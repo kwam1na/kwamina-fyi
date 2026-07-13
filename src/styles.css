@@ -1,0 +1,141 @@
+@import "tailwindcss/theme" layer(theme);
+@import "tailwindcss/utilities" layer(utilities);
+@import "../docs/content/assets/athena-story.css" layer(components);
+
+@source "../docs/content";
+
+@theme {
+  --color-paper: rgb(252 252 251);
+  --color-ink: #151821;
+  --color-copy: #303746;
+  --color-muted: #596172;
+  --color-line: #d9dde5;
+  --color-line-strong: #b8c0cc;
+  --color-focus: #2f607b;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Newsreader", Georgia, serif;
+  --ease-portfolio-in: cubic-bezier(0.55, 0.085, 0.68, 0.53);
+  --ease-portfolio: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@layer base {
+  body {
+    @apply m-0 bg-paper font-sans text-base leading-relaxed text-ink;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-paper: rgb(22 22 22);
+  --color-ink: #f2f0eb;
+  --color-copy: #d5d2ca;
+  --color-muted: #aaa69d;
+  --color-line: #343430;
+  --color-line-strong: #4b4b45;
+  --color-focus: #91c3e2;
+  --paper: var(--color-paper);
+  --ink: var(--color-ink);
+  --copy: var(--color-copy);
+  --muted: var(--color-muted);
+  --line: var(--color-line);
+  --line-strong: var(--color-line-strong);
+  --focus: var(--color-focus);
+  --nav-surface: rgba(22, 22, 22, 0.86);
+  --surface-subtle: rgba(255, 255, 255, 0.05);
+  --chart-bar: #68717c;
+}
+
+.theme-toggle {
+  position: fixed;
+  z-index: 40;
+  bottom: 24px;
+  left: 24px;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--nav-surface, var(--paper));
+  box-shadow: 0 4px 16px rgba(21, 24, 33, 0.08);
+  color: var(--copy);
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  opacity: 0.78;
+  transition: transform 160ms var(--ease-portfolio), color 160ms ease, background-color 160ms ease, opacity 160ms ease;
+}
+
+.theme-toggle:active {
+  transform: scale(0.97);
+}
+
+.theme-toggle:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+}
+
+.theme-toggle-icon {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+  transition: transform 160ms var(--ease-portfolio), opacity 120ms ease;
+}
+
+.theme-toggle-icon--moon {
+  opacity: 0;
+  transform: rotate(-18deg) scale(0.82);
+}
+
+:root[data-theme='dark'] .theme-toggle-icon--sun {
+  opacity: 0;
+  transform: rotate(18deg) scale(0.82);
+}
+
+:root[data-theme='dark'] .theme-toggle-icon--moon {
+  opacity: 1;
+  transform: rotate(0) scale(1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .theme-toggle:hover {
+    color: var(--ink);
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle,
+  .theme-toggle-icon {
+    transition-duration: 1ms;
+  }
+}
+
+@media (max-width: 620px) {
+  .theme-toggle {
+    top: 8px;
+    right: 10px;
+    bottom: auto;
+    left: auto;
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    opacity: 0.64;
+  }
+
+  .theme-toggle-icon {
+    width: 16px;
+    height: 16px;
+  }
+}
