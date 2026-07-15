@@ -39,6 +39,25 @@ export function StaticPage({ documentHtml, pagePath, title }) {
   }, [title])
 
   useEffect(() => {
+    const operatingFlow = containerRef.current?.querySelector('.operating-flow')
+    if (!operatingFlow || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
+
+    operatingFlow.classList.add('has-flow-motion')
+
+    if (!('IntersectionObserver' in window)) {
+      operatingFlow.classList.add('is-flowing')
+      return undefined
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      operatingFlow.classList.toggle('is-flowing', entry.isIntersecting)
+    }, { threshold: 0.35 })
+
+    observer.observe(operatingFlow)
+    return () => observer.disconnect()
+  }, [documentHtml])
+
+  useEffect(() => {
     const container = containerRef.current
     if (!container) return undefined
 

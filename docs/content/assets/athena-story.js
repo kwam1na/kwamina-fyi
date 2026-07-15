@@ -1,4 +1,20 @@
 (() => {
+  const operatingFlow = document.querySelector('.operating-flow');
+
+  if (operatingFlow && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    operatingFlow.classList.add('has-flow-motion');
+
+    if ('IntersectionObserver' in window) {
+      const flowObserver = new IntersectionObserver(([entry]) => {
+        operatingFlow.classList.toggle('is-flowing', entry.isIntersecting);
+      }, { threshold: 0.35 });
+
+      flowObserver.observe(operatingFlow);
+    } else {
+      operatingFlow.classList.add('is-flowing');
+    }
+  }
+
   const sectionNav = document.querySelector('.rail-nav[aria-label="On this page"]');
 
   if (!sectionNav) return;
