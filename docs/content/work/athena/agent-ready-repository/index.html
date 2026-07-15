@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Agent-ready repository — Athena</title>
-    <meta name="description" content="A technical reflection on the repository systems that support human and AI contribution to Athena.">
+    <meta name="description" content="How Athena moves work from grounded planning through implementation, multi-lens review, release, and live verification.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,650;1,6..72,500&amp;display=swap" rel="stylesheet">
@@ -23,7 +23,7 @@
         <a class="hero-return" href="../" aria-label="Back to Athena"><span aria-hidden="true">&larr;</span><span class="hero-return-label" aria-hidden="true">Athena</span></a>
         <p class="eyebrow">Athena technical reflection</p>
         <h1>Agent-ready repository</h1>
-        <p class="hero-lede">Fast contribution is useful only when the repository can explain itself, constrain change, produce evidence, and keep contributors accountable for the result.</p>
+        <p class="hero-lede">Athena&rsquo;s repository is more than a place to write code. It is a delivery system that narrows ambiguous work into an integrated change, widens the evidence around it, and keeps approval attached to the exact artifact that will ship.</p>
       </div>
     </header>
 
@@ -34,12 +34,14 @@
             <p class="context-label">On this page</p>
             <div class="rail-links">
               <span class="rail-indicator" aria-hidden="true"></span>
-              <a href="#orientation">Orientation before action</a>
-              <a href="#repository-map">A layered repository map</a>
-              <a href="#validation">Validation that follows the change</a>
-              <a href="#delivery-loop">The delivery loop</a>
-              <a href="#learnings">Durable learning</a>
+              <a href="#orientation">The operating premise</a>
+              <a href="#repository-map">Repository as delivery infrastructure</a>
+              <a href="#validation">Proof follows the change</a>
+              <a href="#review-loop">From plan to production</a>
+              <a href="#delivery-loop">Progressive assurance</a>
+              <a href="#learnings">Learning compounds</a>
               <a href="#limits">What this does not guarantee</a>
+              <a href="#sources">Evidence reviewed</a>
             </div>
           </nav>
           <nav class="rail-nav" aria-label="Athena navigation">
@@ -53,16 +55,16 @@
 
         <article class="story">
           <section id="orientation" class="story-section" aria-labelledby="orientation-title">
-            <p class="section-kicker">The premise</p>
-            <h2 id="orientation-title">Orientation before action</h2>
-            <p data-claim="claim-agent-orientation">AI agents can search a large repository quickly, but search is not the same as understanding. Athena begins contribution with generated package maps, route and entry-point guides, validation maps, and a repository graph so both people and agents can find the surface they are about to change.</p>
-            <p>The aim is not autonomous development. The repository supplies orientation and evidence; a human still chooses the work, evaluates the tradeoffs, reviews the diff, and owns the decision to ship.</p>
+            <p class="section-kicker">The operating premise</p>
+            <h2 id="orientation-title">A repository should help work reach a trustworthy finish</h2>
+            <p data-claim="claim-agent-orientation">AI agents can search a large repository quickly, but search is not the same as understanding or delivery. Athena begins with generated package maps, route and entry-point guides, validation maps, and a repository graph so a contributor can ground the problem in the code and runtime before proposing a change.</p>
+            <p>That orientation is the first move in a larger system. The work is framed, bounded, implemented, integrated, challenged from several directions, released through repository gates, and checked against live behavior. A human still chooses the scope, evaluates tradeoffs and residual risk, and grants permission to ship.</p>
           </section>
 
           <section id="repository-map" class="story-section" aria-labelledby="repository-map-title">
-            <p class="section-kicker">Repository map</p>
-            <h2 id="repository-map-title">A layered system for legibility</h2>
-            <p data-claim="claim-agent-registry">The harness starts with an explicit registry of active package surfaces. That registry feeds generated orientation material; freshness and validation sensors compare those expectations with the live repository; review commands then gather the evidence needed for a person to make the final judgment.</p>
+            <p class="section-kicker">Delivery infrastructure</p>
+            <h2 id="repository-map-title">The repository makes its boundaries legible</h2>
+            <p data-claim="claim-agent-registry">The harness starts with an explicit registry of active package surfaces. That registry feeds generated orientation material; freshness and validation sensors compare those expectations with the live repository; review commands then gather the evidence needed to move from a local edit toward an integrated, reviewable release candidate.</p>
 
             <figure class="evidence-figure repository-map-figure" aria-describedby="repository-map-description">
               <figcaption>
@@ -112,46 +114,79 @@
           </section>
 
           <section id="validation" class="story-section" aria-labelledby="validation-title">
-            <p class="section-kicker">Validation</p>
-            <h2 id="validation-title">Checks follow the surface that changed</h2>
-            <p data-claim="claim-agent-validation">Generated validation maps connect important package surfaces to the commands and behavior scenarios that can evaluate them. Review commands compare a branch with its base and use those maps to expose missing tests or validation gaps instead of asking every contributor to reconstruct the test strategy from memory.</p>
+            <p class="section-kicker">Change-aware proof</p>
+            <h2 id="validation-title">The change declares what can prove it</h2>
+            <p data-claim="claim-agent-validation">Generated validation maps connect important package surfaces to the commands and behavior scenarios that can evaluate them. Review commands compare a branch with its base and use those maps to expose missing tests or validation gaps instead of asking each contributor to reconstruct the proof strategy from memory.</p>
             <p data-claim="claim-agent-freshness">Freshness checks are deliberately fail-closed. A repair command may regenerate maps or documentation, but repaired evidence is not silently carried past review. The workflow stops so the changed artifacts can be inspected and committed intentionally.</p>
           </section>
 
+          <section id="review-loop" class="story-section" aria-labelledby="review-loop-title">
+            <p class="section-kicker">End-to-end delivery</p>
+            <h2 id="review-loop-title">The work narrows while the evidence widens</h2>
+            <p data-claim="claim-agent-review-loop">Substantial Athena work moves through a recurring delivery shape: ground the problem in repository and runtime truth; turn it into bounded requirements and a verification contract; implement and integrate the change; widen the proof through risk-selected review, repository gates, and release checks; then verify the important boundary live.</p>
+            <p>The work narrows as it moves: an uncertain problem becomes explicit scope and non-goals, then bounded work units, then one integrated branch. The integration point matters. A locally correct contribution is not the approval artifact; approval belongs to the exact combination of requirements, plan, diff, configuration, and generated evidence.</p>
+            <p>The evidence moves in the opposite direction. Focused tests establish the changed behavior first. Cross-layer checks, architecture and freshness gates, and independent review lenses then look for gaps the implementation path may have missed. The lenses vary with risk&mdash;correctness, testing, security, data and API contracts, architecture, maintainability, product experience, performance, deployment, or rollback.</p>
+            <p>Findings become work. Fixes generate new evidence, and affected lenses review the exact current artifact again. For substantial or high-risk changes, the loop continues until every active lens reports no actionable gaps; a later edit invalidates stale approval. Unanimity is therefore a release condition chosen for the risk, not a fixed panel or a claim that every small change needs the same ceremony.</p>
+
+            <figure class="evidence-figure delivery-loop-figure" aria-describedby="review-loop-description">
+              <figcaption>
+                <span class="figure-label">Athena delivery system</span>
+                Work becomes more bounded while evidence expands toward release and production truth.
+              </figcaption>
+              <div class="delivery-loop" aria-hidden="true">
+                <div><span>01</span><strong>Ground reality</strong><code>code + runtime + logs</code></div>
+                <div><span>02</span><strong>Bound the plan</strong><code>scope + risks + proof</code></div>
+                <div><span>03</span><strong>Build in units</strong><code>isolated workstreams</code></div>
+                <div><span>04</span><strong>Integrate evidence</strong><code>full branch + focused proof</code></div>
+                <div><span>05</span><strong>Close every gap</strong><code>findings + fixes + re-review</code></div>
+                <div><span>06</span><strong>Ship the boundary</strong><code>CI + deploy + live evidence</code></div>
+              </div>
+              <ol id="review-loop-description" class="structured-equivalent">
+                <li>Ground the problem in the relevant code, runtime behavior, logs, and production state.</li>
+                <li>Bound the plan with explicit scope, non-goals, risks, dependencies, and a verification contract.</li>
+                <li>Execute isolated workstreams whose ownership and expected evidence are clear.</li>
+                <li>Integrate the full branch and establish focused proof for the combined artifact.</li>
+                <li>Turn findings into fixes and re-review affected lenses until the current artifact has no actionable gaps.</li>
+                <li>Pass repository and pull-request gates, release with human authorization, and verify the important boundary live.</li>
+              </ol>
+            </figure>
+          </section>
+
           <section id="delivery-loop" class="story-section" aria-labelledby="delivery-loop-title">
-            <p class="section-kicker">Evidence loop</p>
-            <h2 id="delivery-loop-title">A change should leave evidence behind</h2>
-            <p data-claim="claim-agent-runtime">Static checks are only one sensor. Named behavior scenarios boot representative product and service paths, look for expected runtime signals, and emit machine-readable reports. They make runtime exercise reviewable without pretending to cover every possible user journey.</p>
+            <p class="section-kicker">Progressive assurance</p>
+            <h2 id="delivery-loop-title">The checks get broader as the change moves outward</h2>
+            <p>Each layer answers a different question. Focused tests ask whether the intended behavior works. Integrated checks ask whether adjacent systems still agree. Repository gates ask whether architecture, generated artifacts, and required knowledge remain coherent. Independent lenses ask what the implementation path failed to notice. Pull-request checks test the release candidate, while live evidence tests the deployed boundary.</p>
+            <p data-claim="claim-agent-runtime">Static checks are only one sensor. Named behavior scenarios exercise representative runtime paths, look for expected signals, and emit machine-readable reports. Production-facing work can continue into deployed logs, state, responses, or a real workflow so release confidence is grounded in the environment that matters.</p>
 
             <figure class="evidence-figure delivery-loop-figure" aria-describedby="delivery-loop-description">
               <figcaption>
-                <span class="figure-label">Delivery loop</span>
-                Contribution moves from orientation to preserved learning, with review remaining a human responsibility.
+                <span class="figure-label">Evidence widens toward release</span>
+                No single green check carries the full claim; confidence accumulates across distinct boundaries.
               </figcaption>
               <div class="delivery-loop" aria-hidden="true">
-                <div><span>01</span><strong>Orient</strong><code>graphify-out/wiki</code></div>
-                <div><span>02</span><strong>Change</strong><code>touched surface</code></div>
-                <div><span>03</span><strong>Validate</strong><code>harness:review</code></div>
-                <div><span>04</span><strong>Exercise runtime</strong><code>harness:behavior</code></div>
-                <div><span>05</span><strong>Human review</strong><code>diff + evidence</code></div>
-                <div><span>06</span><strong>Preserve learning</strong><code>docs/solutions</code></div>
+                <div><span>01</span><strong>Unit proof</strong><code>changed behavior</code></div>
+                <div><span>02</span><strong>Integrated proof</strong><code>cross-layer contracts</code></div>
+                <div><span>03</span><strong>Repository proof</strong><code>maps + architecture + freshness</code></div>
+                <div><span>04</span><strong>Independent review</strong><code>risk-selected lenses</code></div>
+                <div><span>05</span><strong>Release proof</strong><code>PR + CI + deploy</code></div>
+                <div><span>06</span><strong>Operational proof</strong><code>live behavior + logs</code></div>
               </div>
               <ol id="delivery-loop-description" class="structured-equivalent">
-                <li>Orient with generated package guides and the repository graph.</li>
-                <li>Make a bounded change to a known product or infrastructure surface.</li>
-                <li>Run the validation selected for the touched surface and check generated-artifact freshness.</li>
-                <li>Exercise representative runtime behavior when the changed surface needs runtime evidence.</li>
-                <li>Put the diff, validation output, and runtime evidence in front of a human reviewer.</li>
-                <li>Preserve a reusable lesson in <code>docs/solutions</code> when the change establishes durable project knowledge.</li>
+                <li>Establish unit-level proof for the behavior that changed.</li>
+                <li>Check cross-layer contracts and the behavior of the integrated branch.</li>
+                <li>Run repository-level architecture, freshness, generated-artifact, and harness gates.</li>
+                <li>Apply independent, risk-selected review lenses to the current release candidate.</li>
+                <li>Pass pull-request checks, continuous integration, and the authorized deployment path.</li>
+                <li>Inspect live behavior, logs, state, or responses at the operational boundary.</li>
               </ol>
             </figure>
           </section>
 
           <section id="learnings" class="story-section" aria-labelledby="learnings-title">
-            <p class="section-kicker">Compounding</p>
-            <h2 id="learnings-title">Useful context should survive the session</h2>
+            <p class="section-kicker">Learning compounds</p>
+            <h2 id="learnings-title">The finish line improves the next starting point</h2>
             <p data-claim="claim-agent-learning">Athena treats generated maps and solution notes as reviewable source artifacts. Substantial behavior-bearing work is expected to leave behind a durable explanation of the problem, solution, and prevention pattern so the next human or agent can begin with more context than the last one had.</p>
-            <p>This is the part of agent-assisted development I find most consequential: not producing more code per prompt, but improving the repository&rsquo;s ability to orient, constrain, validate, and teach every contributor who arrives next.</p>
+            <p>This closes the system. Delivery does not end with code in production; a durable boundary, failure mode, or prevention pattern becomes new orientation for the next task. The consequential gain is not more code per prompt, but making gaps harder to carry forward unnoticed.</p>
           </section>
 
           <section id="limits" class="story-section" aria-labelledby="limits-title">
@@ -162,7 +197,20 @@
               <li>Maps can become stale, which is why freshness checks block rather than assume.</li>
               <li>Behavior scenarios exercise representative paths, not every production condition.</li>
               <li>Validation output supports judgment; it does not replace product or engineering review.</li>
+              <li>Review depth is selected by risk; small changes can take a shorter path than cross-cutting or production-critical work.</li>
               <li>Human reviewers remain responsible for scope, tradeoffs, evidence quality, and release decisions.</li>
+            </ul>
+          </section>
+
+          <section id="sources" class="story-section" aria-labelledby="sources-title">
+            <p class="section-kicker">Evidence reviewed</p>
+            <h2 id="sources-title">The process is visible in the delivery artifacts</h2>
+            <p>This account is grounded in what Athena work leaves behind: scope and proof defined before implementation, findings recorded against the integrated artifact, repository and release gates, live verification, and durable learning. Those artifacts show a recurring system without implying that every task takes the same path or needs the same review depth.</p>
+            <ul class="source-list">
+              <li>Requirements and plans that define scope, non-goals, risks, dependencies, and verification before implementation.</li>
+              <li>Integrated changes and the findings, fixes, and clearance produced by independent review lenses.</li>
+              <li>Repository gates, pull-request checks, deployment evidence, and verification at the live operating boundary.</li>
+              <li>Harness documentation, generated repository maps, behavior scenarios, review commands, and durable solution notes.</li>
             </ul>
           </section>
 

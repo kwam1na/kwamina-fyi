@@ -281,6 +281,22 @@ class StaticPageTests(unittest.TestCase):
             },
         )
 
+    def test_athena_operating_flow_motion_is_explanatory_and_accessible(self) -> None:
+        html = PAGES["athena"].read_text(encoding="utf-8")
+        css = (CONTENT_ROOT / "assets" / "athena-story.css").read_text(encoding="utf-8")
+        javascript = (CONTENT_ROOT / "assets" / "athena-story.js").read_text(encoding="utf-8")
+        page_shell = (CONTENT_ROOT.parents[1] / "src" / "static-page.jsx").read_text(encoding="utf-8")
+
+        self.assertRegex(html, r'<div class="operating-flow" aria-hidden="true">')
+        self.assertIn('id="operating-day-description"', html)
+        self.assertIn("@keyframes operating-flow-node", css)
+        self.assertIn("@keyframes operating-flow-packet", css)
+        self.assertIn("@media (prefers-reduced-motion: reduce)", css)
+        self.assertIn("IntersectionObserver", javascript)
+        self.assertIn("prefers-reduced-motion: reduce", javascript)
+        self.assertIn("IntersectionObserver", page_shell)
+        self.assertIn("prefers-reduced-motion: reduce", page_shell)
+
     def test_athena_public_claims_are_mapped_in_evidence_ledger(self) -> None:
         parser = parse_page(PAGES["athena"])
         self.assert_claims_mapped(parser, 8)
@@ -351,6 +367,7 @@ class StaticPageTests(unittest.TestCase):
             "orientation",
             "repository-map",
             "validation",
+            "review-loop",
             "delivery-loop",
             "learnings",
             "limits",
@@ -362,22 +379,37 @@ class StaticPageTests(unittest.TestCase):
             "generated package maps",
             "fail-closed",
             "representative runtime",
+            "substantial athena work moves through",
+            "the work narrows while the evidence widens",
+            "findings become work",
+            "exact current artifact",
+            "risk-selected review",
+            "every task takes the same path",
             "human reviewer",
             "complete understanding of the codebase",
             "regression-free delivery",
         ):
             self.assertIn(phrase, lowered)
+        for internal_detail in (
+            "aggregate audit",
+            "session logs",
+            "user-owned tasks",
+            "child-agent sessions",
+            "complete local codex archive",
+        ):
+            self.assertNotIn(internal_detail, lowered)
         self.assertEqual(nav_fragment_targets(html, "On this page"), expected_sections)
 
         self.assert_accessible_figures(
             path,
-            2,
+            3,
             {
                 "repository-map-description": ("registry", "generated", "sensors", "review"),
-                "delivery-loop-description": ("orient", "bounded change", "validation", "runtime", "diff", "human", "preserve"),
+                "review-loop-description": ("ground", "scope", "workstreams", "integrate", "findings", "release", "live"),
+                "delivery-loop-description": ("unit-level", "cross-layer", "repository-level", "independent", "pull-request", "operational"),
             },
         )
-        self.assert_claims_mapped(parser, 6)
+        self.assert_claims_mapped(parser, 7)
 
     def test_claim_ledger_has_no_stale_entries(self) -> None:
         published_claims = {

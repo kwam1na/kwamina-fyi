@@ -417,11 +417,22 @@ h1 {
 
 .operating-flow {
   align-items: stretch;
+  --flow-cycle: 12s;
 }
 
 .operating-flow .flow-arrow {
   align-self: center;
 }
+
+.operating-flow > :nth-child(1) { --flow-delay: 0s; }
+.operating-flow > :nth-child(2) { --flow-delay: 1s; }
+.operating-flow > :nth-child(3) { --flow-delay: 2s; }
+.operating-flow > :nth-child(4) { --flow-delay: 3s; }
+.operating-flow > :nth-child(5) { --flow-delay: 4s; }
+.operating-flow > :nth-child(6) { --flow-delay: 5s; }
+.operating-flow > :nth-child(7) { --flow-delay: 6s; }
+.operating-flow > :nth-child(8) { --flow-delay: 7s; }
+.operating-flow > :nth-child(9) { --flow-delay: 8s; }
 
 .flow-node,
 .sequence-node {
@@ -434,8 +445,36 @@ h1 {
 }
 
 .flow-node {
+  position: relative;
+  isolation: isolate;
   min-height: 126px;
   justify-content: space-between;
+  overflow: hidden;
+}
+
+.flow-node::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: var(--focus);
+  content: "";
+  opacity: 0;
+  animation: operating-flow-highlight var(--flow-cycle) linear infinite;
+  animation-delay: var(--flow-delay);
+}
+
+.flow-node::after {
+  position: absolute;
+  top: -2px;
+  left: 0;
+  width: 20%;
+  height: 2px;
+  background: var(--focus);
+  content: "";
+  opacity: 0;
+  transform: translate3d(0, 0, 0);
+  animation: operating-flow-node var(--flow-cycle) linear infinite;
+  animation-delay: var(--flow-delay);
 }
 
 .flow-node--owner {
@@ -459,6 +498,84 @@ h1 {
   color: var(--muted);
   font-family: var(--serif);
   font-size: 1.2rem;
+}
+
+.operating-flow .flow-arrow {
+  position: relative;
+  width: 24px;
+  height: 1px;
+  background: var(--line-strong);
+  color: transparent;
+}
+
+.operating-flow .flow-arrow::after {
+  position: absolute;
+  top: 50%;
+  right: -1px;
+  width: 5px;
+  height: 5px;
+  border-top: 1px solid var(--line-strong);
+  border-right: 1px solid var(--line-strong);
+  content: "";
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.operating-flow .flow-arrow::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--focus);
+  content: "";
+  opacity: 0;
+  transform: translate3d(0, -50%, 0);
+  animation: operating-flow-packet var(--flow-cycle) linear infinite;
+  animation-delay: var(--flow-delay);
+}
+
+.operating-flow.has-flow-motion:not(.is-flowing) .flow-node::before,
+.operating-flow.has-flow-motion:not(.is-flowing) .flow-node::after,
+.operating-flow.has-flow-motion:not(.is-flowing) .flow-arrow::before {
+  animation-play-state: paused;
+}
+
+@keyframes operating-flow-highlight {
+  0%, 10% { opacity: 0.075; }
+  14%, 100% { opacity: 0; }
+}
+
+@keyframes operating-flow-node {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0);
+  }
+  1% { opacity: 1; }
+  9% {
+    opacity: 1;
+    transform: translate3d(400%, 0, 0);
+  }
+  10%, 100% {
+    opacity: 0;
+    transform: translate3d(400%, 0, 0);
+  }
+}
+
+@keyframes operating-flow-packet {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -50%, 0);
+  }
+  1% { opacity: 1; }
+  9% {
+    opacity: 1;
+    transform: translate3d(18px, -50%, 0);
+  }
+  10%, 100% {
+    opacity: 0;
+    transform: translate3d(18px, -50%, 0);
+  }
 }
 
 .pulse-window {
@@ -941,7 +1058,26 @@ h1 {
 
   .flow-arrow {
     justify-self: center;
-    transform: rotate(90deg);
+  }
+
+  .operating-flow .flow-arrow {
+    width: 1px;
+    height: 28px;
+  }
+
+  .operating-flow .flow-arrow::after {
+    top: auto;
+    right: auto;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%) rotate(135deg);
+  }
+
+  .operating-flow .flow-arrow::before {
+    top: 0;
+    left: 50%;
+    transform: translate3d(-50%, 0, 0);
+    animation-name: operating-flow-packet-vertical;
   }
 
   .flow-node {
@@ -950,6 +1086,22 @@ h1 {
 
   .state-ledger {
     grid-template-columns: 1fr;
+  }
+}
+
+@keyframes operating-flow-packet-vertical {
+  0% {
+    opacity: 0;
+    transform: translate3d(-50%, 0, 0);
+  }
+  1% { opacity: 1; }
+  9% {
+    opacity: 1;
+    transform: translate3d(-50%, 22px, 0);
+  }
+  10%, 100% {
+    opacity: 0;
+    transform: translate3d(-50%, 22px, 0);
   }
 }
 
@@ -1046,5 +1198,13 @@ h1 {
 
   .routed-page {
     opacity: 1;
+  }
+
+  .flow-node::before,
+  .flow-node::after,
+  .operating-flow .flow-arrow::before {
+    animation: none;
+    opacity: 0;
+    transform: none;
   }
 }
