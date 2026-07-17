@@ -21,6 +21,9 @@
 @layer base {
   body {
     @apply m-0 bg-paper font-sans text-base leading-relaxed text-ink;
+    /* Route changes swap the whole document body; scroll anchoring fights
+     * the SPA's own scroll placement (top or restored position). */
+    overflow-anchor: none;
   }
 }
 

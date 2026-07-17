@@ -13,6 +13,13 @@ function normalisePath(pathname) {
   return pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname
 }
 
+// The homepage's scroll position is remembered when leaving via an in-site
+// link, so returning brings the reader back to where they were (e.g. the
+// Athena section). Homepage-only; other pages always open at the top.
+// Deliberately in-memory: a fresh page load starts at the top as before.
+const scrollRestorePaths = new Set(['/'])
+const savedScrollPositions = new Map()
+
 function extractPage(documentHtml) {
   const styles = [...documentHtml.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)]
     .map((match) => match[1])
@@ -31,7 +38,9 @@ export function StaticPage({ documentHtml, pagePath, title }) {
   const page = useMemo(() => extractPage(documentHtml), [documentHtml])
 
   useLayoutEffect(() => {
-    window.scrollTo(0, 0)
+    const savedPosition = savedScrollPositions.get(pagePath)
+    savedScrollPositions.delete(pagePath)
+    window.scrollTo(0, savedPosition ?? 0)
   }, [pagePath])
 
   useEffect(() => {
@@ -74,9 +83,16 @@ export function StaticPage({ documentHtml, pagePath, title }) {
       const destinationHash = target.hash
 
       event.preventDefault()
+      if (scrollRestorePaths.has(pagePath)) savedScrollPositions.set(pagePath, window.scrollY)
+      // Links marked data-scroll-top always land at the top of their
+      // destination, discarding any saved position.
+      if (link.hasAttribute('data-scroll-top')) savedScrollPositions.delete(path)
       navigate({
         to: path,
         hash: destinationHash.slice(1) || undefined,
+        // The mount effect owns scroll (restore or top); keep the router
+        // from resetting it after commit.
+        resetScroll: false,
       })
     }
 
@@ -118,6 +134,10 @@ export function StaticPage({ documentHtml, pagePath, title }) {
     }
 
     const onScroll = () => {
+      // A clicked link keeps focus, and :focus-within holds the rail at full
+      // opacity. Once the page scrolls, release that focus so the rail
+      // returns to its dimmed state; if nothing is focused, do nothing.
+      if (nav.contains(document.activeElement)) document.activeElement.blur()
       window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(update)
     }

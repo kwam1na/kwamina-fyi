@@ -51,8 +51,16 @@
     }
   };
 
+  // A clicked link keeps focus, and :focus-within holds the rail at full
+  // opacity. Once the page scrolls, release that focus so the rail returns
+  // to its dimmed state; when nothing in the rail is focused, do nothing.
+  const releaseLingeringFocus = () => {
+    if (sectionNav.contains(document.activeElement)) document.activeElement.blur();
+  };
+
   let scrollFrame;
   window.addEventListener('scroll', () => {
+    releaseLingeringFocus();
     cancelAnimationFrame(scrollFrame);
     scrollFrame = requestAnimationFrame(setCurrentSection);
   }, { passive: true });

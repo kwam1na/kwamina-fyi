@@ -419,6 +419,26 @@ class StaticPageTests(unittest.TestCase):
         }
         self.assertEqual(set(claim_rows()), published_claims)
 
+    def test_public_asset_mirrors_match_reviewed_media(self) -> None:
+        # Runtime assets under public/ must be byte-identical to the reviewed
+        # canonical copies in docs/content/assets, so the media ledger's
+        # hashes govern what actually ships.
+        public_assets = CONTENT_ROOT.parents[1] / "public" / "assets"
+        if not public_assets.exists():
+            return
+        for public_file in public_assets.iterdir():
+            if not public_file.is_file():
+                continue
+            with self.subTest(asset=public_file.name):
+                canonical = CONTENT_ROOT / "assets" / public_file.name
+                self.assertTrue(canonical.is_file(), f"No reviewed canonical copy for {public_file.name}")
+                self.assertFalse(public_file.is_symlink(), f"public asset must be a real file: {public_file.name}")
+                self.assertEqual(
+                    hashlib.sha256(public_file.read_bytes()).hexdigest(),
+                    hashlib.sha256(canonical.read_bytes()).hexdigest(),
+                    f"public/assets/{public_file.name} drifted from docs/content/assets",
+                )
+
     def test_unsafe_athena_captures_are_absent_and_unreferenced(self) -> None:
         for filename in UNSAFE_ATHENA_ASSETS:
             self.assertFalse((CONTENT_ROOT / "assets" / filename).exists(), filename)
