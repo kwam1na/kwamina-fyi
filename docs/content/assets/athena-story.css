@@ -1208,3 +1208,40 @@ h1 {
     transform: none;
   }
 }
+
+/* Theme-matched workspace captures (Store Pulse figure) */
+.evidence-figure.store-pulse {
+  border: none;
+  background: none;
+}
+
+.evidence-figure.store-pulse figcaption {
+  padding: 18px 0;
+  border-bottom: none;
+}
+
+.evidence-figure.store-pulse .structured-equivalent {
+  padding-left: 0;
+  padding-right: 0;
+  border-top: none;
+}
+
+.workspace-capture {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.workspace-capture--dark {
+  display: none;
+}
+
+:root[data-theme='dark'] .workspace-capture--light {
+  display: none;
+}
+
+:root[data-theme='dark'] .workspace-capture--dark {
+  display: block;
+}

@@ -21,9 +21,9 @@
     <header class="story-hero">
       <div class="page-inner">
         <a class="hero-return" href="../../homepage-draft-v1.html" aria-label="Back to homepage"><span aria-hidden="true">&larr;</span><span class="hero-return-label" aria-hidden="true">Homepage</span></a>
-        <p class="eyebrow">Athena &middot; Current work</p>
-        <h1>A business OS for owner-led retail.</h1>
-        <p class="hero-lede">One operating day spans sales, stock, cash, services, and staff activity. Athena is my attempt to keep that work connected closely enough for an owner to understand what happened and decide what needs attention next.</p>
+        <p class="eyebrow">Athena &middot; A business OS for owner-led retail</p>
+        <h1>The owner should not have to reconstruct the business before running it.</h1>
+        <p class="hero-lede">Athena keeps sales, stock, cash, services, and staff work on one operating record &mdash; built with AI agents, and running a real store today.</p>
       </div>
     </header>
 
@@ -50,6 +50,7 @@
             <div class="rail-links">
               <span class="rail-indicator" aria-hidden="true"></span>
               <a href="#problem">The operating problem</a>
+              <a href="#proving-ground">Proving ground</a>
               <a href="#product-model">The product model</a>
               <a href="#connected-operations">Connected operations</a>
               <a href="#local-first">Local-first continuity</a>
@@ -71,15 +72,22 @@
         <article class="story">
           <section id="problem" class="story-section" aria-labelledby="problem-title">
             <p class="section-kicker">The operating problem</p>
-            <h2 id="problem-title">The owner should not have to reconstruct the business before running it.</h2>
-            <p data-claim="claim-problem-fragmentation">In an owner-led retail business, the evidence of the day often lives in different places: a register total, online orders, stock notes, physical receipts, staff memory, and a list of work still waiting for someone. Before the next decision can happen, the owner has to piece those fragments back together.</p>
-            <p>That reconstruction is more than administrative friction. It makes simple questions harder to answer: What sold? What changed in stock? Which cash or service issue is unresolved? What needs attention before the day can close?</p>
+            <h2 id="problem-title">The day&rsquo;s evidence lives in fragments.</h2>
+            <p data-claim="claim-problem-fragmentation">In an owner-led retail business, the evidence of the day lives in different places: a register total, online orders, stock notes, physical receipts, staff memory, and a list of work still waiting for someone. Before the next decision can happen, the owner has to piece those fragments back together.</p>
+            <p>That reconstruction makes simple questions expensive: What sold? What changed in stock? Which cash or service issue is unresolved? What needs attention before the day can close?</p>
+          </section>
+
+          <section id="proving-ground" class="story-section" aria-labelledby="proving-ground-title">
+            <p class="section-kicker">Proving ground</p>
+            <h2 id="proving-ground-title">Built with Wigclub. Live in production.</h2>
+            <p data-claim="claim-wigclub-context">Athena runs the operating day at Wigclub, a retail and service business in Ghana: register sales, storefront orders, inventory, procurement, cash controls, and Daily Close. The register records cash, card, and mobile money tenders; online payments settle through Paystack. Connectivity there is a real constraint rather than an edge case, and the resilience decisions on this page follow from that.</p>
+            <p data-claim="claim-system-facts">The engineering claims here trace back to the repository: more than 650 test files across unit, component, and end-to-end suites, plus 40 more covering the delivery harness itself; four CI workflows, including scripted production rollback; and a static money-entry audit that fails validation whenever money is parsed outside the shared minor-unit helpers.</p>
           </section>
 
           <section id="product-model" class="story-section" aria-labelledby="product-model-title">
             <p class="section-kicker">The product model</p>
             <h2 id="product-model-title">One operating record, shaped around the day.</h2>
-            <p data-claim="claim-connected-scope">Athena connects in-person and online sales with inventory, procurement, cash controls, services, and staff activity. The value is not that every domain has been collapsed into one screen. It is that the records can retain enough shared context for the owner to follow the work from action to evidence.</p>
+            <p data-claim="claim-connected-scope">Athena connects in-person and online sales with inventory, procurement, cash controls, services, and staff activity. The point is not one screen that swallows every domain. It is that the records keep enough shared context for the owner to follow the work from action to evidence.</p>
 
             <figure class="evidence-figure operating-model" aria-describedby="operating-day-description" data-claim="claim-operating-day-flow">
               <figcaption>
@@ -111,84 +119,40 @@
           <section id="connected-operations" class="story-section" aria-labelledby="connected-operations-title">
             <p class="section-kicker">Connected operations</p>
             <h2 id="connected-operations-title">Start with today. Keep the history close.</h2>
-            <p data-claim="claim-store-pulse">Store Pulse gives the operator a view of completed point-of-sale activity, including sales, transactions, items sold, comparison windows, and the products moving within the selected period. As Athena records more operating days, that history becomes available for comparison without pretending to reconstruct the paper record from before adoption.</p>
+            <p data-claim="claim-store-pulse">Store Pulse shows the operator completed register activity &mdash; sales, transactions, and items sold &mdash; with comparison windows, the sales trend, the products moving, and how customers paid. This is the workspace itself, captured from a development build.</p>
 
             <figure class="evidence-figure store-pulse" aria-describedby="store-pulse-description">
               <figcaption>
-                <span class="figure-label">Code-native product illustration</span>
-                A nonnumeric view of today, history, and product movement.
+                <span class="figure-label">The shipped workspace</span>
+                Store Pulse from the register workspace, captured from a development build seeded with illustrative data.
               </figcaption>
-              <div class="pulse-window" aria-hidden="true">
-                <div class="pulse-header">
-                  <div><span>Store pulse</span><strong>Today</strong></div>
-                  <span class="pulse-status">Sales in view</span>
-                </div>
-                <div class="pulse-metrics">
-                  <div><span>Sales</span><i></i></div>
-                  <div><span>Transactions</span><i></i></div>
-                  <div><span>Items sold</span><i></i></div>
-                </div>
-                <div class="pulse-detail">
-                  <div class="pulse-history">
-                    <div class="pulse-title-row"><strong>Sales over time</strong><span>History stays close</span></div>
-                    <div class="pulse-bars">
-                      <i class="pulse-bar pulse-bar--1"></i><i class="pulse-bar pulse-bar--2"></i><i class="pulse-bar pulse-bar--3"></i><i class="pulse-bar pulse-bar--4"></i><i class="pulse-bar pulse-bar--5"></i><i class="pulse-bar pulse-bar--6"></i><i class="pulse-bar pulse-bar--7"></i><i class="pulse-bar pulse-bar--8"></i>
-                    </div>
-                  </div>
-                  <div class="pulse-products">
-                    <strong>Products moving</strong>
-                    <span>Everyday essentials</span>
-                    <span>New arrivals</span>
-                    <span>Repeat favourites</span>
-                  </div>
-                </div>
-              </div>
+              <img class="workspace-capture workspace-capture--light" src="../../assets/athena-store-pulse-light.webp" alt="Store Pulse workspace showing sales, average sale, transactions, and items sold metric cards, a monthly sales-trend chart, top items, and payment-method shares." loading="lazy" width="2000" height="1385">
+              <img class="workspace-capture workspace-capture--dark" src="../../assets/athena-store-pulse-dark.webp" alt="Store Pulse workspace showing sales, average sale, transactions, and items sold metric cards, a monthly sales-trend chart, top items, and payment-method shares." loading="lazy" width="2000" height="1385">
               <div id="store-pulse-description" class="structured-equivalent">
-                <p>The illustration groups three nonnumeric signals—sales, transactions, and items sold—with an abstract history chart and a generic list of products moving. It demonstrates information hierarchy only; the bars do not represent business performance.</p>
+                <p>The captured workspace reports sales, transactions, and items sold for the selected time window, draws a sales-trend history chart, lists the top products moving, and breaks down how customers paid. All figures come from a development build seeded with illustrative data and represent no business performance.</p>
               </div>
             </figure>
-            <p data-claim="claim-cross-channel-record">Beyond this point-of-sale view, Athena&rsquo;s reporting model can recognize completed in-person activity and fulfilled storefront activity while preserving which channel each record came from. That creates a shared commerce history without claiming every channel already appears inside Store Pulse itself.</p>
+            <p data-claim="claim-cross-channel-record">Athena&rsquo;s reporting model recognizes completed in-person sales and fulfilled storefront orders while preserving which channel each record came from: one commerce history, with channel identity intact.</p>
           </section>
 
           <section id="local-first" class="story-section" aria-labelledby="local-first-title">
             <p class="section-kicker">Resilient operations</p>
             <h2 id="local-first-title">The register records the work before it reports success.</h2>
-            <p data-claim="claim-local-first-command">A provisioned, locally authorized register writes each cashier event to its local record before returning success, whether or not the browser appears online. That keeps connected and disconnected selling on the same command path instead of treating offline work as a weaker fallback.</p>
+            <p data-claim="claim-local-first-origin">Local-first was not an architectural preference. It started as a field constraint: Wigclub&rsquo;s register cannot depend on the network at the moment a customer is ready to pay. So offline is the register&rsquo;s initial posture, not a fallback mode.</p>
+            <p data-claim="claim-local-first-command">A provisioned, locally authorized register writes each cashier event to its durable local record before returning success, whether or not the browser appears online. A mobile money sale completed during an outage looks exactly like one completed on a healthy connection: the event is appended, the receipt is issued, and the register keeps selling. When connectivity returns, the terminal uploads its events in order.</p>
             <ol class="proof-sequence" aria-label="Local-first point-of-sale sequence">
               <li><span>01</span><div><strong>Check local authority</strong><p>Terminal integrity, staff identity, drawer authority, and a durable local destination still matter.</p></div></li>
               <li><span>02</span><div><strong>Append local evidence</strong><p>The register event exists before the cashier sees success.</p></div></li>
               <li><span>03</span><div><strong>Continue the operation</strong><p>The local read model keeps the active register usable through unreliable connectivity.</p></div></li>
               <li><span>04</span><div><strong>Synchronize and reconcile</strong><p>Ordered, idempotent upload maps local records to cloud records and surfaces conflicts for review.</p></div></li>
             </ol>
-            <p data-claim="claim-local-sync-boundary">The boundary is deliberately narrow: point of sale is Athena&rsquo;s offline-first workflow, and Convex becomes the cloud source of truth after accepted projection. If last-known stock or permission evidence has drifted, Athena preserves the completed local sale and creates review work rather than rewriting the receipt or hiding the history.</p>
+            <p data-claim="claim-local-sync-boundary">The boundary is deliberately narrow: point of sale is Athena&rsquo;s offline-first workflow, and Convex becomes the cloud source of truth after accepted projection. If last-known stock or permission evidence drifted while the register was offline, Athena preserves the completed sale and creates review work &mdash; it never rewrites the receipt or hides the history.</p>
           </section>
 
           <section id="agent-ready" class="story-section" aria-labelledby="agent-ready-title">
             <p class="section-kicker">Engineering method</p>
             <h2 id="agent-ready-title">AI-assisted development needs a codebase that can explain itself.</h2>
-            <p data-claim="claim-agent-ready-system">I build Athena with AI agents, but not through prompt-in, patch-out work. The repository is designed to help contributors understand the system, produce evidence for changes, and leave the next person or agent with more context than they started with.</p>
-            <div class="engineering-stages" aria-label="Agent-ready engineering lifecycle">
-              <article class="engineering-stage">
-                <div class="stage-heading"><span>01</span><div><h3>Understand the system</h3><p>Give every contributor reliable context before changing anything.</p></div></div>
-                <ul class="stage-practices">
-                  <li><strong>Orient</strong><span>Repository policy, generated indexes, and a knowledge graph make the current shape discoverable.</span></li>
-                </ul>
-              </article>
-              <article class="engineering-stage">
-                <div class="stage-heading"><span>02</span><div><h3>Make change evidence</h3><p>Connect each touched surface to proof that it still behaves as intended.</p></div></div>
-                <ul class="stage-practices">
-                  <li><strong>Validate</strong><span>Focused tests, architecture checks, audits, types, and builds meet the changed surface.</span></li>
-                  <li><strong>Exercise</strong><span>Representative runtime scenarios show whether key paths still boot and behave.</span></li>
-                </ul>
-              </article>
-              <article class="engineering-stage">
-                <div class="stage-heading"><span>03</span><div><h3>Preserve judgment</h3><p>Keep delivery accountable now and useful to the next contributor.</p></div></div>
-                <ul class="stage-practices">
-                  <li><strong>Review</strong><span>Diff-aware sensors and fail-closed freshness checks stop incomplete evidence from moving silently.</span></li>
-                  <li><strong>Preserve</strong><span>Solution notes retain the reasoning behind substantial changes.</span></li>
-                </ul>
-              </article>
-            </div>
+            <p data-claim="claim-agent-ready-system">I build Athena with AI agents, but not through prompt-in, patch-out work. The delivery system began as an audit of the repository against published harness-engineering practice and grew into a set of sensors: generated maps and a knowledge graph for orientation, diff-aware validation and runtime behavior scenarios for evidence, fail-closed freshness checks and review gates for accountability. When a failure escapes to CI, the fix lands with a new sensor, so the next contributor &mdash; human or agent &mdash; does not repeat it.</p>
             <p data-claim="claim-agent-ready-limits">These safeguards make the repository more legible and reviewable for humans and agents; they do not create autonomous development, exhaustive runtime coverage, full test coverage, or guaranteed correctness. Human review and bounded authority remain part of the system.</p>
           </section>
 
@@ -200,12 +164,12 @@
               <article>
                 <p class="state-label">Works</p>
                 <h3>Core retail loops</h3>
-                <p>Point of sale, storefront checkout, orders, inventory, procurement, cash controls, Daily Close, and staff workflows are represented across the operator and customer systems.</p>
+                <p>Point of sale, storefront checkout, orders, inventory, procurement, cash controls, Daily Close, and staff workflows run in production across the operator and customer systems.</p>
               </article>
               <article>
                 <p class="state-label">Being validated</p>
                 <h3>The clearest owner story</h3>
-                <p>The entry promise and the way operating evidence should converge are still being tested. The cross-domain exception view and proactive guidance need more work.</p>
+                <p>The trusted Reports workspace is being proven against real store history before any production activation. The cross-domain exception view and proactive guidance need more work.</p>
               </article>
               <article>
                 <p class="state-label">Not claimed</p>
@@ -218,9 +182,9 @@
           <section id="deeper-reading" class="story-section" aria-labelledby="deeper-reading-title">
             <p class="section-kicker">Technical reflections</p>
             <h2 id="deeper-reading-title">Deeper reading</h2>
-            <p>The product story stands on its own. These reflections go further into two engineering decisions that make the system credible.</p>
+            <p>These reflections go into the two engineering decisions that carry the most weight &mdash; including the reversals and bugs that shaped them.</p>
             <div class="deep-links">
-              <a class="deep-link" href="local-first-pos/"><span>Local-first point of sale</span><small>Why the store cannot wait for the network.</small></a>
+              <a class="deep-link" href="local-first-pos/"><span>Local-first point of sale</span><small>Why the store cannot wait for the network &mdash; and the bug that taught the sync model.</small></a>
               <a class="deep-link" href="agent-ready-repository/"><span>Agent-ready repository</span><small>How maps, sensors, and evidence change AI-assisted work.</small></a>
             </div>
           </section>
@@ -236,7 +200,7 @@
           <div>
             <p class="footer-label">Navigate</p>
             <div class="footer-links">
-              <a class="text-link" href="../../homepage-draft-v1.html">Homepage</a>
+              <a class="text-link" href="../../homepage-draft-v1.html" data-scroll-top>Homepage</a>
             </div>
           </div>
           <div>

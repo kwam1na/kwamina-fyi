@@ -40,6 +40,7 @@
               <a href="#sync-and-reconciliation">Sync and reconciliation</a>
               <a href="#authority-boundary">Authority boundary</a>
               <a href="#limits">Candid limits</a>
+              <a href="#sources">Evidence reviewed</a>
             </div>
           </nav>
           <nav class="rail-nav" aria-label="Athena navigation">
@@ -55,14 +56,14 @@
           <section id="online-first" class="story-section" aria-labelledby="online-first-title">
             <p class="section-kicker">The failure mode</p>
             <h2 id="online-first-title">A store cannot wait for the network to decide whether the sale happened.</h2>
-            <p data-claim="claim-pos-online-first">An online-first register makes the cashier&rsquo;s success depend on a cloud mutation: send the command, wait for acceptance, then update the interface. That arrangement looks simple until connectivity becomes slow, intermittent, or falsely reports itself as available.</p>
-            <p>The operational problem is deeper than a loading spinner. If the browser and the backend disagree at the wrong moment, the cashier can lose stable receipt context, repeat a command, or become uncertain whether a customer has already paid. An offline fallback added beside that path creates a second version of the register with different guarantees.</p>
+            <p data-claim="claim-pos-online-first">An online-first register makes the cashier&rsquo;s success depend on a cloud round trip: send the command, wait, update the screen. When connectivity is slow, intermittent, or lying about being available, the cashier loses receipt context, repeats commands, or cannot tell whether the customer has paid. Bolting an offline fallback beside that path just creates a second register with different guarantees.</p>
+            <p data-claim="claim-local-first-origin">This is not hypothetical at Wigclub, the store Athena runs. The design brief said it plainly: internet access in the field is not reliable enough to be a dependency during checkout &mdash; and the register is fragile at exactly the moment a customer is ready to pay. So offline is the initial posture, not an added mode.</p>
           </section>
 
           <section id="local-evidence" class="story-section" aria-labelledby="local-evidence-title">
             <p class="section-kicker">The command boundary</p>
             <h2 id="local-evidence-title">Local evidence exists before cashier success.</h2>
-            <p data-claim="claim-pos-local-before-success">On a provisioned, locally authorized register, Athena appends the cashier event to the durable local record before returning success. Opening a drawer, changing a cart, recording payment, completing a transaction, and closing out all begin at the same local command boundary, regardless of whether the browser appears online.</p>
+            <p data-claim="claim-pos-local-before-success">On a provisioned, locally authorized register, every cashier event is appended to the durable local record before success returns. Opening a drawer, changing a cart, taking payment, completing a sale, closing out &mdash; all start at the same local command boundary, online or not.</p>
 
             <figure class="evidence-figure sequence-figure" aria-describedby="cashier-cloud-description" data-claim="claim-pos-sequence">
               <figcaption>
@@ -93,21 +94,23 @@
           <section id="one-path" class="story-section" aria-labelledby="one-path-title">
             <p class="section-kicker">Connected and disconnected</p>
             <h2 id="one-path-title">One operating path, not an offline fallback.</h2>
-            <p data-claim="claim-pos-one-path">The same append-first command path runs when the network is healthy and when it is unavailable. Connectivity can wake synchronization, refresh seed data, and validate cloud state; it does not decide whether the cashier&rsquo;s action is first recorded locally.</p>
-            <p>This keeps the active cart, payment state, receipt context, and register lifecycle recoverable from one event history.</p>
+            <p data-claim="claim-pos-one-path">The same append-first path runs when the network is healthy and when it is gone. Connectivity wakes synchronization, refreshes seed data, validates cloud state &mdash; it does not decide whether the cashier&rsquo;s work is recorded locally first. Cart, payments, receipt context, and register lifecycle all stay recoverable from one event history.</p>
+            <p data-claim="claim-pos-always-local-reversal">The first release got this wrong &mdash; it preferred cloud commands whenever the browser claimed to be online &mdash; and was inverted the day after it landed. The fix was to stop trusting that claim entirely: local append is primary in every condition, the cloud is background projection.</p>
           </section>
 
           <section id="sync-and-reconciliation" class="story-section" aria-labelledby="sync-and-reconciliation-title">
             <p class="section-kicker">Cloud acceptance</p>
             <h2 id="sync-and-reconciliation-title">Synchronize in order. Reconcile without rewriting history.</h2>
-            <p data-claim="claim-pos-idempotent-sync">When connectivity and cloud validation are available, Athena uploads eligible events in order through an authenticated terminal boundary. The upload is idempotent: retrying the same local evidence does not create a second sale, and accepted mappings connect local identifiers to their cloud records.</p>
-            <p>Acceptance is not the only possible outcome. A stale product reference, changed authority, or conflicting cloud state can require review. In that case Athena preserves the completed local sale, records the reconciliation posture, and directs the conflict into manager-visible work instead of rewriting the cashier&rsquo;s receipt or pretending the mismatch never happened.</p>
+            <p data-claim="claim-pos-idempotent-sync">When the cloud is reachable, events upload in order through an authenticated terminal boundary. The upload is idempotent &mdash; retrying the same evidence cannot mint a second sale &mdash; and accepted mappings tie local identifiers to cloud records.</p>
+            <p>Acceptance is not the only outcome. A stale product reference, changed authority, or conflicting cloud state becomes manager-visible review work; the completed sale is preserved, the receipt never rewritten, the mismatch never hidden.</p>
+            <p data-claim="claim-pos-sync-drain">Strict ordering earned its design by failing. Upload order was originally computed at sync time from events carrying the signed-in cashier&rsquo;s proof &mdash; so when a cashier signed out with unsynced sales, their events dropped out of the upload set, later staff took earlier sequence numbers, and the server correctly held the shifted batch as out-of-order, forever. The fix separated attribution from authority: every event gets a durable upload sequence the moment it is written, and the terminal &mdash; not the cashier &mdash; owns the drain. A cashier who never returns can no longer strand the store&rsquo;s records.</p>
+            <p data-claim="claim-pos-liveness-hardening">The same discipline guards the seams. A data-shaped failure is validated before the first write, so one poison event cannot wedge a register&rsquo;s stream or commit half a sale. Sales stranded by an earlier policy were repaired by replaying their stored events through the production projection path &mdash; never by hand-editing durable records. The test everything here answers to: in an offline cash system, the failure that matters most is money changing hands while the record goes missing or wrong.</p>
           </section>
 
           <section id="authority-boundary" class="story-section" aria-labelledby="authority-boundary-title">
             <p class="section-kicker">Two authorities</p>
             <h2 id="authority-boundary-title">Local continuity and cloud truth do different jobs.</h2>
-            <p data-claim="claim-pos-authority-boundary">The register is authoritative for whether it durably recorded the cashier&rsquo;s action. After upload is accepted, the cloud projection becomes authoritative for Athena&rsquo;s shared cloud record. Keeping those responsibilities explicit lets the store continue locally without treating an unvalidated device as universally trusted.</p>
+            <p data-claim="claim-pos-authority-boundary">The register is authoritative for one thing: whether it durably recorded the cashier&rsquo;s action. Once upload is accepted, the cloud projection is authoritative for the shared business record. That split lets the store keep selling without treating an unvalidated device as universally trusted.</p>
 
             <div class="authority-comparison" aria-label="Local and cloud authority comparison">
               <article>
@@ -134,12 +137,24 @@
           <section id="limits" class="story-section" aria-labelledby="limits-title">
             <p class="section-kicker">Candid limits</p>
             <h2 id="limits-title">Offline-first is a bounded promise.</h2>
-            <p data-claim="claim-pos-limits">POS is Athena&rsquo;s offline-first workflow; the rest of the operating system should not be described as universally available without a connection. Even at the register, offline continuity depends on a provisioned terminal, a locally authorized staff member, drawer authority, and a healthy durable local destination.</p>
+            <p data-claim="claim-pos-limits">POS is Athena&rsquo;s offline-first workflow; the rest of the operating system is not promised offline. Even the register needs a provisioned terminal, a locally authorized staff member, drawer authority, and a healthy durable local destination.</p>
             <ul class="limit-list">
               <li><strong>Last-known stock can drift.</strong> A disconnected register can preserve a sale, but it cannot prove another terminal or channel has not changed inventory.</li>
               <li><strong>Cloud validation can wait without disappearing.</strong> Deferred events remain visible to synchronization and support flows until validation returns.</li>
               <li><strong>Conflict is evidence, not failure theater.</strong> Review work remains explicit rather than being hidden behind an apparently successful sync.</li>
               <li><strong>Accepted cloud projection becomes the cloud source of truth.</strong> Local continuity does not grant a terminal authority over every shared business record.</li>
+            </ul>
+          </section>
+
+          <section id="sources" class="story-section" aria-labelledby="sources-title">
+            <p class="section-kicker">Evidence reviewed</p>
+            <h2 id="sources-title">The record behind this page</h2>
+            <p>This reflection is grounded in Athena&rsquo;s delivery artifacts rather than reconstructed memory: the decisions, reversals, and repairs above are all written down.</p>
+            <ul class="source-list">
+              <li>The original local-first requirements brief and the register, offline-entry, staff-authority, and inventory-snapshot plans that carried it.</li>
+              <li>The always-local-first inversion plan and its solution note, which record the online-preference reversal.</li>
+              <li>The hub-owned sync-drain redesign that fixed the multi-cashier ordering failure.</li>
+              <li>The projection-policy notes and the operations runbook for replaying stranded sales through the production projection path.</li>
             </ul>
           </section>
 
@@ -160,7 +175,7 @@
             <p class="footer-label">Navigate</p>
             <div class="footer-links">
               <a class="text-link" href="../">Athena</a>
-              <a class="text-link" href="../../../homepage-draft-v1.html">Homepage</a>
+              <a class="text-link" href="../../../homepage-draft-v1.html" data-scroll-top>Homepage</a>
             </div>
           </div>
           <div>
