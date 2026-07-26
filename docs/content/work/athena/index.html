@@ -28,6 +28,54 @@
     </header>
 
     <main id="main" class="page-inner">
+      <section class="product-establishing" aria-label="Product overview captures">
+        <figure class="evidence-figure establishing-shot">
+          <figcaption>
+            <span class="figure-label">The product</span>
+            <span class="establishing-caption">Daily Operations &mdash; where the day starts: how the store is doing, what needs attention, and what to do next.</span>
+            <span class="establishing-note">Shown with illustrative data.</span>
+          </figcaption>
+          <img class="workspace-capture workspace-capture--light" src="../../assets/athena-daily-operations-light.png" alt="Athena's Daily Operations workspace mid-week: a pending approval, the open register, today's net sales, cash, card and mobile money tiles, and the week at a glance." loading="eager" width="3840" height="2350">
+          <img class="workspace-capture workspace-capture--dark" src="../../assets/athena-daily-operations-dark.png" alt="Athena's Daily Operations workspace mid-week: a pending approval, the open register, today's net sales, cash, card and mobile money tiles, and the week at a glance." loading="eager" width="3840" height="2350">
+          <button type="button" class="hero-expand" aria-label="Expand the selected capture" aria-haspopup="dialog">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></svg>
+          </button>
+        </figure>
+
+        <ul class="shot-strip" aria-label="Workspace captures">
+          <li>
+            <button type="button" class="shot-thumb is-active" aria-current="true" aria-label="Show the Daily Operations capture" data-hero-caption="Daily Operations &mdash; where the day starts: how the store is doing, what needs attention, and what to do next." data-hero-alt="Athena's Daily Operations workspace mid-week: a pending approval, the open register, today's net sales, cash, card and mobile money tiles, and the week at a glance.">
+              <img class="workspace-capture workspace-capture--light" src="../../assets/athena-daily-operations-light.png" alt="" aria-hidden="true" loading="lazy" width="3840" height="2350">
+              <img class="workspace-capture workspace-capture--dark" src="../../assets/athena-daily-operations-dark.png" alt="" aria-hidden="true" loading="lazy" width="3840" height="2350">
+            </button>
+          </li>
+          <li>
+            <button type="button" class="shot-thumb" aria-current="false" aria-label="Show the Opening Handoff capture" data-hero-caption="Opening Handoff &mdash; the morning check: yesterday closed cleanly, carried-over work is waiting, and the store day starts itself." data-hero-alt="Athena's Opening Handoff workspace: the prior day's close cleared, a carried-forward inventory review, and the store day started automatically.">
+              <img class="workspace-capture workspace-capture--light" src="../../assets/athena-opening-handoff-light.png" alt="" aria-hidden="true" loading="lazy" width="3072" height="2624">
+              <img class="workspace-capture workspace-capture--dark" src="../../assets/athena-opening-handoff-dark.png" alt="" aria-hidden="true" loading="lazy" width="3072" height="2624">
+            </button>
+          </li>
+          <li>
+            <button type="button" class="shot-thumb" aria-current="false" aria-label="Show the point-of-sale capture" data-hero-caption="Point of sale &mdash; the register between customers, ready for whoever walks in next." data-hero-alt="The POS register ready for the next sale: an empty cart, a fresh sale started, and the product lookup entry in focus.">
+              <img class="workspace-capture workspace-capture--light" src="../../assets/athena-pos-register-light.png" alt="" aria-hidden="true" loading="lazy" width="2506" height="1318">
+              <img class="workspace-capture workspace-capture--dark" src="../../assets/athena-pos-register-dark.png" alt="" aria-hidden="true" loading="lazy" width="2506" height="1318">
+            </button>
+          </li>
+          <li>
+            <button type="button" class="shot-thumb" aria-current="false" aria-label="Show the day&rsquo;s-activity capture" data-hero-caption="The day&rsquo;s activity &mdash; the money coming in, what&rsquo;s selling, and the day unfolding as it happens." data-hero-alt="Daily Operations detail: today's money tiles, the week's sales at a glance, today's sales trend, top items and payment mix, and the live activity timeline.">
+              <img class="workspace-capture workspace-capture--light" src="../../assets/athena-daily-ops-metrics-light.png" alt="" aria-hidden="true" loading="lazy" width="3072" height="2720">
+              <img class="workspace-capture workspace-capture--dark" src="../../assets/athena-daily-ops-metrics-dark.png" alt="" aria-hidden="true" loading="lazy" width="3072" height="2720">
+            </button>
+          </li>
+          <li>
+            <button type="button" class="shot-thumb" aria-current="false" aria-label="Show the EOD Review capture" data-hero-caption="EOD Review &mdash; counting the day down: totals checked, a small variance explained, tomorrow already prepped." data-hero-alt="Athena's EOD Review workspace: the day's net sales, cash, card and mobile money, a small approved cash variance, and an inventory review carried into tomorrow's opening.">
+              <img class="workspace-capture workspace-capture--light" src="../../assets/athena-eod-review-light.png" alt="" aria-hidden="true" loading="lazy" width="3072" height="2458">
+              <img class="workspace-capture workspace-capture--dark" src="../../assets/athena-eod-review-dark.png" alt="" aria-hidden="true" loading="lazy" width="3072" height="2458">
+            </button>
+          </li>
+        </ul>
+      </section>
+
       <div class="story-layout">
         <aside class="context-rail" aria-label="Athena context">
           <dl class="context-list">
@@ -41,7 +89,11 @@
             </div>
             <div>
               <dt>Status</dt>
-              <dd class="status-readout"><span aria-hidden="true"></span>Live</dd>
+              <dd>
+                <a class="status-readout" href="https://athena.wigclub.store/landing" target="_blank" rel="noreferrer"
+                  aria-label="Open the Athena product landing page in a new tab"><span aria-hidden="true"></span>View
+                  live product &nearr;</a>
+              </dd>
             </div>
           </dl>
 
@@ -126,8 +178,13 @@
                 <span class="figure-label">The shipped workspace</span>
                 Store Pulse from the register workspace, captured from a development build seeded with illustrative data.
               </figcaption>
-              <img class="workspace-capture workspace-capture--light" src="../../assets/athena-store-pulse-light.webp" alt="Store Pulse workspace showing sales, average sale, transactions, and items sold metric cards, a monthly sales-trend chart, top items, and payment-method shares." loading="lazy" width="2000" height="1385">
-              <img class="workspace-capture workspace-capture--dark" src="../../assets/athena-store-pulse-dark.webp" alt="Store Pulse workspace showing sales, average sale, transactions, and items sold metric cards, a monthly sales-trend chart, top items, and payment-method shares." loading="lazy" width="2000" height="1385">
+              <div class="capture-frame">
+                <img class="workspace-capture workspace-capture--light" src="../../assets/athena-store-pulse-light.webp" alt="Store Pulse workspace showing sales, average sale, transactions, and items sold metric cards, a monthly sales-trend chart, top items, and payment-method shares." loading="lazy" width="2000" height="1385">
+                <img class="workspace-capture workspace-capture--dark" src="../../assets/athena-store-pulse-dark.webp" alt="Store Pulse workspace showing sales, average sale, transactions, and items sold metric cards, a monthly sales-trend chart, top items, and payment-method shares." loading="lazy" width="2000" height="1385">
+                <button type="button" class="hero-expand" aria-label="Expand the Store Pulse capture" aria-haspopup="dialog">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></svg>
+                </button>
+              </div>
               <div id="store-pulse-description" class="structured-equivalent">
                 <p>The captured workspace reports sales, transactions, and items sold for the selected time window, draws a sales-trend history chart, lists the top products moving, and breaks down how customers paid. All figures come from a development build seeded with illustrative data and represent no business performance.</p>
               </div>
