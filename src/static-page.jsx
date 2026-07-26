@@ -212,57 +212,29 @@ export function StaticPage({ documentHtml, pagePath, title }) {
   useEffect(() => {
     const container = containerRef.current
     const footer = container?.querySelector('.site-footer')
-    const main = container?.querySelector('main')
     if (!footer || !revealedFooterPaths.has(pagePath)) return undefined
 
     container.classList.add('has-revealed-footer')
-    let themeToggleFrame = 0
-
-    const updateThemeToggleSurface = () => {
-      themeToggleFrame = 0
-      const toggle = document.querySelector('.theme-toggle')
-      if (!toggle || !main || container.classList.contains('has-inline-footer')) {
-        document.documentElement.classList.remove('theme-toggle-on-footer')
-        return
-      }
-
-      const toggleBounds = toggle.getBoundingClientRect()
-      const toggleCenter = toggleBounds.top + toggleBounds.height / 2
-      document.documentElement.classList.toggle(
-        'theme-toggle-on-footer',
-        main.getBoundingClientRect().bottom <= toggleCenter,
-      )
-    }
-
-    const scheduleThemeToggleSurface = () => {
-      if (!themeToggleFrame) {
-        themeToggleFrame = window.requestAnimationFrame(updateThemeToggleSurface)
-      }
-    }
 
     const measure = () => {
       const height = footer.offsetHeight
       container.style.setProperty('--revealed-footer-height', `${height}px`)
-      // A footer taller than the viewport could never be fully uncovered, so
-      // it falls back to scrolling in flow with the rest of the page. The
-      // footer keeps the same height either way, so this can't oscillate.
-      container.classList.toggle('has-inline-footer', height > window.innerHeight)
-      scheduleThemeToggleSurface()
+      // Larger screens fall back to normal flow when the footer cannot fit.
+      // Mobile keeps the reveal and scrolls an unusually tall footer inside
+      // its viewport-sized layer.
+      const isMobile = window.matchMedia('(max-width: 620px)').matches
+      container.classList.toggle('has-inline-footer', !isMobile && height > window.innerHeight)
     }
 
     measure()
     window.addEventListener('resize', measure)
-    window.addEventListener('scroll', scheduleThemeToggleSurface, { passive: true })
 
     const observer = 'ResizeObserver' in window ? new ResizeObserver(measure) : null
     observer?.observe(footer)
 
     return () => {
-      window.cancelAnimationFrame(themeToggleFrame)
       observer?.disconnect()
       window.removeEventListener('resize', measure)
-      window.removeEventListener('scroll', scheduleThemeToggleSurface)
-      document.documentElement.classList.remove('theme-toggle-on-footer')
       container.classList.remove('has-revealed-footer', 'has-inline-footer')
     }
   }, [documentHtml, pagePath])
