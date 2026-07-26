@@ -154,6 +154,10 @@ body::after {
   z-index: 10;
 }
 
+.routed-page .site-nav {
+  background: var(--paper);
+}
+
 .routed-page.has-revealed-footer main {
   background: var(--paper);
 }
@@ -201,21 +205,16 @@ body::after {
   cursor: pointer;
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
-  opacity: 0.52;
-  animation: theme-toggle-enter 800ms var(--ease-portfolio) 80ms backwards;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(18px);
   transition: transform 160ms var(--ease-portfolio), color 160ms ease, background-color 160ms ease, opacity 160ms ease;
 }
 
-@keyframes theme-toggle-enter {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-
-  to {
-    opacity: 0.52;
-    transform: translateY(0);
-  }
+.theme-toggle.is-visible {
+  opacity: 0.52;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .theme-toggle:active {
@@ -228,7 +227,7 @@ body::after {
   outline-offset: 4px;
 }
 
-:root.theme-toggle-on-footer .theme-toggle {
+.theme-toggle.is-on-footer {
   background: color-mix(in srgb, var(--footer-surface) 86%, transparent);
   color: var(--color-paper);
 }
@@ -266,6 +265,10 @@ body::after {
     opacity: 1;
     transform: translateY(-1px);
   }
+
+  .theme-toggle.is-on-footer:hover {
+    color: var(--color-paper);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -277,6 +280,27 @@ body::after {
 }
 
 @media (max-width: 620px) {
+  .routed-page .site-nav {
+    position: static;
+    overflow: hidden;
+  }
+
+  .routed-page .brand-group {
+    min-width: 0;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .routed-page .brand,
+  .routed-page .brand-crumb {
+    font-size: 0.68rem;
+    letter-spacing: 0.09em;
+  }
+
+  .routed-page .brand-crumb:not(:nth-last-child(-n + 2)) {
+    display: none;
+  }
+
   .theme-toggle {
     top: 8px;
     right: 10px;
@@ -288,7 +312,24 @@ body::after {
     box-shadow: none;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+
+  .theme-toggle.is-visible {
     opacity: 0.64;
+  }
+
+  .routed-page.has-revealed-footer:not(.has-inline-footer) .site-footer {
+    max-height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .routed-page.has-revealed-footer .site-footer .footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 20px;
+  }
+
+  .routed-page.has-revealed-footer .site-footer .footer-grid > :first-child {
+    grid-column: 1 / -1;
   }
 
   .theme-toggle-icon {

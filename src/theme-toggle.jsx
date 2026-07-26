@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const storageKey = 'kwamina-fyi-theme'
 
@@ -10,6 +10,9 @@ function getTheme() {
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState(getTheme)
+  const [isVisible, setIsVisible] = useState(false)
+  const [isOnFooter, setIsOnFooter] = useState(false)
+  const toggleRef = useRef(null)
   const isDark = theme === 'dark'
 
   useEffect(() => {
@@ -17,9 +20,66 @@ export function ThemeToggle() {
     window.localStorage.setItem(storageKey, theme)
   }, [theme])
 
+  useEffect(() => {
+    let frame = 0
+
+    const updatePositionState = () => {
+      frame = 0
+      const nav = document.querySelector('.site-nav')
+      const footer = document.querySelector('.site-footer')
+      const toggle = toggleRef.current
+
+      const navIsSticky = nav && window.getComputedStyle(nav).position === 'sticky'
+      setIsVisible(
+        nav
+          ? navIsSticky
+            ? window.scrollY >= nav.offsetHeight
+            : nav.getBoundingClientRect().bottom <= 0
+          : window.scrollY > 0,
+      )
+
+      if (!footer || !toggle) {
+        setIsOnFooter(false)
+        return
+      }
+
+      const routedPage = footer.closest('.routed-page')
+      const main = routedPage?.querySelector('main')
+      const footerBounds = footer.getBoundingClientRect()
+      const toggleBounds = toggle.getBoundingClientRect()
+      const toggleCenter = toggleBounds.top + toggleBounds.height / 2
+      const hasPinnedFooter = routedPage?.classList.contains('has-revealed-footer')
+        && !routedPage.classList.contains('has-inline-footer')
+
+      setIsOnFooter(
+        hasPinnedFooter && main
+          ? main.getBoundingClientRect().bottom <= toggleCenter
+          : toggleCenter >= footerBounds.top && toggleCenter <= footerBounds.bottom,
+      )
+    }
+
+    const scheduleUpdate = () => {
+      if (!frame) frame = window.requestAnimationFrame(updatePositionState)
+    }
+
+    const pageObserver = new MutationObserver(scheduleUpdate)
+    pageObserver.observe(document.getElementById('root'), { childList: true, subtree: true })
+    window.addEventListener('scroll', scheduleUpdate, { passive: true })
+    window.addEventListener('resize', scheduleUpdate)
+    scheduleUpdate()
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      pageObserver.disconnect()
+      window.removeEventListener('scroll', scheduleUpdate)
+      window.removeEventListener('resize', scheduleUpdate)
+    }
+  }, [])
+
   return (
     <button
-      className="theme-toggle"
+      ref={toggleRef}
+      className={`theme-toggle${isVisible ? ' is-visible' : ''}${isOnFooter ? ' is-on-footer' : ''}`}
       type="button"
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       aria-pressed={isDark}
