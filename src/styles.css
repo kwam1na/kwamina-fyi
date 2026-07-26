@@ -27,6 +27,141 @@
   }
 }
 
+/* A faint paper grain over every page. The tile is black noise, so it reads
+ * on the light theme's paper and is inverted to light grain on the dark
+ * theme's near-black. Fixed and non-interactive, so it sits over copy,
+ * panels, and figures alike without moving or catching the pointer.
+ * The footer paints its own dot grid (below): it inverts the page's palette,
+ * so this grain's polarity would vanish against it. */
+:root {
+  --grain-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+body::after {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  background-image: var(--grain-tile);
+  content: '';
+  opacity: 0.09;
+  pointer-events: none;
+}
+
+:root[data-theme='dark'] body::after {
+  opacity: 0.075;
+  filter: invert(1);
+}
+
+/* Route breadcrumbs are added by StaticPage so every document shares the
+ * same stable brand and path-aware entrance choreography. */
+.brand-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.brand-crumb {
+  display: inline-flex;
+  align-items: center;
+  color: color-mix(in srgb, var(--muted) 55%, transparent);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  animation: route-crumb-wipe 640ms cubic-bezier(0.16, 1, 0.3, 1)
+    calc(120ms + var(--crumb-index) * 90ms) both;
+}
+
+@keyframes route-crumb-wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+
+  to {
+    clip-path: inset(0 -2px 0 0);
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Pinned footer reveal: the footer sits fixed beneath the page, and the page
+ * rides above it as one opaque layer that reserves a footer-height margin
+ * below it. The footer stays covered until the reader scrolls to the end and
+ * the page slides up off it — a quiet reveal with no scroll handlers.
+ * --revealed-footer-height is measured and set by StaticPage. */
+/* The revealed footer is the page inverted — near-black behind light type in
+ * the light theme, paper-light behind dark type in the dark one — so it reads
+ * as a distinct layer underneath. The palette tokens are swapped locally, so
+ * the footer's own type, links, and rules follow along. */
+:root {
+  --footer-surface: #0c0d10;
+}
+
+:root[data-theme='dark'] {
+  --footer-surface: var(--color-ink);
+}
+
+.routed-page.has-revealed-footer .site-footer {
+  --paper: var(--footer-surface);
+  --ink: var(--color-paper);
+  --copy: color-mix(in srgb, var(--color-paper) 88%, var(--footer-surface));
+  --muted: color-mix(in srgb, var(--color-paper) 62%, var(--footer-surface));
+  --line: color-mix(in srgb, var(--color-paper) 18%, var(--footer-surface));
+  --line-strong: color-mix(in srgb, var(--color-paper) 34%, var(--footer-surface));
+  position: relative;
+  padding-top: 48px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* A quiet dot grid gives the footer a little depth without competing with
+ * its oversized nameplate. The dots inherit the footer's inverted palette,
+ * so the same treatment works on both light- and dark-theme surfaces. */
+.routed-page.has-revealed-footer .site-footer::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--ink) 8%, transparent) 0 0.75px,
+    transparent 0.9px
+  );
+  background-size: 20px 20px;
+  content: '';
+  pointer-events: none;
+}
+
+/* Footer content rides above the texture. */
+.routed-page.has-revealed-footer .site-footer > * {
+  position: relative;
+  z-index: 1;
+}
+
+.routed-page.has-revealed-footer:not(.has-inline-footer) .site-footer {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 0;
+}
+
+.routed-page.has-revealed-footer .site-nav,
+.routed-page.has-revealed-footer main {
+  position: relative;
+  z-index: 10;
+}
+
+.routed-page.has-revealed-footer main {
+  background: var(--paper);
+}
+
+.routed-page.has-revealed-footer:not(.has-inline-footer) main {
+  margin-bottom: var(--revealed-footer-height, 0px);
+}
+
 :root[data-theme='dark'] {
   color-scheme: dark;
   --color-paper: rgb(22 22 22);
@@ -66,8 +201,21 @@
   cursor: pointer;
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
-  opacity: 0.78;
+  opacity: 0.52;
+  animation: theme-toggle-enter 800ms var(--ease-portfolio) 80ms backwards;
   transition: transform 160ms var(--ease-portfolio), color 160ms ease, background-color 160ms ease, opacity 160ms ease;
+}
+
+@keyframes theme-toggle-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 0.52;
+    transform: translateY(0);
+  }
 }
 
 .theme-toggle:active {
@@ -78,6 +226,11 @@
   opacity: 1;
   outline: 2px solid var(--focus);
   outline-offset: 4px;
+}
+
+:root.theme-toggle-on-footer .theme-toggle {
+  background: color-mix(in srgb, var(--footer-surface) 86%, transparent);
+  color: var(--color-paper);
 }
 
 .theme-toggle-icon {
@@ -118,6 +271,7 @@
 @media (prefers-reduced-motion: reduce) {
   .theme-toggle,
   .theme-toggle-icon {
+    animation-duration: 1ms;
     transition-duration: 1ms;
   }
 }
