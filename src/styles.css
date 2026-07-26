@@ -73,6 +73,20 @@ body::after {
     calc(120ms + var(--crumb-index) * 90ms) both;
 }
 
+.inline-link-icon {
+  width: 0.78em;
+  height: 0.78em;
+  margin-left: 2px;
+  vertical-align: -0.08em;
+  transition: transform 160ms var(--ease-portfolio);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  a:hover .inline-link-icon {
+    transform: translate(2px, -2px);
+  }
+}
+
 @keyframes route-crumb-wipe {
   from {
     clip-path: inset(0 100% 0 0);
