@@ -11,6 +11,7 @@ import {
 import { StaticPage } from './static-page.jsx'
 import { ThemeToggle } from './theme-toggle.jsx'
 import homepage from '../docs/content/homepage-draft-v1.html?raw'
+import about from '../docs/content/about.html?raw'
 import athena from '../docs/content/work/athena/index.html?raw'
 import localFirstPos from '../docs/content/work/athena/local-first-pos/index.html?raw'
 import agentReadyRepository from '../docs/content/work/athena/agent-ready-repository/index.html?raw'
@@ -31,6 +32,12 @@ const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: () => <StaticPage documentHtml={homepage} pagePath="/" title="Kwamina Essuah Mensah" />,
+})
+
+const aboutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/about',
+  component: () => <StaticPage documentHtml={about} pagePath="/about" title="About — Kwamina Essuah Mensah" />,
 })
 
 const athenaRoute = createRoute({
@@ -69,6 +76,7 @@ const legacyAgentReadyRepositoryRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   homeRoute,
+  aboutRoute,
   athenaRoute,
   localFirstPosRoute,
   agentReadyRepositoryRoute,
