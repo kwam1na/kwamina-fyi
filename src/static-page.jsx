@@ -38,6 +38,16 @@ let hasPlayedHomeNavEntry = false
 // the very bottom and the page slides up off it.
 const revealedFooterPaths = new Set(['/', '/about'])
 
+function measureRevealedFooter(container, footer) {
+  const height = footer.offsetHeight
+  container.style.setProperty('--revealed-footer-height', `${height}px`)
+  // Larger screens fall back to normal flow when the footer cannot fit.
+  // Mobile keeps the reveal and scrolls an unusually tall footer inside
+  // its viewport-sized layer.
+  const isMobile = window.matchMedia('(max-width: 620px)').matches
+  container.classList.toggle('has-inline-footer', !isMobile && height > window.innerHeight)
+}
+
 // The article heroes' return link adapts to how the reader arrived: entering
 // from the homepage points it back home, from the Athena story back there,
 // and so on. Sources are kept as a stack so chains unwind in order — home →
@@ -188,6 +198,29 @@ export function StaticPage({ documentHtml, pagePath, title }) {
   const page = useMemo(() => extractPage(documentHtml, pagePath), [documentHtml, pagePath])
   const shouldPlayHomeNavEntry = pagePath === '/' && !hasPlayedHomeNavEntry
 
+  // The page reserves exactly the footer's height below it, so the pinned
+  // footer is uncovered at the end of the scroll. The footer's height is
+  // content- and viewport-dependent, so it is measured rather than assumed.
+  //
+  // This has to land before the first paint, and before the scroll
+  // restoration below. The footer's pinned position and its inverted palette
+  // both hang off .has-revealed-footer, so applying it after paint showed one
+  // frame of a light, in-flow footer before it snapped dark and pinned. The
+  // reserved margin is also part of the document height, so restoring scroll
+  // without it clamps the position short on longer pages.
+  useLayoutEffect(() => {
+    const container = containerRef.current
+    const footer = container?.querySelector('.site-footer')
+    if (!footer || !revealedFooterPaths.has(pagePath)) return undefined
+
+    container.classList.add('has-revealed-footer')
+    measureRevealedFooter(container, footer)
+
+    return () => {
+      container.classList.remove('has-revealed-footer', 'has-inline-footer')
+    }
+  }, [documentHtml, pagePath])
+
   useLayoutEffect(() => {
     const savedPosition = savedScrollPositions.get(pagePath)
     savedScrollPositions.delete(pagePath)
@@ -199,27 +232,14 @@ export function StaticPage({ documentHtml, pagePath, title }) {
     document.title = title
   }, [title])
 
-  // The page reserves exactly the footer's height below it, so the pinned
-  // footer is uncovered at the end of the scroll. The footer's height is
-  // content- and viewport-dependent, so it is measured rather than assumed.
+  // Keep the reserved height honest as the viewport or the footer's own
+  // content changes after mount.
   useEffect(() => {
     const container = containerRef.current
     const footer = container?.querySelector('.site-footer')
     if (!footer || !revealedFooterPaths.has(pagePath)) return undefined
 
-    container.classList.add('has-revealed-footer')
-
-    const measure = () => {
-      const height = footer.offsetHeight
-      container.style.setProperty('--revealed-footer-height', `${height}px`)
-      // Larger screens fall back to normal flow when the footer cannot fit.
-      // Mobile keeps the reveal and scrolls an unusually tall footer inside
-      // its viewport-sized layer.
-      const isMobile = window.matchMedia('(max-width: 620px)').matches
-      container.classList.toggle('has-inline-footer', !isMobile && height > window.innerHeight)
-    }
-
-    measure()
+    const measure = () => measureRevealedFooter(container, footer)
     window.addEventListener('resize', measure)
 
     const observer = 'ResizeObserver' in window ? new ResizeObserver(measure) : null
@@ -228,7 +248,6 @@ export function StaticPage({ documentHtml, pagePath, title }) {
     return () => {
       observer?.disconnect()
       window.removeEventListener('resize', measure)
-      container.classList.remove('has-revealed-footer', 'has-inline-footer')
     }
   }, [documentHtml, pagePath])
 
