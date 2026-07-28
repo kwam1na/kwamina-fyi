@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { NAVIGABLE_PATHS } from './routes.js'
-import { startFlashCapture } from './flash-debug.js'
 
 function normalisePath(pathname) {
   if (pathname === '/homepage-draft-v1.html') return '/'
@@ -42,18 +41,11 @@ const revealedFooterPaths = new Set(['/', '/about'])
 function measureRevealedFooter(container, footer) {
   const height = footer.offsetHeight
   container.style.setProperty('--revealed-footer-height', `${height}px`)
-  // Normal flow instead of the pinned reveal in two cases: when the footer is
-  // too tall to fit behind the page, and on mobile always.
-  //
-  // Mobile used to keep the reveal. Pinning it means `position: fixed`, which
-  // WebKit composites on its own layer, and after a route swap that layer is
-  // ready before the incoming page has rasterised — the footer's inverted
-  // palette then flashes across the viewport. Holding the footer back for the
-  // first frames reduced it but left it intermittent, so phones now skip the
-  // pinned treatment altogether. The footer keeps its inverted look; it just
-  // sits at the end of the page.
+  // Larger screens fall back to normal flow when the footer cannot fit.
+  // Mobile keeps the reveal and scrolls an unusually tall footer inside
+  // its viewport-sized layer.
   const isMobile = window.matchMedia('(max-width: 620px)').matches
-  container.classList.toggle('has-inline-footer', isMobile || height > window.innerHeight)
+  container.classList.toggle('has-inline-footer', !isMobile && height > window.innerHeight)
 }
 
 // The article heroes' return link adapts to how the reader arrived: entering
@@ -196,8 +188,20 @@ function extractPage(documentHtml, pagePath) {
 
   return {
     styles,
-    body: addRouteBreadcrumbs(body.replace(/<script\b[\s\S]*?<\/script>/gi, ''), pagePath),
+    body: wrapFooterReveal(
+      addRouteBreadcrumbs(body.replace(/<script\b[\s\S]*?<\/script>/gi, ''), pagePath),
+    ),
   }
+}
+
+// The reveal frame the footer CSS clips into (see .footer-reveal in
+// styles.css). Wrapped on every page; the frame is inert until the page is
+// in revealedFooterPaths and the pinned treatment applies.
+function wrapFooterReveal(body) {
+  return body.replace(
+    /(<footer\b[\s\S]*?<\/footer>)/i,
+    '<div class="footer-reveal">$1</div>',
+  )
 }
 
 export function StaticPage({ documentHtml, pagePath, title }) {
@@ -224,27 +228,8 @@ export function StaticPage({ documentHtml, pagePath, title }) {
     container.classList.add('has-revealed-footer')
     measureRevealedFooter(container, footer)
 
-    // WebKit composites the pinned footer on its own layer. After a route swap
-    // replaces the document, that layer is ready before the incoming page has
-    // rasterised, so the footer's inverted palette paints across the viewport
-    // for a frame or two — a white flash on the dark theme, black on the light
-    // one. It is never legitimately visible this early, because the reveal only
-    // happens at the very end of the scroll, so it stays hidden until the new
-    // page has painted. The timeout is a backstop: a backgrounded tab never
-    // runs the frame callbacks, and the footer must not stay hidden.
-    container.classList.add('is-settling')
-    const reveal = () => container.classList.remove('is-settling')
-    let inner = 0
-    const outer = requestAnimationFrame(() => {
-      inner = requestAnimationFrame(reveal)
-    })
-    const fallback = window.setTimeout(reveal, 250)
-
     return () => {
-      window.cancelAnimationFrame(outer)
-      window.cancelAnimationFrame(inner)
-      window.clearTimeout(fallback)
-      container.classList.remove('has-revealed-footer', 'has-inline-footer', 'is-settling')
+      container.classList.remove('has-revealed-footer', 'has-inline-footer')
     }
   }, [documentHtml, pagePath])
 
@@ -463,8 +448,6 @@ export function StaticPage({ documentHtml, pagePath, title }) {
       // Links marked data-scroll-top always land at the top of their
       // destination, discarding any saved position.
       if (link.hasAttribute('data-scroll-top')) savedScrollPositions.delete(path)
-      // TEMPORARY: see src/flash-debug.js. No-op unless localStorage.flashdebug.
-      startFlashCapture(`${normalisePath(pagePath)} -> ${path}`)
       navigate({
         to: path,
         hash: destinationHash.slice(1) || undefined,

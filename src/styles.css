@@ -154,10 +154,20 @@ body::after {
   z-index: 1;
 }
 
-/* Held back for the first painted frames of a navigation; see the
- * `is-settling` note in static-page.jsx. */
-.routed-page.is-settling .site-footer {
-  visibility: hidden;
+/* The reveal frame is the footer's in-flow slot at the end of the page,
+ * sized by the measured footer height. clip-path traps the fixed footer's
+ * painting inside that slot, so the stationary footer is uncovered only as
+ * the frame scrolls into view — the same curtain-lift as before, but the
+ * footer can no longer paint outside its slot. The old design relied on the
+ * page covering the footer instead (opaque main, reserved margin, z-index),
+ * and WebKit could composite the footer's fixed layer before the incoming
+ * page rasterised after a route swap, flashing the inverted palette across
+ * the viewport. With the clip, mid-page the slot is off-screen and the
+ * compositor has nothing to show, whatever the rasterisation order. */
+.routed-page.has-revealed-footer:not(.has-inline-footer) .footer-reveal {
+  position: relative;
+  height: var(--revealed-footer-height, 0px);
+  clip-path: inset(0);
 }
 
 .routed-page.has-revealed-footer:not(.has-inline-footer) .site-footer {
@@ -165,7 +175,6 @@ body::after {
   right: 0;
   bottom: 0;
   left: 0;
-  z-index: 0;
 }
 
 .routed-page.has-revealed-footer .site-nav,
@@ -180,10 +189,6 @@ body::after {
 
 .routed-page.has-revealed-footer main {
   background: var(--paper);
-}
-
-.routed-page.has-revealed-footer:not(.has-inline-footer) main {
-  margin-bottom: var(--revealed-footer-height, 0px);
 }
 
 :root[data-theme='dark'] {
