@@ -215,7 +215,8 @@ h1 {
   opacity: 1;
 }
 
-.context-list .status-readout {
+.context-list .status-readout,
+.context-list .context-link {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -241,7 +242,8 @@ h1 {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .context-list .status-readout:hover {
+  .context-list .status-readout:hover,
+  .context-list .context-link:hover {
     color: var(--focus);
     text-decoration-color: currentColor;
   }
