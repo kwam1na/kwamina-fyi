@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-router'
 import { StaticPage } from './static-page.jsx'
 import { ThemeToggle } from './theme-toggle.jsx'
+import { NotFoundPage } from './not-found-page.jsx'
 import { LEGACY_REDIRECTS, ROUTE_PATHS } from './routes.js'
 import homepage from '../docs/content/homepage-draft-v1.html?raw'
 import about from '../docs/content/about.html?raw'
@@ -27,7 +28,10 @@ function RootLayout() {
   )
 }
 
-const rootRoute = createRootRoute({ component: RootLayout })
+const rootRoute = createRootRoute({
+  component: RootLayout,
+  notFoundComponent: NotFoundPage,
+})
 
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,

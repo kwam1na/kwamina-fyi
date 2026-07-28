@@ -363,3 +363,315 @@ body::after {
     height: 16px;
   }
 }
+
+/* Not found
+ * The missing route borrows the site's editorial grammar without pretending
+ * to be another article: an oversized issue number carries the volume while
+ * the useful copy and exits stay deliberately quiet. */
+.not-found-page {
+  --paper: var(--color-paper);
+  --ink: var(--color-ink);
+  --copy: var(--color-copy);
+  --muted: var(--color-muted);
+  --line: var(--color-line);
+  --line-strong: var(--color-line-strong);
+  --focus: var(--color-focus);
+  --sans: var(--font-sans);
+  --serif: var(--font-serif);
+  min-height: 100svh;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.not-found-page *,
+.not-found-page *::before,
+.not-found-page *::after {
+  box-sizing: border-box;
+}
+
+.not-found-page a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.not-found-page a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+}
+
+.not-found-page .skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 16px;
+  left: 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  transform: translateY(-160%);
+  transition: transform 160ms var(--ease-portfolio);
+}
+
+.not-found-page .skip-link:focus {
+  transform: translateY(0);
+}
+
+.not-found-page .site-nav {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 32px;
+  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.not-found-page .brand,
+.not-found-page .nav-link {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.not-found-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.5fr);
+  grid-template-rows: auto 1fr auto;
+  gap: 0 48px;
+  width: min(100% - 64px, 1380px);
+  min-height: calc(100svh - 60px);
+  margin: 0 auto;
+  padding: 40px 0 28px;
+  overflow: hidden;
+}
+
+.not-found-folio {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  animation: not-found-rule-enter 480ms var(--ease-portfolio) 60ms both;
+}
+
+.not-found-display {
+  grid-row: 2 / 4;
+  display: flex;
+  align-self: center;
+  align-items: baseline;
+  margin-left: -0.045em;
+  font-family: var(--serif);
+  font-size: clamp(12rem, 35vw, 34rem);
+  font-variant-numeric: lining-nums tabular-nums;
+  font-weight: 400;
+  letter-spacing: -0.12em;
+  line-height: 0.62;
+  white-space: nowrap;
+  animation: not-found-display-enter 540ms var(--ease-portfolio) 40ms both;
+}
+
+.not-found-zero {
+  color: transparent;
+  -webkit-text-stroke: 1px var(--line-strong);
+}
+
+.not-found-copy {
+  align-self: end;
+  max-width: 400px;
+  padding-bottom: 40px;
+  animation: not-found-copy-enter 420ms var(--ease-portfolio) 140ms both;
+}
+
+.not-found-kicker {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.not-found-copy h1 {
+  max-width: 9em;
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(2.5rem, 4.8vw, 4.75rem);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 0.94;
+}
+
+.not-found-note {
+  max-width: 34ch;
+  margin: 24px 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.not-found-actions {
+  grid-column: 2;
+  align-self: start;
+  display: grid;
+  border-top: 1px solid var(--line);
+  animation: not-found-copy-enter 420ms var(--ease-portfolio) 200ms both;
+}
+
+.not-found-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 52px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  transition: color 160ms ease, transform 160ms var(--ease-portfolio);
+}
+
+.not-found-action--primary {
+  color: var(--ink);
+}
+
+.not-found-action:active {
+  transform: scale(0.97);
+}
+
+.not-found-link-icon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  transition: transform 160ms var(--ease-portfolio);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .not-found-page .brand:hover,
+  .not-found-page .nav-link:hover,
+  .not-found-action:hover {
+    color: var(--ink);
+  }
+
+  .not-found-action:hover .not-found-link-icon {
+    transform: translate(2px, -2px);
+  }
+}
+
+@keyframes not-found-rule-enter {
+  from {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0;
+  }
+
+  to {
+    clip-path: inset(0);
+    opacity: 1;
+  }
+}
+
+@keyframes not-found-display-enter {
+  from {
+    opacity: 0;
+    transform: translateY(3%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes not-found-copy-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 860px) {
+  .not-found-main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+    width: min(100% - 48px, 680px);
+    min-height: calc(100svh - 60px);
+    padding-top: 28px;
+  }
+
+  .not-found-display {
+    grid-row: auto;
+    align-self: auto;
+    margin-top: clamp(72px, 14vh, 132px);
+    font-size: clamp(11rem, 51vw, 22rem);
+  }
+
+  .not-found-copy {
+    padding: 64px 0 48px;
+  }
+
+  .not-found-actions {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 620px) {
+  .not-found-page .site-nav {
+    padding: 18px 24px;
+  }
+
+  .not-found-main {
+    width: calc(100% - 40px);
+    padding-top: 20px;
+  }
+
+  .not-found-folio span:last-child {
+    display: none;
+  }
+
+  .not-found-display {
+    margin-top: clamp(72px, 12vh, 108px);
+    font-size: clamp(9.25rem, 51vw, 15rem);
+  }
+
+  .not-found-copy {
+    padding-top: 56px;
+  }
+
+  .not-found-copy h1 {
+    font-size: clamp(2.8rem, 14vw, 4rem);
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .not-found-folio,
+  .not-found-display,
+  .not-found-copy,
+  .not-found-actions {
+    animation: none;
+  }
+
+  .not-found-page .skip-link,
+  .not-found-action,
+  .not-found-link-icon {
+    transition-duration: 1ms;
+  }
+}
