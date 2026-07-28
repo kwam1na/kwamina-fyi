@@ -48,13 +48,16 @@ export function ThemeToggle() {
       const footerBounds = footer.getBoundingClientRect()
       const toggleBounds = toggle.getBoundingClientRect()
       const toggleCenter = toggleBounds.top + toggleBounds.height / 2
-      const hasPinnedFooter = routedPage?.classList.contains('has-revealed-footer')
+      const hasInvertedFooter = routedPage?.classList.contains('has-revealed-footer')
+      const hasPinnedFooter = hasInvertedFooter
         && !routedPage.classList.contains('has-inline-footer')
 
       setIsOnFooter(
-        hasPinnedFooter && main
-          ? main.getBoundingClientRect().bottom <= toggleCenter
-          : toggleCenter >= footerBounds.top && toggleCenter <= footerBounds.bottom,
+        hasInvertedFooter && (
+          hasPinnedFooter && main
+            ? main.getBoundingClientRect().bottom <= toggleCenter
+            : toggleCenter >= footerBounds.top && toggleCenter <= footerBounds.bottom
+        ),
       )
     }
 

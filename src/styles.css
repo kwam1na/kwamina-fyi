@@ -191,6 +191,24 @@ body::after {
   background: var(--paper);
 }
 
+/* Shared route entry: keep the main surface itself opaque (important for the
+ * pinned footer reveal) and fade its direct content instead. Authored pages
+ * with a hero before <main> inherit the same treatment at that top level. */
+.routed-page > div > header,
+.routed-page main > * {
+  animation: page-content-enter 420ms ease 60ms both;
+}
+
+@keyframes page-content-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 :root[data-theme='dark'] {
   color-scheme: dark;
   --color-paper: rgb(22 22 22);
@@ -453,7 +471,7 @@ body::after {
   overflow: hidden;
 }
 
-.not-found-folio {
+.not-found-page .not-found-folio {
   grid-column: 1 / -1;
   display: flex;
   justify-content: space-between;
@@ -465,7 +483,7 @@ body::after {
   letter-spacing: 0.14em;
   line-height: 1.2;
   text-transform: uppercase;
-  animation: not-found-rule-enter 480ms var(--ease-portfolio) 60ms both;
+  animation: not-found-rule-enter 480ms var(--ease-portfolio) 40ms both;
 }
 
 .not-found-display {
@@ -481,7 +499,6 @@ body::after {
   letter-spacing: -0.12em;
   line-height: 0.62;
   white-space: nowrap;
-  animation: not-found-display-enter 540ms var(--ease-portfolio) 40ms both;
 }
 
 .not-found-zero {
@@ -493,7 +510,6 @@ body::after {
   align-self: end;
   max-width: 400px;
   padding-bottom: 40px;
-  animation: not-found-copy-enter 420ms var(--ease-portfolio) 140ms both;
 }
 
 .not-found-kicker {
@@ -528,7 +544,6 @@ body::after {
   align-self: start;
   display: grid;
   border-top: 1px solid var(--line);
-  animation: not-found-copy-enter 420ms var(--ease-portfolio) 200ms both;
 }
 
 .not-found-action {
@@ -580,30 +595,6 @@ body::after {
   to {
     clip-path: inset(0);
     opacity: 1;
-  }
-}
-
-@keyframes not-found-display-enter {
-  from {
-    opacity: 0;
-    transform: translateY(3%);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes not-found-copy-enter {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -662,11 +653,9 @@ body::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .not-found-folio,
-  .not-found-display,
-  .not-found-copy,
-  .not-found-actions {
-    animation: none;
+  .routed-page > div > header,
+  .routed-page main > * {
+    animation: none !important;
   }
 
   .not-found-page .skip-link,
