@@ -154,6 +154,12 @@ body::after {
   z-index: 1;
 }
 
+/* Held back for the first painted frames of a navigation; see the
+ * `is-settling` note in static-page.jsx. */
+.routed-page.is-settling .site-footer {
+  visibility: hidden;
+}
+
 .routed-page.has-revealed-footer:not(.has-inline-footer) .site-footer {
   position: fixed;
   right: 0;

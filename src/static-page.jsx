@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { NAVIGABLE_PATHS } from './routes.js'
+import { startFlashCapture } from './flash-debug.js'
 
 function normalisePath(pathname) {
   if (pathname === '/homepage-draft-v1.html') return '/'
@@ -216,8 +217,27 @@ export function StaticPage({ documentHtml, pagePath, title }) {
     container.classList.add('has-revealed-footer')
     measureRevealedFooter(container, footer)
 
+    // WebKit composites the pinned footer on its own layer. After a route swap
+    // replaces the document, that layer is ready before the incoming page has
+    // rasterised, so the footer's inverted palette paints across the viewport
+    // for a frame or two — a white flash on the dark theme, black on the light
+    // one. It is never legitimately visible this early, because the reveal only
+    // happens at the very end of the scroll, so it stays hidden until the new
+    // page has painted. The timeout is a backstop: a backgrounded tab never
+    // runs the frame callbacks, and the footer must not stay hidden.
+    container.classList.add('is-settling')
+    const reveal = () => container.classList.remove('is-settling')
+    let inner = 0
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(reveal)
+    })
+    const fallback = window.setTimeout(reveal, 250)
+
     return () => {
-      container.classList.remove('has-revealed-footer', 'has-inline-footer')
+      window.cancelAnimationFrame(outer)
+      window.cancelAnimationFrame(inner)
+      window.clearTimeout(fallback)
+      container.classList.remove('has-revealed-footer', 'has-inline-footer', 'is-settling')
     }
   }, [documentHtml, pagePath])
 
@@ -227,6 +247,7 @@ export function StaticPage({ documentHtml, pagePath, title }) {
     window.scrollTo(0, savedPosition ?? 0)
     if (shouldPlayHomeNavEntry) hasPlayedHomeNavEntry = true
   }, [pagePath, shouldPlayHomeNavEntry])
+
 
   useEffect(() => {
     document.title = title
@@ -435,6 +456,8 @@ export function StaticPage({ documentHtml, pagePath, title }) {
       // Links marked data-scroll-top always land at the top of their
       // destination, discarding any saved position.
       if (link.hasAttribute('data-scroll-top')) savedScrollPositions.delete(path)
+      // TEMPORARY: see src/flash-debug.js. No-op unless localStorage.flashdebug.
+      startFlashCapture(`${normalisePath(pagePath)} -> ${path}`)
       navigate({
         to: path,
         hash: destinationHash.slice(1) || undefined,
