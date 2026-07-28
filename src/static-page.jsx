@@ -42,11 +42,18 @@ const revealedFooterPaths = new Set(['/', '/about'])
 function measureRevealedFooter(container, footer) {
   const height = footer.offsetHeight
   container.style.setProperty('--revealed-footer-height', `${height}px`)
-  // Larger screens fall back to normal flow when the footer cannot fit.
-  // Mobile keeps the reveal and scrolls an unusually tall footer inside
-  // its viewport-sized layer.
+  // Normal flow instead of the pinned reveal in two cases: when the footer is
+  // too tall to fit behind the page, and on mobile always.
+  //
+  // Mobile used to keep the reveal. Pinning it means `position: fixed`, which
+  // WebKit composites on its own layer, and after a route swap that layer is
+  // ready before the incoming page has rasterised — the footer's inverted
+  // palette then flashes across the viewport. Holding the footer back for the
+  // first frames reduced it but left it intermittent, so phones now skip the
+  // pinned treatment altogether. The footer keeps its inverted look; it just
+  // sits at the end of the page.
   const isMobile = window.matchMedia('(max-width: 620px)').matches
-  container.classList.toggle('has-inline-footer', !isMobile && height > window.innerHeight)
+  container.classList.toggle('has-inline-footer', isMobile || height > window.innerHeight)
 }
 
 // The article heroes' return link adapts to how the reader arrived: entering
