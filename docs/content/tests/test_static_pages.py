@@ -9,6 +9,7 @@ from urllib.parse import unquote, urlsplit
 
 
 CONTENT_ROOT = Path(__file__).resolve().parents[1]
+PUBLIC_ROOT = CONTENT_ROOT.parents[1] / "public"
 PAGES = {
     "homepage": CONTENT_ROOT / "homepage-draft-v1.html",
     "athena": CONTENT_ROOT / "work" / "athena" / "index.html",
@@ -82,18 +83,33 @@ def is_external(reference: str) -> bool:
 
 
 def resolve_site_reference(source: Path, reference: str) -> Path | None:
+    # The site serves from two roots: the authored pages under docs/content and
+    # the static files under public/, which are copied to the deployed root. An
+    # absolute reference can therefore live in either. Extensionless references
+    # are router paths (href="about" -> /about), whose authored file carries the
+    # .html suffix.
     if is_external(reference) or reference.startswith("//"):
         return None
     path_text = unquote(urlsplit(reference).path)
     if not path_text:
         return source
     if path_text.startswith("/"):
-        destination = CONTENT_ROOT / path_text.lstrip("/")
+        bases = [CONTENT_ROOT / path_text.lstrip("/"), PUBLIC_ROOT / path_text.lstrip("/")]
     else:
-        destination = source.parent / path_text
-    if path_text.endswith("/") or destination.is_dir():
-        destination /= "index.html"
-    return destination.resolve()
+        bases = [source.parent / path_text]
+
+    candidates: list[Path] = []
+    for base in bases:
+        if path_text.endswith("/") or base.is_dir():
+            base = base / "index.html"
+        candidates.append(base)
+        if not base.suffix:
+            candidates.append(base.with_suffix(".html"))
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate.resolve()
+    return candidates[0].resolve()
 
 
 def evidence_rows() -> dict[str, dict[str, str]]:
@@ -469,6 +485,12 @@ class StaticPageTests(unittest.TestCase):
         for media_path in local_media_refs:
             with self.subTest(media=media_path):
                 self.assertTrue(media_path.is_file(), f"Missing media: {media_path}")
+                if not media_path.is_relative_to(CONTENT_ROOT):
+                    # Files served straight from public/ (the resume PDF) are
+                    # documents, not reviewed evidence media. Anything under
+                    # public/assets is still held to the reviewed canonical
+                    # copies by test_public_asset_mirrors_match_reviewed_media.
+                    continue
                 public_path = media_path.relative_to(CONTENT_ROOT).as_posix()
                 row = ledger.get(public_path)
                 self.assertIsNotNone(row, f"Media lacks evidence approval: {public_path}")

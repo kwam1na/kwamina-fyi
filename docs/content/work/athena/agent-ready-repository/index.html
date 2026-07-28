@@ -57,8 +57,8 @@
           <section id="orientation" class="story-section" aria-labelledby="orientation-title">
             <p class="section-kicker">The operating premise</p>
             <h2 id="orientation-title">A repository should help work reach a trustworthy finish</h2>
-            <p data-claim="claim-agent-origin">The system has a concrete origin. In April 2026 I audited the repository against published harness-engineering practice &mdash; the essays from Martin Fowler&rsquo;s site and OpenAI on keeping large codebases legible to coding agents &mdash; and turned the gaps into a ticket series. That series became what this page describes: deterministic self-tests, diff-aware review, runtime behavior scenarios, a quality scorecard, and a janitor that repairs drift.</p>
-            <p data-claim="claim-agent-orientation">AI agents can search a large repository quickly, but search is not understanding. Athena begins with generated package maps, route and entry-point guides, validation maps, and a repository graph, so a contributor grounds the problem in the code and runtime before proposing a change.</p>
+            <p data-claim="claim-agent-origin">In April 2026 I audited the repository against published harness-engineering practice (the essays from <a class="prose-link" href="https://martinfowler.com/articles/harness-engineering.html" target="_blank" rel="noreferrer">Martin Fowler&rsquo;s site<svg class="inline-link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a> and <a class="prose-link" href="https://openai.com/index/harness-engineering/" target="_blank" rel="noreferrer">OpenAI<svg class="inline-link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a> on keeping large codebases legible to coding agents) and turned the gaps into a ticket series. That series became what this page describes: deterministic self-tests, diff-aware review, runtime behavior scenarios, a quality scorecard, and a janitor that repairs drift.</p>
+            <p data-claim="claim-agent-orientation">AI agents can search a large repository quickly, but search is not understanding. Athena begins with generated package maps, route and entry-point guides, validation maps, and a repository graph built with <a class="prose-link" href="https://github.com/Graphify-Labs/graphify" target="_blank" rel="noreferrer">Graphify<svg class="inline-link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>, so a contributor grounds the problem in the code and runtime before proposing a change.</p>
           </section>
 
           <section id="repository-map" class="story-section" aria-labelledby="repository-map-title">
@@ -108,7 +108,7 @@
                 <li>The package registry names active surfaces, important folders, generated documentation paths, and validation scenarios.</li>
                 <li>Generated agent documentation and Graphify turn that registry and the live filesystem into navigable maps.</li>
                 <li>Freshness, architecture, test, and runtime sensors compare expected coverage with the current repository.</li>
-                <li>Pre-push and pull-request review commands assemble the evidence and run the review lenses &mdash; agents, mostly &mdash; before a human authorizes release.</li>
+                <li>Pre-push and pull-request review commands assemble the evidence and run the review lenses (agents, mostly) before a human authorizes release.</li>
               </ol>
             </figure>
           </section>
@@ -116,8 +116,8 @@
           <section id="validation" class="story-section" aria-labelledby="validation-title">
             <p class="section-kicker">Change-aware proof</p>
             <h2 id="validation-title">The change declares what can prove it</h2>
-            <p data-claim="claim-agent-validation">Generated validation maps connect each package surface to the commands and behavior scenarios that can evaluate it. Review commands diff a branch against its base and use the maps to point at the missing proof &mdash; no contributor reconstructs the strategy from memory.</p>
-            <p data-claim="claim-agent-freshness">Freshness checks are fail-closed. A repair command may regenerate maps or documentation, but repaired evidence never slides past review &mdash; the workflow stops so the changed artifacts are inspected and committed on purpose.</p>
+            <p data-claim="claim-agent-validation">Generated validation maps connect each package surface to the commands and behavior scenarios that can evaluate it. Review commands diff a branch against its base and use the maps to point at the missing proof, so no contributor reconstructs the strategy from memory.</p>
+            <p data-claim="claim-agent-freshness">Freshness checks are fail-closed. A repair command may regenerate maps or documentation, but repaired evidence never slides past review: the workflow stops so the changed artifacts are inspected and committed on purpose.</p>
             <p data-claim="claim-agent-proof-statuses">The vocabulary is the design. A recorded proof is reused only while its exact conditions hold; anything else reruns the gate and says why: <code>stale</code>, <code>dirty</code>, <code>base_changed</code>, <code>validation_wiring_changed</code>, <code>generated_repaired</code>. Evidence is invalidated by observed drift, not by suspicion.</p>
           </section>
 
@@ -125,9 +125,9 @@
             <p class="section-kicker">End-to-end delivery</p>
             <h2 id="review-loop-title">The work narrows while the evidence widens</h2>
             <p data-claim="claim-agent-review-loop">Substantial Athena work moves through the same shape every time: understand what is actually true in the code and at runtime, write down what will prove the change, build it, put it through risk-selected review, ship it, check the live boundary.</p>
-            <p data-claim="claim-agent-skills">The shape is not a checklist in a doc &mdash; it is encoded as skills the agents invoke, so a behavior change starts with a failing test and is not done at &ldquo;PR open&rdquo;: done is merged, closed, and reported. The tracker holds the work record, the repo holds the sensors, the skills hold the workflow.</p>
-            <p>The work narrows &mdash; problem, scope, units, one branch &mdash; and the evidence widens: tests first, then cross-layer checks, gates, and review lenses picked by risk. Those lenses are mostly agents reviewing other agents&rsquo; work; I choose the scope, set the risk posture, and decide whether the evidence earns a release. What gets approved is the exact bundle that ships &mdash; requirements, plan, diff, evidence &mdash; not a locally correct patch.</p>
-            <p>Findings become work. A fix produces new evidence, and the affected lenses look at the exact current artifact again &mdash; an edit after approval makes that approval stale. High-risk changes loop until every lens approves: unanimity before merge. Small ones do not get the full ceremony.</p>
+            <p data-claim="claim-agent-skills">The shape is not a checklist in a doc. It is encoded as skills the agents invoke, so a behavior change starts with a failing test and is not done at &ldquo;PR open&rdquo;: done is merged, closed, and reported. The tracker holds the work record, the repo holds the sensors, the skills hold the workflow.</p>
+            <p>The work narrows (problem, scope, units, one branch) and the evidence widens: tests first, then cross-layer checks, gates, and review lenses picked by risk. Those lenses are mostly agents reviewing other agents&rsquo; work; I choose the scope, set the risk posture, and decide whether the evidence earns a release. What gets approved is the exact bundle that ships (requirements, plan, diff, evidence), not a locally correct patch.</p>
+            <p>Findings become work. A fix produces new evidence, and the affected lenses look at the exact current artifact again. An edit after approval makes that approval stale. High-risk changes loop until every lens approves: unanimity before merge. Small ones do not get the full ceremony.</p>
 
             <figure class="evidence-figure delivery-loop-figure" aria-describedby="review-loop-description">
               <figcaption>
@@ -157,7 +157,7 @@
             <p class="section-kicker">Progressive assurance</p>
             <h2 id="delivery-loop-title">The checks get broader as the change moves outward</h2>
             <p>Each layer answers a question the one before it cannot: does the behavior work, do adjacent systems still agree, is the repository coherent, what did the implementation path miss, does the release candidate hold, does the deployed boundary behave.</p>
-            <p data-claim="claim-agent-runtime">Static checks are one sensor. Named behavior scenarios boot representative runtime paths and emit machine-readable <code>[harness:behavior:report]</code> lines &mdash; phase durations, matched signals &mdash; that an agent or a trend dashboard can parse. Production-facing work continues into deployed logs, state, and responses, so confidence is grounded in the environment that matters.</p>
+            <p data-claim="claim-agent-runtime">Static checks are one sensor. Named behavior scenarios boot representative runtime paths and emit machine-readable <code>[harness:behavior:report]</code> lines (phase durations, matched signals) that an agent or a trend dashboard can parse. Production-facing work continues into deployed logs, state, and responses, so confidence is grounded in the environment that matters.</p>
 
             <figure class="evidence-figure delivery-loop-figure" aria-describedby="delivery-loop-description">
               <figcaption>
@@ -187,7 +187,7 @@
             <p class="section-kicker">Learning compounds</p>
             <h2 id="learnings-title">The finish line improves the next starting point</h2>
             <p data-claim="claim-agent-learning">Generated maps and solution notes are reviewable source artifacts. Substantial work leaves behind the problem, the solution, and the prevention pattern, so the next human or agent starts with more context than the last one had.</p>
-            <p data-claim="claim-agent-sensor-loop">The loop is most visible when something escapes. When money inputs were found saving display amounts where minor units belonged, the fix landed with a static audit that scans every money-entry boundary and fails validation on raw float parsing. Escaped failures become sensors the next contributor inherits &mdash; the gain is not more code per prompt, but gaps that are harder to carry forward unnoticed.</p>
+            <p data-claim="claim-agent-sensor-loop">The loop is most visible when something escapes. When money inputs were caught saving display amounts where minor units belonged, the fix landed with a static audit that scans every money-entry boundary and fails validation on raw float parsing. Escaped failures become sensors the next contributor inherits. The gain is not more code per prompt, but gaps that are harder to carry forward unnoticed.</p>
           </section>
 
           <section id="limits" class="story-section" aria-labelledby="limits-title">
@@ -198,7 +198,7 @@
               <li>Maps can become stale, which is why freshness checks block rather than assume.</li>
               <li>Behavior scenarios exercise representative paths, not every production condition.</li>
               <li>Validation output supports judgment; it does not replace product or engineering review.</li>
-              <li>Review depth is selected by risk; small changes can take a shorter path than cross-cutting or production-critical work.</li>
+              <li>Review depth is selected by risk; not every task takes the same path, and small changes can take a shorter one than cross-cutting or production-critical work.</li>
               <li>Human reviewers remain responsible for scope, tradeoffs, evidence quality, and release decisions.</li>
             </ul>
           </section>
@@ -206,7 +206,7 @@
           <section id="sources" class="story-section" aria-labelledby="sources-title">
             <p class="section-kicker">Evidence reviewed</p>
             <h2 id="sources-title">The process is visible in the delivery artifacts</h2>
-            <p>This account is grounded in what Athena work leaves behind: scope and proof defined before implementation, findings recorded against the integrated artifact, repository and release gates, live verification, and durable learning. Those artifacts show a recurring system without implying that every task takes the same path or needs the same review depth.</p>
+            <p>This account is grounded in what Athena work leaves behind: scope and proof defined before implementation, findings recorded against the integrated artifact, repository and release gates, live verification, and durable learning.</p>
             <ul class="source-list">
               <li>Requirements and plans that define scope, non-goals, risks, dependencies, and verification before implementation.</li>
               <li>Integrated changes and the findings, fixes, and clearance produced by independent review lenses.</li>

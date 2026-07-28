@@ -356,6 +356,56 @@ h1 {
   line-height: 1;
 }
 
+.story-section .prose-link {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 160ms var(--ease-out);
+}
+
+.story-section .prose-link:hover {
+  text-decoration-color: var(--ink);
+}
+
+.inline-link-icon {
+  width: 0.78em;
+  height: 0.78em;
+  margin-left: 2px;
+  vertical-align: -0.08em;
+  transition: transform 160ms var(--ease-out);
+}
+
+a:hover .inline-link-icon {
+  transform: translate(2px, -2px);
+}
+
+.story-section h3 {
+  max-width: 680px;
+  margin: 52px 0 0;
+  font-family: var(--serif);
+  font-size: 1.6rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.thesis-line {
+  border-left: 2px solid var(--line-strong);
+  padding-left: 22px;
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.story-section p.thesis-line {
+  margin-top: 30px;
+  font-size: 1.35rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
 .story-section p {
   max-width: 680px;
   margin: 20px 0 0;

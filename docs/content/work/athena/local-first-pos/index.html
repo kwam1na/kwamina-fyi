@@ -23,7 +23,7 @@
         <a class="hero-return" href="../" aria-label="Back to Athena"><span aria-hidden="true">&larr;</span><span class="hero-return-label" aria-hidden="true">Athena</span></a>
         <p class="eyebrow">Athena technical reflection</p>
         <h1>Local-first point of sale</h1>
-        <p class="hero-lede">Why the register records the work before it reports success&mdash;and why offline continuity still has boundaries.</p>
+        <p class="hero-lede">Why the register records the work before it reports success, and why offline continuity still has boundaries.</p>
       </div>
     </header>
 
@@ -39,7 +39,7 @@
               <a href="#one-path">One operating path</a>
               <a href="#sync-and-reconciliation">Sync and reconciliation</a>
               <a href="#authority-boundary">Authority boundary</a>
-              <a href="#limits">Candid limits</a>
+              <a href="#limits">A bounded promise</a>
               <a href="#sources">Evidence reviewed</a>
             </div>
           </nav>
@@ -57,13 +57,15 @@
             <p class="section-kicker">The failure mode</p>
             <h2 id="online-first-title">A store cannot wait for the network to decide whether the sale happened.</h2>
             <p data-claim="claim-pos-online-first">An online-first register makes the cashier&rsquo;s success depend on a cloud round trip: send the command, wait, update the screen. When connectivity is slow, intermittent, or lying about being available, the cashier loses receipt context, repeats commands, or cannot tell whether the customer has paid. Bolting an offline fallback beside that path just creates a second register with different guarantees.</p>
-            <p data-claim="claim-local-first-origin">This is not hypothetical at Wigclub, the store Athena runs. The design brief said it plainly: internet access in the field is not reliable enough to be a dependency during checkout &mdash; and the register is fragile at exactly the moment a customer is ready to pay. So offline is the initial posture, not an added mode.</p>
+            <p class="thesis-line" data-claim="claim-pos-stakes">In an offline cash system, the failure that matters most is money changing hands while the record goes missing or wrong.</p>
+            <p data-claim="claim-local-first-origin">This is not hypothetical at Wigclub, the store Athena runs. The design decision was plain: internet access in the field is not reliable enough to be a dependency during checkout. So offline is the initial posture, not an added mode.</p>
+            <p data-claim="claim-pos-production-tenure">This register has been Wigclub&rsquo;s production till since May 2026.</p>
           </section>
 
           <section id="local-evidence" class="story-section" aria-labelledby="local-evidence-title">
             <p class="section-kicker">The command boundary</p>
             <h2 id="local-evidence-title">Local evidence exists before cashier success.</h2>
-            <p data-claim="claim-pos-local-before-success">On a provisioned, locally authorized register, every cashier event is appended to the durable local record before success returns. Opening a drawer, changing a cart, taking payment, completing a sale, closing out &mdash; all start at the same local command boundary, online or not.</p>
+            <p data-claim="claim-pos-local-before-success">On a provisioned, locally authorized register, every cashier event is appended to the durable local record before success returns. Opening a drawer, changing a cart, taking payment, completing a sale, closing out: all of it starts at the same local command boundary, online or not.</p>
 
             <figure class="evidence-figure sequence-figure" aria-describedby="cashier-cloud-description" data-claim="claim-pos-sequence">
               <figcaption>
@@ -94,17 +96,24 @@
           <section id="one-path" class="story-section" aria-labelledby="one-path-title">
             <p class="section-kicker">Connected and disconnected</p>
             <h2 id="one-path-title">One operating path, not an offline fallback.</h2>
-            <p data-claim="claim-pos-one-path">The same append-first path runs when the network is healthy and when it is gone. Connectivity wakes synchronization, refreshes seed data, validates cloud state &mdash; it does not decide whether the cashier&rsquo;s work is recorded locally first. Cart, payments, receipt context, and register lifecycle all stay recoverable from one event history.</p>
-            <p data-claim="claim-pos-always-local-reversal">The first release got this wrong &mdash; it preferred cloud commands whenever the browser claimed to be online &mdash; and was inverted the day after it landed. The fix was to stop trusting that claim entirely: local append is primary in every condition, the cloud is background projection.</p>
+            <p data-claim="claim-pos-one-path">The same append-first path runs when the network is healthy and when it is gone. Connectivity wakes synchronization, refreshes seed data, and validates cloud state. It does not decide whether the cashier&rsquo;s work is recorded locally first. Cart, payments, receipt context, and register lifecycle all stay recoverable from one event history.</p>
+            <p data-claim="claim-pos-always-local-reversal"><strong>The reversal.</strong> The first release got this wrong. It preferred cloud commands whenever the browser claimed to be online, and it was inverted the day after it landed. The fix was to stop trusting that claim entirely: local append is primary in every condition, the cloud is background projection.</p>
           </section>
 
           <section id="sync-and-reconciliation" class="story-section" aria-labelledby="sync-and-reconciliation-title">
             <p class="section-kicker">Cloud acceptance</p>
             <h2 id="sync-and-reconciliation-title">Synchronize in order. Reconcile without rewriting history.</h2>
-            <p data-claim="claim-pos-idempotent-sync">When the cloud is reachable, events upload in order through an authenticated terminal boundary. The upload is idempotent &mdash; retrying the same evidence cannot mint a second sale &mdash; and accepted mappings tie local identifiers to cloud records.</p>
+            <p data-claim="claim-pos-idempotent-sync">When the cloud is reachable, events upload in order through an authenticated terminal boundary. The upload is idempotent, so retrying the same evidence cannot mint a second sale, and accepted mappings tie local identifiers to cloud records.</p>
             <p>Acceptance is not the only outcome. A stale product reference, changed authority, or conflicting cloud state becomes manager-visible review work; the completed sale is preserved, the receipt never rewritten, the mismatch never hidden.</p>
-            <p data-claim="claim-pos-sync-drain">Strict ordering earned its design by failing. Upload order was originally computed at sync time from events carrying the signed-in cashier&rsquo;s proof &mdash; so when a cashier signed out with unsynced sales, their events dropped out of the upload set, later staff took earlier sequence numbers, and the server correctly held the shifted batch as out-of-order, forever. The fix separated attribution from authority: every event gets a durable upload sequence the moment it is written, and the terminal &mdash; not the cashier &mdash; owns the drain. A cashier who never returns can no longer strand the store&rsquo;s records.</p>
-            <p data-claim="claim-pos-liveness-hardening">The same discipline guards the seams. A data-shaped failure is validated before the first write, so one poison event cannot wedge a register&rsquo;s stream or commit half a sale. Sales stranded by an earlier policy were repaired by replaying their stored events through the production projection path &mdash; never by hand-editing durable records. The test everything here answers to: in an offline cash system, the failure that matters most is money changing hands while the record goes missing or wrong.</p>
+            <h3 id="sync-drain-bug">The bug that taught the sync model</h3>
+            <div data-claim="claim-pos-sync-drain">
+              <p>Strict ordering earned its design by failing. Upload order was originally computed at sync time, from events carrying the signed-in cashier&rsquo;s proof. The failure arrived in three steps: a cashier signed out with unsynced sales, their events dropped out of the upload set, and later staff took earlier sequence numbers. The server did its job correctly: it held the shifted batch as out-of-order, forever.</p>
+              <p>The fix separated attribution from authority. Every event now gets a durable upload sequence the moment it is written, and the terminal, not the cashier, owns the drain. A cashier who never returns can no longer strand the store&rsquo;s records.</p>
+            </div>
+            <div data-claim="claim-pos-liveness-hardening">
+              <p>The same discipline guards the seams. A data-shaped failure is validated before the first write, so one poison event cannot wedge a register&rsquo;s stream or commit half a sale.</p>
+              <p>When an earlier policy stranded completed sales, the repair went through the front door: their stored events were replayed through the production projection path, never hand-edited into durable records.</p>
+            </div>
           </section>
 
           <section id="authority-boundary" class="story-section" aria-labelledby="authority-boundary-title">

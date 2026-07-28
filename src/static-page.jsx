@@ -1,13 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-
-const routePaths = new Set([
-  '/',
-  '/about',
-  '/work/athena',
-  '/work/athena/local-first-pos',
-  '/work/athena/agent-ready-repository',
-])
+import { NAVIGABLE_PATHS } from './routes.js'
 
 function normalisePath(pathname) {
   if (pathname === '/homepage-draft-v1.html') return '/'
@@ -412,7 +405,7 @@ export function StaticPage({ documentHtml, pagePath, title }) {
 
       const target = new URL(href, new URL(pagePath, window.location.origin))
       const path = normalisePath(target.pathname)
-      if (target.origin !== window.location.origin || !routePaths.has(path)) return
+      if (target.origin !== window.location.origin || !NAVIGABLE_PATHS.has(path)) return
 
       const destinationHash = target.hash
 

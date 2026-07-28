@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-router'
 import { StaticPage } from './static-page.jsx'
 import { ThemeToggle } from './theme-toggle.jsx'
+import { LEGACY_REDIRECTS, ROUTE_PATHS } from './routes.js'
 import homepage from '../docs/content/homepage-draft-v1.html?raw'
 import about from '../docs/content/about.html?raw'
 import athena from '../docs/content/work/athena/index.html?raw'
@@ -30,49 +31,43 @@ const rootRoute = createRootRoute({ component: RootLayout })
 
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/',
+  path: ROUTE_PATHS.home,
   component: () => <StaticPage documentHtml={homepage} pagePath="/" title="Kwamina Essuah Mensah" />,
 })
 
 const aboutRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/about',
+  path: ROUTE_PATHS.about,
   component: () => <StaticPage documentHtml={about} pagePath="/about" title="About — Kwamina Essuah Mensah" />,
 })
 
 const athenaRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/work/athena',
+  path: ROUTE_PATHS.athena,
   component: () => <StaticPage documentHtml={athena} pagePath="/work/athena/" title="Athena — Kwamina Essuah Mensah" />,
 })
 
 const localFirstPosRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/work/athena/local-first-pos',
+  path: ROUTE_PATHS.localFirstPos,
   component: () => <StaticPage documentHtml={localFirstPos} pagePath="/work/athena/local-first-pos/" title="Local-first point of sale — Athena" />,
 })
 
 const agentReadyRepositoryRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/work/athena/agent-ready-repository',
+  path: ROUTE_PATHS.agentReadyRepository,
   component: () => <StaticPage documentHtml={agentReadyRepository} pagePath="/work/athena/agent-ready-repository/" title="Agent-ready repository — Athena" />,
 })
 
-const legacyLocalFirstPosRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/work/local-first-pos',
-  beforeLoad: () => {
-    throw redirect({ to: '/work/athena/local-first-pos' })
-  },
-})
-
-const legacyAgentReadyRepositoryRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/work/agent-ready-repository',
-  beforeLoad: () => {
-    throw redirect({ to: '/work/athena/agent-ready-repository' })
-  },
-})
+const legacyRedirectRoutes = Object.entries(LEGACY_REDIRECTS).map(([from, to]) =>
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: from,
+    beforeLoad: () => {
+      throw redirect({ to })
+    },
+  }),
+)
 
 const routeTree = rootRoute.addChildren([
   homeRoute,
@@ -80,8 +75,7 @@ const routeTree = rootRoute.addChildren([
   athenaRoute,
   localFirstPosRoute,
   agentReadyRepositoryRoute,
-  legacyLocalFirstPosRoute,
-  legacyAgentReadyRepositoryRoute,
+  ...legacyRedirectRoutes,
 ])
 
 const router = createRouter({
