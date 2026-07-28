@@ -292,7 +292,8 @@ body::after {
   }
 
   .routed-page .brand,
-  .routed-page .brand-crumb {
+  .routed-page .brand-crumb,
+  .routed-page .nav-link {
     font-size: 0.68rem;
     letter-spacing: 0.09em;
   }
