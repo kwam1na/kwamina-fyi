@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { NAVIGABLE_PATHS } from './routes.js'
 
 function normalisePath(pathname) {
-  if (pathname === '/homepage-draft-v1.html') return '/'
+  if (pathname === '/homepage.html') return '/'
   return pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname
 }
 
@@ -61,6 +61,7 @@ const returnLabels = new Map([
   ['/work/athena', 'Athena'],
   ['/work/athena/local-first-pos', 'Local-first point of sale'],
   ['/work/athena/agent-ready-repository', 'Agent-ready repository'],
+  ['/work/athena/read-optimized-reporting', 'Read-optimized reporting'],
 ])
 const returnStack = []
 

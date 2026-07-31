@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Read-optimized reporting — Athena</title>
+    <meta name="description" content="A technical reflection on the report layer behind Athena&#39;s reports workspace: one fact ledger, one pure fold, and a dashboard that costs a single document read.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,650;1,6..72,500&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../../assets/athena-story.css">
+    <style>
+      /* The code figures give this page intrinsically wide content the other
+         reflections don't have; without this the grid column tracks the pre's
+         content width and the whole layout overflows on small screens. */
+      .story-layout > .story {
+        min-width: 0;
+      }
+
+      .code-figure pre {
+        margin: 0;
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface-subtle);
+        overflow-x: auto;
+        font-size: 0.78rem;
+        line-height: 1.6;
+        color: var(--copy);
+      }
+
+      .code-figure code {
+        font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      .story-section p > code,
+      .story-section li > code {
+        font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.82em;
+        padding: 1px 5px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: var(--surface-subtle);
+        overflow-wrap: anywhere;
+      }
+
+      .read-budget-list {
+        margin: 20px 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 10px;
+      }
+
+      .read-budget-list li {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        font-size: 0.86rem;
+      }
+
+      .read-budget-list li strong {
+        font-weight: 500;
+      }
+
+      .read-budget-list li span {
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      @media (max-width: 480px) {
+        .read-budget-list li {
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .read-budget-list li span {
+          white-space: normal;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <nav class="site-nav" aria-label="Primary navigation">
+      <a class="brand" href="../../../homepage.html">kwamina.fyi</a>
+    </nav>
+
+    <header class="story-hero">
+      <div class="page-inner">
+        <a class="hero-return" href="../" aria-label="Back to Athena"><span aria-hidden="true">&larr;</span><span class="hero-return-label" aria-hidden="true">Athena</span></a>
+        <p class="eyebrow">Athena technical reflection</p>
+        <h1>Read-optimized reporting</h1>
+        <p class="hero-lede">Why the reports workspace runs on one fact ledger and one pure fold, and why the dashboard costs a single document read.</p>
+      </div>
+    </header>
+
+    <main id="main" class="page-inner">
+      <section class="product-establishing" aria-label="Reports workspace captures">
+        <figure class="evidence-figure establishing-shot">
+          <figcaption>
+            <span class="figure-label">The workspace</span>
+            <span class="establishing-caption">The reports overview: today&rsquo;s tiles, the freshness note, and the 30-day net-sales trend &mdash; all served from one document.</span>
+            <span class="establishing-note">Shown with sales amounts redacted.</span>
+          </figcaption>
+          <img class="workspace-capture workspace-capture--light" src="../../../assets/athena-reports-overview-light.webp" alt="Athena's reports overview: net sales, units sold, gross profit, and refunds tiles for today, a note that day totals update first, and a 30-day net-sales trend chart. Amounts are redacted." loading="eager" width="2000" height="1209">
+          <img class="workspace-capture workspace-capture--dark" src="../../../assets/athena-reports-overview-dark.webp" alt="Athena's reports overview: net sales, units sold, gross profit, and refunds tiles for today, a note that day totals update first, and a 30-day net-sales trend chart. Amounts are redacted." loading="eager" width="2000" height="1209">
+          <button type="button" class="hero-expand" aria-label="Expand the selected capture" aria-haspopup="dialog">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></svg>
+          </button>
+        </figure>
+
+        <ul class="shot-strip" aria-label="Reports workspace captures">
+          <li>
+            <button type="button" class="shot-thumb is-active" aria-current="true" aria-label="Show the reports overview capture" data-hero-caption="The reports overview: today&rsquo;s tiles, the freshness note, and the 30-day net-sales trend &mdash; all served from one document." data-hero-alt="Athena's reports overview: net sales, units sold, gross profit, and refunds tiles for today, a note that day totals update first, and a 30-day net-sales trend chart. Amounts are redacted.">
+              <img class="workspace-capture workspace-capture--light" src="../../../assets/athena-reports-overview-light.webp" alt="" aria-hidden="true" loading="lazy" width="2000" height="1209">
+              <img class="workspace-capture workspace-capture--dark" src="../../../assets/athena-reports-overview-dark.webp" alt="" aria-hidden="true" loading="lazy" width="2000" height="1209">
+            </button>
+          </li>
+          <li>
+            <button type="button" class="shot-thumb" aria-current="false" aria-label="Show the days-and-items capture" data-hero-caption="A selected date range: net sales and units by operating day beside the product mix for the same range." data-hero-alt="Athena's reports workspace for a two-week date range: a day-by-day table of net sales and units sold, and a donut chart of units sold by product with the top products listed. Amounts are redacted.">
+              <img class="workspace-capture workspace-capture--light" src="../../../assets/athena-reports-chart-light.webp" alt="" aria-hidden="true" loading="lazy" width="2000" height="1209">
+              <img class="workspace-capture workspace-capture--dark" src="../../../assets/athena-reports-chart-dark.webp" alt="" aria-hidden="true" loading="lazy" width="2000" height="1209">
+            </button>
+          </li>
+        </ul>
+      </section>
+
+      <div class="story-layout">
+        <aside class="context-rail" aria-label="Page context">
+          <p class="rail-readtime">13 min read</p>
+          <nav class="rail-nav" aria-label="On this page">
+            <p class="context-label">On this page</p>
+            <div class="rail-links">
+              <span class="rail-indicator" aria-hidden="true"></span>
+              <a href="#orientation">The operating record</a>
+              <a href="#metric-as-row">The metric-as-row failure</a>
+              <a href="#shape">The shape of the layer</a>
+              <a href="#contract">The frozen contract</a>
+              <a href="#facts">The write path</a>
+              <a href="#fold">The fold</a>
+              <a href="#sweep">The sweep</a>
+              <a href="#reads">Bounded reads</a>
+              <a href="#workspace">The workspace</a>
+              <a href="#verification">Second opinions</a>
+              <a href="#limits">Candid limits</a>
+              <a href="#sources">Evidence reviewed</a>
+            </div>
+          </nav>
+          <nav class="rail-nav" aria-label="Athena navigation">
+            <p class="context-label">Athena</p>
+            <div class="rail-links">
+              <a href="../">Complete product story</a>
+              <a href="../local-first-pos/">Local-first point of sale</a>
+              <a href="../agent-ready-repository/">Agent-ready repository</a>
+            </div>
+          </nav>
+        </aside>
+
+        <article class="story">
+          <section id="orientation" class="story-section" aria-labelledby="orientation-title">
+            <p class="section-kicker">The operating record</p>
+            <h2 id="orientation-title">One workspace answers what the business actually did.</h2>
+            <p>Athena is the operating system a solo owner runs a retail and service business on: point of sale, an online storefront, service work, inventory, cash controls, and a daily close. Each of those domains keeps its own authoritative records. The reports workspace is where those records become answers &mdash; an overview of net sales, gross profit, and trend; a day-by-day table with each day&rsquo;s settlement status; and item performance down to a single SKU on a single day, with the transactions behind a number one click away.</p>
+            <p>The report layer is the backend machinery between the two. It turns domain events into those numbers and owns nothing else: it is derived by construction, rebuildable from the operational record at any time, and no operational workflow ever reads reporting to decide whether its own command succeeded. That one-way dependency is the boundary the whole design leans on. This page is about what the layer looked like when that machinery was built wrong, and how it was rebuilt.</p>
+          </section>
+
+          <section id="metric-as-row" class="story-section" aria-labelledby="metric-as-row-title">
+            <p class="section-kicker">The failure mode</p>
+            <h2 id="metric-as-row-title">A dashboard should not spend thousands of reads to say what today earned.</h2>
+            <p data-claim="claim-reports-metric-as-row-cost">Athena&rsquo;s first reporting layer stored one row per metric, and the cost was measured before the rewrite: 1,284 canonical facts across 64 operating days had fanned out into roughly 35,800 derived and audit rows &mdash; about 28 rows per fact. The overview read 340&ndash;440 documents per execution and re-ran on every applied fact, on the order of 6,000 to 19,000 reads a day to keep one dashboard current.</p>
+            <p class="thesis-line">The unit of storage was wrong, so no amount of tuning could make the reads right.</p>
+            <p>The rebuild inverted the unit: a metric is a field on a day document, never a row. The same store now produces about 0.9 derived documents per fact, and the dashboard subscribes to exactly one document.</p>
+          </section>
+
+          <section id="shape" class="story-section" aria-labelledby="shape-title">
+            <p class="section-kicker">The shape of the layer</p>
+            <h2 id="shape-title">One ledger, one fold, four read models, seven queries.</h2>
+            <p>The layer is deliberately not a reporting engine. There are no report definitions, no exporters, no query builder. There is an append-only fact ledger (<code>reportFact</code>), a pure function that folds one operating day (<code>foldDay</code>), derived documents shaped for exactly what the workspace renders, a dirty-day work queue, and a small set of read queries. Everything else on this page is a consequence of keeping that list short.</p>
+
+            <figure class="evidence-figure sequence-figure" aria-describedby="report-pipeline-description">
+              <figcaption>
+                <span class="figure-label">Fact-to-workspace pipeline</span>
+                Facts commit with the sale; derived documents are rebuilt behind a work queue; the workspace reads only derived documents.
+              </figcaption>
+              <div class="sequence-flow" aria-hidden="true">
+                <div class="sequence-node"><span>01</span><strong>Domain mutation</strong><small>Sale, refund, close, receipt</small></div>
+                <span class="sequence-arrow">&rarr;</span>
+                <div class="sequence-node"><span>02</span><strong>Append facts</strong><small>Same transaction, same commit</small></div>
+                <span class="sequence-arrow">&rarr;</span>
+                <div class="sequence-node"><span>03</span><strong>Mark the day dirty</strong><small>A row, not a scheduled job</small></div>
+                <span class="sequence-arrow sequence-arrow--background">&rarr;</span>
+                <div class="sequence-node"><span>04</span><strong>Sweep and fold</strong><small>Rebuild the day from its facts</small></div>
+                <span class="sequence-arrow">&rarr;</span>
+                <div class="sequence-node"><span>05</span><strong>Serve read models</strong><small>Bounded queries, live subscriptions</small></div>
+              </div>
+              <ol id="report-pipeline-description" class="structured-equivalent">
+                <li>A domain workflow such as checkout or the daily close performs its own mutation.</li>
+                <li>Inside that same transaction it appends reporting facts, so a fact commits with the sale or rolls back with it.</li>
+                <li>Ingestion marks the affected operating day dirty in a dedicated work-queue table.</li>
+                <li>A single job sweeps the queue every five minutes and rebuilds each dirty day from its facts with one pure fold.</li>
+                <li>The workspace subscribes to the derived documents through bounded queries; it never reads the ledger for totals.</li>
+              </ol>
+            </figure>
+          </section>
+
+          <section id="contract" class="story-section" aria-labelledby="contract-title">
+            <p class="section-kicker">The frozen contract</p>
+            <h2 id="contract-title">The backend and the UI import the same shapes, or the build fails.</h2>
+            <p>Every metric name, status, and result shape lives in one shared module, <code>reportsContract.ts</code>, imported by both the backend and the UI. A dashboard rendering a metric the backend stopped materializing is a compile error, not a blank panel. The module is declared frozen &mdash; changes escalate, they do not accrete &mdash; and a parity test walks the stored schemas at runtime to assert the contract and the tables agree, so contract-to-schema agreement is a test, not a convention.</p>
+
+            <figure class="evidence-figure code-figure" aria-describedby="contract-excerpt-description">
+              <figcaption>
+                <span class="figure-label">The fold signature</span>
+                From <code>reportsContract.ts</code> &mdash; the one function the whole layer is built around.
+              </figcaption>
+              <pre><code>/** Pure: no ctx, no db, deterministic. */
+export type FoldDayFn = (
+  storeCurrency: string,
+  facts: readonly FoldFact[],
+  close?: CloseRef,
+) =&gt; DayFoldResult;</code></pre>
+              <ol id="contract-excerpt-description" class="structured-equivalent">
+                <li>The shared contract types the day fold as a pure, deterministic function of currency, facts, and an optional close reference.</li>
+                <li>Both sides of the system import this contract exclusively, so divergence fails at compile time.</li>
+              </ol>
+            </figure>
+          </section>
+
+          <section id="facts" class="story-section" aria-labelledby="facts-title">
+            <p class="section-kicker">The write path</p>
+            <h2 id="facts-title">A fact commits with the sale, or not at all.</h2>
+            <p data-claim="claim-reports-transactional-facts">Facts are emitted from inside the domain transactions themselves &mdash; POS completion, storefront fulfillment, service billing, the daily close, payments, and stock receiving all call the same <code>recordFacts</code> function before their own mutation commits. There is no event bus between the business outcome and its reporting evidence; the two share one commit or neither happens. Cost basis crosses here too: emitters attach a per-unit cost only when the inventory ledger fully knows it. Unknown cost is omitted, never zeroed.</p>
+            <p>Identity is structural &mdash; a five-part index of store, domain, source, line, and kind rather than a concatenated string key, so the escaping bug class is designed out. A replay with an identical fingerprint is a no-op. A replay with different content is not an update: the existing row is quarantined in place, and the fold excludes quarantined facts while counting them in a visible flag. Conflict is preserved as evidence, not resolved by whoever wrote last.</p>
+
+            <figure class="evidence-figure code-figure" aria-describedby="containment-excerpt-description">
+              <figcaption>
+                <span class="figure-label">Containment at the write boundary</span>
+                From <code>ingest.ts</code> &mdash; reporting must never decide the fate of a sale.
+              </figcaption>
+              <pre><code>} catch {
+  // Containment. A reporting failure must never abort the domain mutation;
+  // it degrades to "this day needs a rebuild". If THIS write also fails the
+  // throw propagates on purpose — an atomic abort beats a silent data hole.
+  for (const date of dates) {
+    await markDirty(ctx, storeId, date, "write_failure");
+  }
+}</code></pre>
+              <ol id="containment-excerpt-description" class="structured-equivalent">
+                <li>Any failure inside ingestion degrades to a dirty mark that schedules a rebuild of the affected day.</li>
+                <li>Only if the dirty mark itself cannot be written does the error propagate, because aborting the transaction beats committing a sale whose reporting evidence silently vanished.</li>
+              </ol>
+            </figure>
+          </section>
+
+          <section id="fold" class="story-section" aria-labelledby="fold-title">
+            <p class="section-kicker">The correctness authority</p>
+            <h2 id="fold-title">One pure function is the rebuild, the reconciliation, and the backfill.</h2>
+            <p><code>foldDay</code> takes a currency, a day&rsquo;s facts, and an optional close reference, and returns the day&rsquo;s metrics. It is pure by construction &mdash; no database, no clock, no randomness &mdash; and order-independent. Because every closed day is written through this one function, recomputing a day, applying a late fact, and backfilling history are the same operation, and idempotency, drift, and ordering stop being three separate problems.</p>
+            <p>The open day is handled with deliberate modesty. Ingestion patches today&rsquo;s totals incrementally so the workspace feels live, but that arithmetic intentionally shares no code with the fold, is labelled <code>open</code>, and is wholesale-replaced at the next fold. Imperfect incremental arithmetic is acceptable; a wrong closed day is not.</p>
+            <p>Honesty survives aggregation. Gross profit is null &mdash; not zero &mdash; whenever any contributing unit lacks a cost basis, the null propagates up every level, and the uncovered revenue stays visible in its own field. Day status is equally precise: <code>reconciled</code> means a close exists and nothing landed after it &mdash; timing, not agreement. A reconciled day can still disagree with its close, the variance is stored, and that row is precisely the one an operator should look at.</p>
+          </section>
+
+          <section id="sweep" class="story-section" aria-labelledby="sweep-title">
+            <p class="section-kicker">The one cron</p>
+            <h2 id="sweep-title">Liveness is a row in a table, not a chain of scheduled jobs.</h2>
+            <p>All asynchronous work belongs to a single job that sweeps every five minutes. Work arrives as dirty-day rows in their own table &mdash; deliberately separate, so marking a day dirty does not invalidate the live subscriptions readers are holding. A crashed sweep leaves its marks for the next tick; there are no wedged states to un-wedge. Delivery is at-least-once by construction: the mark is deleted before the fold runs. A crash after the delete loses nothing, because the fold is idempotent and the next fact re-dirties the day; a crash before it re-runs the fold. Both directions are safe, and double-processing &mdash; the direction that is not &mdash; cannot happen.</p>
+            <p>Every read in the sweep is bounded, and the bounds are refusals, not truncations.</p>
+
+            <figure class="evidence-figure code-figure" aria-describedby="daycap-excerpt-description">
+              <figcaption>
+                <span class="figure-label">Refusing to fold a truncated day</span>
+                From <code>sweeper.ts</code> &mdash; the error class behind the fold&rsquo;s read caps.
+              </figcaption>
+              <pre><code>/**
+ * A day holds more rows than a fold read is allowed to take.
+ *
+ * `.take(n)` truncates silently, so folding past the cap would write a
+ * confidently wrong total that is indistinguishable from a real one — the
+ * exact failure this layer exists to remove. The day is refused instead: no
+ * document is written, the mark is kept, and the sweep reports it separately
+ * from a transient failure. Raising the cap makes the next sweep succeed.
+ */
+export class DayCapExceeded extends Error { … }</code></pre>
+              <ol id="daycap-excerpt-description" class="structured-equivalent">
+                <li>A day exceeding a read cap is refused rather than folded from a silently truncated read.</li>
+                <li>Refusal writes nothing and keeps the mark queued, so raising the cap is the whole remediation.</li>
+              </ol>
+            </figure>
+          </section>
+
+          <section id="reads" class="story-section" aria-labelledby="reads-title">
+            <p class="section-kicker">The read side</p>
+            <h2 id="reads-title">Every query declares its worst case.</h2>
+            <p data-claim="claim-reports-single-doc-overview">The read side is seven queries, each opening with the same access check and each carrying a declared worst-case document budget. The overview &mdash; KPI snapshots, comparisons, the thirty-day trend, the trust strip &mdash; is denormalized at sweep time into one singleton document per store, so the dashboard costs one read and re-executes at most once per sweep instead of once per fact.</p>
+            <ul class="read-budget-list" aria-label="Worst-case document reads per query">
+              <li><strong>Overview dashboard</strong><span>1 document</span></li>
+              <li><strong>Day-by-day table (92-day span)</strong><span>&le;92 documents</span></li>
+              <li><strong>Item performance page</strong><span>&le;36 rollup documents</span></li>
+              <li><strong>SKU detail trend</strong><span>&le;92 documents</span></li>
+              <li><strong>Per-day transaction evidence</strong><span>&le;501 facts + sources</span></li>
+            </ul>
+            <p>The backend&rsquo;s indexes are ascending-only, so top-N-by-revenue is stored as a negated sort key and becomes an indexed range read rather than a scan; ties are resolved deterministically in application code from a bounded overfetch rather than trusted to index order. Arbitrary date ranges do not get to break the budgets either: a custom range is a request &mdash; a deterministic key and a pending row &mdash; that the sweeper computes from derived documents and the client&rsquo;s subscription picks up when it completes. No polling, and no query whose cost scales with the operator&rsquo;s date picker.</p>
+            <p>Access is one function with one answer: every reports query requires the store&rsquo;s admin role, and every failure mode throws the same opaque message, so a caller cannot distinguish &ldquo;does not exist&rdquo; from &ldquo;exists but you cannot see it.&rdquo;</p>
+          </section>
+
+          <section id="workspace" class="story-section" aria-labelledby="workspace-title">
+            <p class="section-kicker">The workspace</p>
+            <h2 id="workspace-title">The URL is the state, and the data holds still while it refreshes.</h2>
+            <p>The workspace &mdash; an overview tab, an items tab, and a per-SKU detail page &mdash; keeps every meaningful choice in the URL as schema-validated search parameters: window, period, sort, cursor, selected day. A report view is a link you can share, and the back button is the undo. The period keys the UI requests are built by the contract&rsquo;s own helpers, the same code the sweeper used when writing the rollups, so the client cannot ask for a key the backend never wrote.</p>
+            <p>One rendering problem earned its own abstraction. The reactive query hook returns undefined on every argument change, not just first load, so a naive skeleton tears the panel down on each date change. A small stale-while-refreshing hook keeps the previous data on screen and reserves skeletons for the only case they are honest: when there is nothing to show yet. The workspace is equally honest about freshness &mdash; day totals update first, the overview catches up on the sweep cadence, and the interface says so in words &mdash; and where a number invites a question, it links out to the system that can answer it: net sales to the POS transaction list, a closed day to the daily close record.</p>
+          </section>
+
+          <section id="verification" class="story-section" aria-labelledby="verification-title">
+            <p class="section-kicker">Second opinions</p>
+            <h2 id="verification-title">The verifier is forbidden from agreeing by construction.</h2>
+            <p data-claim="claim-reports-verifier-defects">A folded day gets an independent second opinion. The verifier recomputes a day&rsquo;s expected metrics straight from the domain tables under three self-imposed rules: it must not import the fold or the emitters&rsquo; mapping code, it must never read the fact ledger, and where possible it reads a different column than the emitters did. Shared metric code would make the two sides agree by construction &mdash; exactly the failure a verifier exists to catch. On first contact with real store data it caught two defects every unit test had missed: a currency normalization gap and a class of service revenue billed at the till.</p>
+            <p>Just as deliberately, the verifier reports what it cannot see. Its blind spots are documented rather than papered over, and one known disagreement &mdash; a sign convention on voided sales &mdash; is left flagging every affected day on purpose until the convention is reconciled. Full rebuilds go through the same front door: reseeding a store is a resumable phase machine that purges the derived tables and re-emits facts from persisted rows, so bootstrap, backfill, and disaster recovery are one code path. And because the layer is fully derived and writes no domain tables, the rollback story is plain &mdash; turn it off, and nothing about the business record changes.</p>
+          </section>
+
+          <section id="limits" class="story-section" aria-labelledby="limits-title">
+            <p class="section-kicker">Candid limits</p>
+            <h2 id="limits-title">Read-optimized is a set of tradeoffs, written down.</h2>
+            <p>The through-line of the design is a consistent trade: flexibility and self-service recovery are given up for read cost, determinism, and honesty. Refuse rather than guess, precompute rather than query, freeze rather than accrete. Each of those choices has a bill, and it is worth naming where it comes due.</p>
+            <ul class="limit-list">
+              <li><strong>Intraday numbers are a preview.</strong> The open day&rsquo;s incremental totals can transiently drift; only the fold&rsquo;s output is treated as correct.</li>
+              <li data-claim="claim-reports-range-ui-unmounted"><strong>Custom ranges are the least finished surface.</strong> A completed range expires by age, not by re-fold, so a late fact inside it is not reflected until the result expires &mdash; and the workspace panel that would expose ranges is built and tested but not yet mounted on any route.</li>
+              <li><strong>Refusals end in a human.</strong> A day past its fold cap and a quarantined fact both preserve the problem instead of guessing &mdash; but neither escalates. The mark waits for someone to notice a counter and raise a constant; quarantined evidence has no triage surface yet.</li>
+              <li><strong>Adding a metric is deliberately expensive.</strong> A new metric touches the frozen contract, the schema, the fold, and the overview &mdash; and history is only correct after a reseed. The inversion that makes reads cheap is the same one that makes the metric set rigid.</li>
+              <li><strong>The compute is sized for a handful of stores.</strong> The data model is per-store everywhere, but the sweep is one job with global per-tick budgets: one store&rsquo;s backfill spends everyone&rsquo;s fold budget, and the design has not been priced at a volume where concurrent sales contend on the same day document.</li>
+            </ul>
+          </section>
+
+          <section id="sources" class="story-section" aria-labelledby="sources-title">
+            <p class="section-kicker">Evidence reviewed</p>
+            <h2 id="sources-title">The record behind this page</h2>
+            <p>This reflection is grounded in Athena&rsquo;s delivery artifacts and the reporting modules themselves rather than reconstructed memory; the measurements, invariants, and reversals above are written down in the repository.</p>
+            <ul class="source-list">
+              <li>The read-optimized reporting redesign note and its implementation plan, including the measured metric-as-row baseline and the per-surface read-cost comparison.</li>
+              <li>The fact-and-projection boundary note that fixed reporting as a derived, non-authoritative layer.</li>
+              <li>The reporting modules&rsquo; own contracts: the frozen shared contract, the fold, ingestion, the sweeper, the verifier, and their docblocks and tests.</li>
+              <li>The delivery reports for the reporting foundation, the reports workspace, and the read-optimized rebuild.</li>
+            </ul>
+          </section>
+
+          <nav class="deep-links deep-links--reflection" aria-label="Continue exploring Athena">
+            <a class="deep-link" href="../"><span>Back to the Athena story</span><small>Return to the complete product narrative.</small></a>
+            <a class="deep-link" href="../local-first-pos/"><span>Next: Local-first point of sale</span><small>Where the facts this layer folds are first recorded.</small></a>
+          </nav>
+
+        </article>
+      </div>
+      <p class="page-byline page-inner">Co-authored with AI agents</p>
+    </main>
+
+    <footer class="site-footer">
+      <div class="page-inner">
+        <div class="footer-grid">
+          <div>
+            <p class="footer-label">Navigate</p>
+            <div class="footer-links">
+              <a class="text-link" href="../">Athena</a>
+              <a class="text-link" href="../../../homepage.html" data-scroll-top>Homepage</a>
+            </div>
+          </div>
+          <div>
+            <p class="footer-label">Contact</p>
+            <div class="footer-links">
+              <a class="text-link" href="mailto:kwami.nuh@gmail.com">kwami.nuh@gmail.com</a>
+            </div>
+          </div>
+        </div>
+        <p class="footer-meta">&copy; 2026 Kwamina Essuah Mensah</p>
+      </div>
+    </footer>
+  </body>
+</html>

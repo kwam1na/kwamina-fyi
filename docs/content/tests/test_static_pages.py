@@ -11,7 +11,12 @@ from urllib.parse import unquote, urlsplit
 CONTENT_ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_ROOT = CONTENT_ROOT.parents[1] / "public"
 PAGES = {
-    "homepage": CONTENT_ROOT / "homepage-draft-v1.html",
+    "homepage": CONTENT_ROOT / "homepage.html",
+    "read_optimized_reporting": CONTENT_ROOT
+    / "work"
+    / "athena"
+    / "read-optimized-reporting"
+    / "index.html",
     "athena": CONTENT_ROOT / "work" / "athena" / "index.html",
     "local_first_pos": CONTENT_ROOT
     / "work"
@@ -30,6 +35,14 @@ UNSAFE_ATHENA_ASSETS = {
     "athena-procurement.png",
 }
 MEDIA_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".mp4", ".webm", ".mov", ".pdf"}
+# The pages listed as writing on the homepage. Each carries a reading estimate
+# in its context rail, held to the page's own word count below.
+ARTICLE_PAGES = (
+    "athena",
+    "local_first_pos",
+    "agent_ready_repository",
+    "read_optimized_reporting",
+)
 
 
 class PageParser(HTMLParser):
@@ -76,6 +89,63 @@ def parse_page(path: Path) -> PageParser:
     parser = PageParser()
     parser.feed(path.read_text(encoding="utf-8"))
     return parser
+
+
+class ReadingTextParser(HTMLParser):
+    # Counts only what a reader actually reads: everything inside <main>, minus
+    # the navigation rail and any nav. Figures and their structured equivalents
+    # count, because both are read.
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.stack: list[tuple[str, str]] = []
+        self.main_depth = 0
+        self.skip_depth = 0
+        self.words: list[str] = []
+
+    @staticmethod
+    def _is_skipped(tag: str, classes: str) -> bool:
+        return tag in {"script", "style", "nav"} or "context-rail" in classes
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        classes = dict(attrs).get("class") or ""
+        self.stack.append((tag, classes))
+        if tag == "main":
+            self.main_depth += 1
+        if self._is_skipped(tag, classes):
+            self.skip_depth += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        for index in range(len(self.stack) - 1, -1, -1):
+            open_tag, classes = self.stack[index]
+            if open_tag != tag:
+                continue
+            if open_tag == "main":
+                self.main_depth -= 1
+            if self._is_skipped(open_tag, classes):
+                self.skip_depth -= 1
+            del self.stack[index]
+            return
+
+    def handle_data(self, data: str) -> None:
+        if self.main_depth > 0 and self.skip_depth == 0:
+            self.words.extend(data.split())
+
+
+READING_WORDS_PER_MINUTE = 200
+
+
+def reading_minutes(path: Path) -> int:
+    parser = ReadingTextParser()
+    parser.feed(path.read_text(encoding="utf-8"))
+    return max(1, round(len(parser.words) / READING_WORDS_PER_MINUTE))
+
+
+def published_read_time(path: Path) -> int | None:
+    match = re.search(
+        r'<p class="rail-readtime">\s*(\d+)\s*min read\s*</p>',
+        path.read_text(encoding="utf-8"),
+    )
+    return int(match.group(1)) if match else None
 
 
 def is_external(reference: str) -> bool:
@@ -307,7 +377,6 @@ class StaticPageTests(unittest.TestCase):
     def test_athena_operating_flow_motion_is_explanatory_and_accessible(self) -> None:
         html = PAGES["athena"].read_text(encoding="utf-8")
         css = (CONTENT_ROOT / "assets" / "athena-story.css").read_text(encoding="utf-8")
-        javascript = (CONTENT_ROOT / "assets" / "athena-story.js").read_text(encoding="utf-8")
         page_shell = (CONTENT_ROOT.parents[1] / "src" / "static-page.jsx").read_text(encoding="utf-8")
 
         self.assertRegex(html, r'<div class="operating-flow" aria-hidden="true">')
@@ -315,10 +384,18 @@ class StaticPageTests(unittest.TestCase):
         self.assertIn("@keyframes operating-flow-node", css)
         self.assertIn("@keyframes operating-flow-packet", css)
         self.assertIn("@media (prefers-reduced-motion: reduce)", css)
-        self.assertIn("IntersectionObserver", javascript)
-        self.assertIn("prefers-reduced-motion: reduce", javascript)
         self.assertIn("IntersectionObserver", page_shell)
         self.assertIn("prefers-reduced-motion: reduce", page_shell)
+
+    def test_authored_pages_carry_no_script_tags(self) -> None:
+        # The app strips <script> out of authored HTML before rendering, so a
+        # script tag here never runs in the built site — it only ever behaved
+        # when a raw file was opened off the filesystem. Keeping one would mean
+        # maintaining a second copy of behavior that static-page.jsx already
+        # owns, with nothing exercising it.
+        for path in CONTENT_ROOT.rglob("*.html"):
+            with self.subTest(page=path.relative_to(CONTENT_ROOT).as_posix()):
+                self.assertNotRegex(path.read_text(encoding="utf-8"), r"<script\b")
 
     def test_athena_public_claims_are_mapped_in_evidence_ledger(self) -> None:
         parser = parse_page(PAGES["athena"])
@@ -433,6 +510,94 @@ class StaticPageTests(unittest.TestCase):
             },
         )
         self.assert_claims_mapped(parser, 7)
+
+    def test_read_optimized_reporting_reflection_contract(self) -> None:
+        path = PAGES["read_optimized_reporting"]
+        html = path.read_text(encoding="utf-8")
+        lowered = html.lower()
+        parser = parse_page(path)
+        expected_sections = {
+            "orientation",
+            "metric-as-row",
+            "shape",
+            "contract",
+            "facts",
+            "fold",
+            "sweep",
+            "reads",
+            "workspace",
+            "verification",
+            "limits",
+            "sources",
+        }
+
+        self.assertTrue(expected_sections.issubset(set(parser.ids)))
+        for phrase in (
+            "derived by construction",
+            "one pure function",
+            "share one commit",
+            "quarantined",
+            "refusals, not truncations",
+            "declared worst-case document budget",
+            "blind spots are documented",
+            "never read the fact ledger",
+            "sized for a handful of stores",
+        ):
+            self.assertIn(phrase, lowered)
+        # The layer is derived and non-authoritative. Any wording that implies
+        # reporting decides an operational outcome, or that the fold is
+        # exact intraday, would misstate the architecture.
+        for unsupported in (
+            "real-time totals",
+            "always accurate",
+            "single source of truth for sales",
+            "guarantees correctness",
+        ):
+            self.assertNotIn(unsupported, lowered)
+        self.assertEqual(nav_fragment_targets(html, "On this page"), expected_sections)
+
+        self.assert_accessible_figures(
+            path,
+            4,
+            {
+                "report-pipeline-description": (
+                    "domain workflow",
+                    "same transaction",
+                    "dirty",
+                    "fold",
+                    "bounded queries",
+                ),
+            },
+        )
+        self.assert_claims_mapped(parser, 5)
+
+    def test_articles_publish_a_read_time_that_matches_their_length(self) -> None:
+        # A hand-authored estimate drifts silently as an article is edited, and
+        # a wrong one is worse than none: it is the first promise the page
+        # makes. One minute of tolerance absorbs ordinary copy edits while a
+        # real change in length fails here.
+        for name in ARTICLE_PAGES:
+            path = PAGES[name]
+            with self.subTest(page=name):
+                published = published_read_time(path)
+                self.assertIsNotNone(published, f"Article publishes no read time: {name}")
+                expected = reading_minutes(path)
+                self.assertLessEqual(
+                    abs(published - expected),
+                    1,
+                    f"{name} claims {published} min read; its word count reads as {expected} min",
+                )
+
+    def test_read_time_sits_at_the_top_of_the_context_rail(self) -> None:
+        # Placement is the contract: it has to be the first thing in the rail
+        # so the estimate is visible before the reader commits to the piece.
+        for name in ARTICLE_PAGES:
+            html = PAGES[name].read_text(encoding="utf-8")
+            with self.subTest(page=name):
+                self.assertRegex(
+                    html,
+                    r'<aside class="context-rail"[^>]*>\s*<p class="rail-readtime">',
+                )
 
     def test_claim_ledger_has_no_stale_entries(self) -> None:
         published_claims = {

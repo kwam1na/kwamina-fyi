@@ -14,6 +14,7 @@ export const ROUTE_PATHS = {
   athena: '/work/athena',
   localFirstPos: '/work/athena/local-first-pos',
   agentReadyRepository: '/work/athena/agent-ready-repository',
+  readOptimizedReporting: '/work/athena/read-optimized-reporting',
 }
 
 // Superseded paths kept resolvable so older links and bookmarks still land.

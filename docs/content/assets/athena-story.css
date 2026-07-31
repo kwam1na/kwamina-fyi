@@ -183,6 +183,20 @@ h1 {
   padding: 24px 0;
 }
 
+/* Reading estimate, first thing in the rail on every article. The published
+   figure is checked against the page's own word count by the static page
+   tests, so editing an article surfaces a stale estimate instead of hiding
+   one. */
+.rail-readtime {
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  opacity: 0.84;
+  text-transform: uppercase;
+}
+
 .context-list {
   margin: 0;
   opacity: 1;
@@ -1203,6 +1217,13 @@ a:hover .inline-link-icon {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-top: 28px;
+}
+
+/* Three reflections hang off the story now. In the 2-up grid the last one
+   would sit alone on a second row at half width, reading like an afterthought
+   rather than a peer. */
+.deep-links--trio {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .deep-link {

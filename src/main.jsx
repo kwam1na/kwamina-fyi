@@ -12,11 +12,12 @@ import { StaticPage } from './static-page.jsx'
 import { ThemeToggle } from './theme-toggle.jsx'
 import { NotFoundPage } from './not-found-page.jsx'
 import { LEGACY_REDIRECTS, ROUTE_PATHS } from './routes.js'
-import homepage from '../docs/content/homepage-draft-v1.html?raw'
+import homepage from '../docs/content/homepage.html?raw'
 import about from '../docs/content/about.html?raw'
 import athena from '../docs/content/work/athena/index.html?raw'
 import localFirstPos from '../docs/content/work/athena/local-first-pos/index.html?raw'
 import agentReadyRepository from '../docs/content/work/athena/agent-ready-repository/index.html?raw'
+import readOptimizedReporting from '../docs/content/work/athena/read-optimized-reporting/index.html?raw'
 import './styles.css'
 
 function RootLayout() {
@@ -63,6 +64,12 @@ const agentReadyRepositoryRoute = createRoute({
   component: () => <StaticPage documentHtml={agentReadyRepository} pagePath="/work/athena/agent-ready-repository/" title="Agent-ready repository — Athena" />,
 })
 
+const readOptimizedReportingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTE_PATHS.readOptimizedReporting,
+  component: () => <StaticPage documentHtml={readOptimizedReporting} pagePath="/work/athena/read-optimized-reporting/" title="Read-optimized reporting — Athena" />,
+})
+
 const legacyRedirectRoutes = Object.entries(LEGACY_REDIRECTS).map(([from, to]) =>
   createRoute({
     getParentRoute: () => rootRoute,
@@ -79,6 +86,7 @@ const routeTree = rootRoute.addChildren([
   athenaRoute,
   localFirstPosRoute,
   agentReadyRepositoryRoute,
+  readOptimizedReportingRoute,
   ...legacyRedirectRoutes,
 ])
 
