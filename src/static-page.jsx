@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { NAVIGABLE_PATHS } from './routes.js'
+import { recordNavigation, returnLabels, returnStack } from './return-stack.js'
 
 function normalisePath(pathname) {
   if (pathname === '/homepage.html') return '/'
@@ -48,22 +49,6 @@ function measureRevealedFooter(container, footer) {
   container.classList.toggle('has-inline-footer', !isMobile && height > window.innerHeight)
 }
 
-// The article heroes' return link adapts to how the reader arrived: entering
-// from the homepage points it back home, from the Athena story back there,
-// and so on. Sources are kept as a stack so chains unwind in order — home →
-// Athena → article returns to Athena, and Athena still returns home.
-// Navigating to the stack's top counts as a return and pops it; any other
-// navigation pushes the departing page. Direct loads keep the page's
-// authored default. Deliberately in-memory, like the saved scroll positions.
-const returnLabels = new Map([
-  ['/', 'Homepage'],
-  ['/about', 'About'],
-  ['/work/athena', 'Athena'],
-  ['/work/athena/local-first-pos', 'Local-first point of sale'],
-  ['/work/athena/agent-ready-repository', 'Agent-ready repository'],
-  ['/work/athena/read-optimized-reporting', 'Read-optimized reporting'],
-])
-const returnStack = []
 
 // Pinch-to-zoom scoped to the lightbox image, ported from Athena's landing
 // lightbox. A CSS transform is driven on the image and the layer takes
@@ -443,8 +428,11 @@ export function StaticPage({ documentHtml, pagePath, title }) {
       const destinationHash = target.hash
 
       event.preventDefault()
-      if (returnStack[returnStack.length - 1] === path) returnStack.pop()
-      else returnStack.push(normalisePath(pagePath))
+      recordNavigation(returnStack, {
+        from: normalisePath(pagePath),
+        to: path,
+        viaReturnLink: link.classList.contains('hero-return'),
+      })
       if (scrollRestorePaths.has(pagePath)) savedScrollPositions.set(pagePath, window.scrollY)
       // Links marked data-scroll-top always land at the top of their
       // destination, discarding any saved position.

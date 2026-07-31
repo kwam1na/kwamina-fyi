@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test": "bun test && python3 -m unittest discover -s docs/content/tests -t docs/content/tests",
     "preview": "bun run build && wrangler dev",
     "deploy": "bun run build && wrangler deploy"
   },
