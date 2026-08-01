@@ -101,12 +101,20 @@
 
     <main id="main" class="page-inner">
       <section class="product-establishing" aria-label="Reports workspace captures">
-        <figure class="evidence-figure establishing-shot">
+        <figure class="evidence-figure establishing-shot is-video">
           <figcaption>
             <span class="figure-label">The workspace</span>
-            <span class="establishing-caption">The reports overview: today&rsquo;s tiles, the freshness note, and the 30-day net-sales trend &mdash; all served from one document.</span>
+            <span class="establishing-caption">The reports workspace running: ranges switched, the day table read, the product mix resolved &mdash; each view a single document read.</span>
             <span class="establishing-note">Shown with sales amounts redacted.</span>
           </figcaption>
+          <video class="workspace-video workspace-video--light" poster="../../../assets/athena-reports-workspace-poster-light.jpg" width="1920" height="1080" controls muted loop playsinline preload="none" aria-label="Screen recording of Athena's reports workspace: switching between date ranges, reading net sales and units by operating day, and opening the product mix for the selected range. Amounts are redacted.">
+            <source src="../../../assets/athena-reports-workspace-light.mp4" type="video/mp4">
+            <p>Your browser cannot play this recording. <a href="../../../assets/athena-reports-workspace-light.mp4">Download the video</a>.</p>
+          </video>
+          <video class="workspace-video workspace-video--dark" poster="../../../assets/athena-reports-workspace-poster-dark.jpg" width="1920" height="1080" controls muted loop playsinline preload="none" aria-label="Screen recording of Athena's reports workspace: switching between date ranges, reading net sales and units by operating day, and opening the product mix for the selected range. Amounts are redacted.">
+            <source src="../../../assets/athena-reports-workspace-dark.mp4" type="video/mp4">
+            <p>Your browser cannot play this recording. <a href="../../../assets/athena-reports-workspace-dark.mp4">Download the video</a>.</p>
+          </video>
           <img class="workspace-capture workspace-capture--light" src="../../../assets/athena-reports-overview-light.webp" alt="Athena's reports overview: net sales, units sold, gross profit, and refunds tiles for today, a note that day totals update first, and a 30-day net-sales trend chart. Amounts are redacted." loading="eager" width="2000" height="1209">
           <img class="workspace-capture workspace-capture--dark" src="../../../assets/athena-reports-overview-dark.webp" alt="Athena's reports overview: net sales, units sold, gross profit, and refunds tiles for today, a note that day totals update first, and a 30-day net-sales trend chart. Amounts are redacted." loading="eager" width="2000" height="1209">
           <button type="button" class="hero-expand" aria-label="Expand the selected capture" aria-haspopup="dialog">
@@ -116,7 +124,18 @@
 
         <ul class="shot-strip" aria-label="Reports workspace captures">
           <li>
-            <button type="button" class="shot-thumb is-active" aria-current="true" aria-label="Show the reports overview capture" data-hero-caption="The reports overview: today&rsquo;s tiles, the freshness note, and the 30-day net-sales trend &mdash; all served from one document." data-hero-alt="Athena's reports overview: net sales, units sold, gross profit, and refunds tiles for today, a note that day totals update first, and a 30-day net-sales trend chart. Amounts are redacted.">
+            <button type="button" class="shot-thumb shot-thumb--video is-active" aria-current="true" aria-label="Show the reports workspace recording" data-hero-video="true" data-hero-caption="The reports workspace running: ranges switched, the day table read, the product mix resolved &mdash; each view a single document read.">
+              <span class="shot-thumb-media">
+                <img class="shot-thumb-poster shot-thumb-poster--light" src="../../../assets/athena-reports-workspace-poster-light.jpg" alt="" aria-hidden="true" loading="lazy" width="1920" height="1080">
+                <img class="shot-thumb-poster shot-thumb-poster--dark" src="../../../assets/athena-reports-workspace-poster-dark.jpg" alt="" aria-hidden="true" loading="lazy" width="1920" height="1080">
+                <span class="shot-thumb-badge" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+                </span>
+              </span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="shot-thumb" aria-current="false" aria-label="Show the reports overview capture" data-hero-caption="The reports overview: today&rsquo;s tiles, the freshness note, and the 30-day net-sales trend &mdash; all served from one document." data-hero-alt="Athena's reports overview: net sales, units sold, gross profit, and refunds tiles for today, a note that day totals update first, and a 30-day net-sales trend chart. Amounts are redacted.">
               <img class="workspace-capture workspace-capture--light" src="../../../assets/athena-reports-overview-light.webp" alt="" aria-hidden="true" loading="lazy" width="2000" height="1209">
               <img class="workspace-capture workspace-capture--dark" src="../../../assets/athena-reports-overview-dark.webp" alt="" aria-hidden="true" loading="lazy" width="2000" height="1209">
             </button>

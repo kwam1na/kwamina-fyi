@@ -266,23 +266,50 @@ export function StaticPage({ documentHtml, pagePath, title }) {
   // as a thumbnail, and selecting one retargets the hero figure's images and
   // caption. Nothing moves in the DOM and the hero frame has a fixed aspect
   // ratio, so the reader's scroll position stays put.
+  //
+  // One thumb may point at a recording instead of a still (data-hero-video).
+  // The player lives in the hero figure from the start and the figure's
+  // .is-video class decides which medium shows, so selection stays a class
+  // and attribute swap either way.
   useEffect(() => {
     const section = containerRef.current?.querySelector('.product-establishing')
     const hero = section?.querySelector('.establishing-shot')
     const heroCaption = hero?.querySelector('.establishing-caption')
     if (!section || !hero || !heroCaption) return undefined
 
-    const select = (thumb) => {
-      const heroLight = hero.querySelector('.workspace-capture--light')
-      const heroDark = hero.querySelector('.workspace-capture--dark')
-      const thumbLight = thumb.querySelector('.workspace-capture--light')
-      const thumbDark = thumb.querySelector('.workspace-capture--dark')
+    const heroNote = hero.querySelector('.establishing-note')
+    const defaultNote = heroNote?.textContent
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
 
-      heroLight.setAttribute('src', thumbLight.getAttribute('src'))
-      heroDark.setAttribute('src', thumbDark.getAttribute('src'))
-      heroLight.setAttribute('alt', thumb.dataset.heroAlt)
-      heroDark.setAttribute('alt', thumb.dataset.heroAlt)
+    // The recording ships once per theme and CSS shows one of them, so the
+    // player to drive is whichever is currently rendered.
+    const videos = [...hero.querySelectorAll('.workspace-video')]
+    const shownVideo = () => videos.find((candidate) => candidate.offsetParent !== null) ?? null
+    const pauseVideos = () => videos.forEach((candidate) => candidate.pause())
+
+    const select = (thumb) => {
+      const isVideo = thumb.dataset.heroVideo === 'true'
+      hero.classList.toggle('is-video', isVideo)
+
+      if (isVideo) {
+        if (!reducedMotion.matches) shownVideo()?.play().catch(() => {})
+      } else {
+        pauseVideos()
+        const heroLight = hero.querySelector('.workspace-capture--light')
+        const heroDark = hero.querySelector('.workspace-capture--dark')
+        const thumbLight = thumb.querySelector('.workspace-capture--light')
+        const thumbDark = thumb.querySelector('.workspace-capture--dark')
+
+        heroLight.setAttribute('src', thumbLight.getAttribute('src'))
+        heroDark.setAttribute('src', thumbDark.getAttribute('src'))
+        heroLight.setAttribute('alt', thumb.dataset.heroAlt)
+        heroDark.setAttribute('alt', thumb.dataset.heroAlt)
+      }
+
       heroCaption.textContent = thumb.dataset.heroCaption
+      // Pages where every still carries the same disclaimer leave the note
+      // off the thumbs; those fall back to the one authored in the figure.
+      if (heroNote) heroNote.textContent = thumb.dataset.heroNote ?? defaultNote
 
       section.querySelectorAll('.shot-thumb').forEach((button) => {
         const active = button === thumb
@@ -297,7 +324,71 @@ export function StaticPage({ documentHtml, pagePath, title }) {
     }
 
     section.addEventListener('click', onClick)
-    return () => section.removeEventListener('click', onClick)
+
+    // Autoplay is driven from here rather than the `autoplay` attribute:
+    // the attribute overrides preload="none" on *both* players, so the theme
+    // the reader cannot see would be downloaded alongside the one they can.
+    // Starting the shown player by hand keeps it to one file, and gets the
+    // rest for free — playback stops when the figure scrolls away and picks
+    // up on the way back, and a reader who asked for less motion is simply
+    // never started.
+    //
+    // Once the reader touches the player, the effect stops driving it: their
+    // pause has to survive scrolling past and back.
+    let observer = null
+    let themeObserver = null
+    let readerTookOver = false
+    const onReaderInput = () => {
+      readerTookOver = true
+    }
+
+    if (videos.length) {
+      videos.forEach((candidate) => {
+        candidate.addEventListener('pointerdown', onReaderInput)
+        candidate.addEventListener('keydown', onReaderInput)
+      })
+
+      if (reducedMotion.matches) {
+        videos.forEach((candidate) => candidate.removeAttribute('loop'))
+      } else {
+        if ('IntersectionObserver' in window) {
+          observer = new IntersectionObserver(([entry]) => {
+            if (readerTookOver || !hero.classList.contains('is-video')) return
+            if (entry.isIntersecting) shownVideo()?.play().catch(() => {})
+            else pauseVideos()
+          }, { threshold: 0.2 })
+          observer.observe(hero)
+        } else if (hero.classList.contains('is-video')) {
+          shownVideo()?.play().catch(() => {})
+        }
+
+        // Switching themes swaps in the other recording cold — it was never
+        // fetched. Hand it the position the reader had reached so the switch
+        // reads as a repaint of the same playback rather than a restart.
+        themeObserver = new MutationObserver(() => {
+          const next = shownVideo()
+          if (!next) return
+          const previous = videos.find((candidate) => candidate !== next && !candidate.paused)
+          if (previous) {
+            previous.pause()
+            if (Number.isFinite(previous.currentTime)) next.currentTime = previous.currentTime
+          }
+          if (!readerTookOver && hero.classList.contains('is-video')) next.play().catch(() => {})
+        })
+        themeObserver.observe(document.documentElement, { attributeFilter: ['data-theme'] })
+      }
+    }
+
+    return () => {
+      section.removeEventListener('click', onClick)
+      observer?.disconnect()
+      themeObserver?.disconnect()
+      videos.forEach((candidate) => {
+        candidate.removeEventListener('pointerdown', onReaderInput)
+        candidate.removeEventListener('keydown', onReaderInput)
+        candidate.pause()
+      })
+    }
   }, [documentHtml])
 
   // Mobile-only lightbox for workspace captures, borrowed from Athena's

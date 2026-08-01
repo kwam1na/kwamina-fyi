@@ -503,6 +503,51 @@ a:hover .inline-link-icon {
   object-fit: contain;
 }
 
+/* The recording sits in the same hero frame as the stills — same aspect
+   ratio, letterboxed the same way — so selecting it never reflows the page.
+   Only the selected medium is shown: the figure carries .is-video while the
+   recording is up, and the stills stay in the DOM so switching back is a
+   src swap rather than a re-layout. */
+.product-establishing .establishing-shot .workspace-video {
+  display: none;
+  width: 100%;
+  /* The intrinsic height attribute would otherwise win over the frame's
+     aspect ratio, the same reason the stills set it too. */
+  height: auto;
+  aspect-ratio: 3840 / 2350;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  object-fit: contain;
+}
+
+/* The recording ships in both themes, switched the same way the stills are.
+   Only the shown one is ever fetched: both carry preload="none", and
+   StaticPage hands playback over to whichever the theme reveals. */
+.product-establishing .establishing-shot.is-video .workspace-video--light {
+  display: block;
+}
+
+:root[data-theme='dark'] .product-establishing .establishing-shot.is-video .workspace-video--light {
+  display: none;
+}
+
+:root[data-theme='dark'] .product-establishing .establishing-shot.is-video .workspace-video--dark {
+  display: block;
+}
+
+/* Beats the theme rules further down, which also switch the captures on
+   `display` — a plain two-class selector would only tie with them. */
+:root .product-establishing .establishing-shot.is-video .workspace-capture {
+  display: none;
+}
+
+/* Nothing to expand into the lightbox while the recording is selected: the
+   player has its own full-screen control. */
+.product-establishing .establishing-shot.is-video .hero-expand {
+  display: none;
+}
+
 /* The dev-build disclaimer stays put while the caption changes with the
    selected shot. */
 .establishing-note {
@@ -610,6 +655,58 @@ a:hover .inline-link-icon {
   border-radius: 6px;
   object-fit: cover;
   object-position: top;
+}
+
+/* The recording's tile is a poster frame with a play badge, so the strip
+   reads as one row of choices rather than a video bolted onto stills. */
+.shot-thumb-media {
+  position: relative;
+  display: block;
+}
+
+.shot-thumb-poster {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  object-fit: cover;
+  object-position: top;
+}
+
+.shot-thumb-poster--dark {
+  display: none;
+}
+
+:root[data-theme='dark'] .shot-thumb-poster--light {
+  display: none;
+}
+
+:root[data-theme='dark'] .shot-thumb-poster--dark {
+  display: block;
+}
+
+.shot-thumb-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  color: var(--ink);
+  transform: translate(-50%, -50%);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.shot-thumb-badge svg {
+  width: 14px;
+  height: 14px;
 }
 
 .shot-thumb.is-active {

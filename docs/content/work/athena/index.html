@@ -28,12 +28,20 @@
 
     <main id="main" class="page-inner">
       <section class="product-establishing" aria-label="Product overview captures">
-        <figure class="evidence-figure establishing-shot">
+        <figure class="evidence-figure establishing-shot is-video">
           <figcaption>
             <span class="figure-label">The product</span>
-            <span class="establishing-caption">Daily Operations. Where the day starts: how the store is doing, what needs attention, and what to do next.</span>
-            <span class="establishing-note">Shown with illustrative data.</span>
+            <span class="establishing-caption">Reports in motion. Switching ranges, reading the day table, and opening the product mix &mdash; the workspace as it runs.</span>
+            <span class="establishing-note">Shown with sales amounts redacted.</span>
           </figcaption>
+          <video class="workspace-video workspace-video--light" poster="../../assets/athena-reports-workspace-poster-light.jpg" width="1920" height="1080" controls muted loop playsinline preload="none" aria-label="Screen recording of Athena's reports workspace: switching between date ranges, reading net sales and units by operating day, and opening the product mix for the selected range. Amounts are redacted.">
+            <source src="../../assets/athena-reports-workspace-light.mp4" type="video/mp4">
+            <p>Your browser cannot play this recording. <a href="../../assets/athena-reports-workspace-light.mp4">Download the video</a>.</p>
+          </video>
+          <video class="workspace-video workspace-video--dark" poster="../../assets/athena-reports-workspace-poster-dark.jpg" width="1920" height="1080" controls muted loop playsinline preload="none" aria-label="Screen recording of Athena's reports workspace: switching between date ranges, reading net sales and units by operating day, and opening the product mix for the selected range. Amounts are redacted.">
+            <source src="../../assets/athena-reports-workspace-dark.mp4" type="video/mp4">
+            <p>Your browser cannot play this recording. <a href="../../assets/athena-reports-workspace-dark.mp4">Download the video</a>.</p>
+          </video>
           <img class="workspace-capture workspace-capture--light" src="../../assets/athena-daily-operations-light.png" alt="Athena's Daily Operations workspace mid-week: a pending approval, the open register, today's net sales, cash, card and mobile money tiles, and the week at a glance." loading="eager" width="3840" height="2350">
           <img class="workspace-capture workspace-capture--dark" src="../../assets/athena-daily-operations-dark.png" alt="Athena's Daily Operations workspace mid-week: a pending approval, the open register, today's net sales, cash, card and mobile money tiles, and the week at a glance." loading="eager" width="3840" height="2350">
           <button type="button" class="hero-expand" aria-label="Expand the selected capture" aria-haspopup="dialog">
@@ -43,31 +51,42 @@
 
         <ul class="shot-strip" aria-label="Workspace captures">
           <li>
-            <button type="button" class="shot-thumb is-active" aria-current="true" aria-label="Show the Daily Operations capture" data-hero-caption="Daily Operations. Where the day starts: how the store is doing, what needs attention, and what to do next." data-hero-alt="Athena's Daily Operations workspace mid-week: a pending approval, the open register, today's net sales, cash, card and mobile money tiles, and the week at a glance.">
+            <button type="button" class="shot-thumb shot-thumb--video is-active" aria-current="true" aria-label="Show the reports workspace recording" data-hero-video="true" data-hero-note="Shown with sales amounts redacted." data-hero-caption="Reports in motion. Switching ranges, reading the day table, and opening the product mix &mdash; the workspace as it runs.">
+              <span class="shot-thumb-media">
+                <img class="shot-thumb-poster shot-thumb-poster--light" src="../../assets/athena-reports-workspace-poster-light.jpg" alt="" aria-hidden="true" loading="lazy" width="1920" height="1080">
+                <img class="shot-thumb-poster shot-thumb-poster--dark" src="../../assets/athena-reports-workspace-poster-dark.jpg" alt="" aria-hidden="true" loading="lazy" width="1920" height="1080">
+                <span class="shot-thumb-badge" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+                </span>
+              </span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="shot-thumb" aria-current="false" aria-label="Show the Daily Operations capture" data-hero-note="Shown with illustrative data." data-hero-caption="Daily Operations. Where the day starts: how the store is doing, what needs attention, and what to do next." data-hero-alt="Athena's Daily Operations workspace mid-week: a pending approval, the open register, today's net sales, cash, card and mobile money tiles, and the week at a glance.">
               <img class="workspace-capture workspace-capture--light" src="../../assets/athena-daily-operations-light.png" alt="" aria-hidden="true" loading="lazy" width="3840" height="2350">
               <img class="workspace-capture workspace-capture--dark" src="../../assets/athena-daily-operations-dark.png" alt="" aria-hidden="true" loading="lazy" width="3840" height="2350">
             </button>
           </li>
           <li>
-            <button type="button" class="shot-thumb" aria-current="false" aria-label="Show the Opening Handoff capture" data-hero-caption="Opening Handoff. The morning check: yesterday closed cleanly, carried-over work is waiting, and the store day starts itself." data-hero-alt="Athena's Opening Handoff workspace: the prior day's close cleared, a carried-forward inventory review, and the store day started automatically.">
+            <button type="button" class="shot-thumb" aria-current="false" aria-label="Show the Opening Handoff capture" data-hero-note="Shown with illustrative data." data-hero-caption="Opening Handoff. The morning check: yesterday closed cleanly, carried-over work is waiting, and the store day starts itself." data-hero-alt="Athena's Opening Handoff workspace: the prior day's close cleared, a carried-forward inventory review, and the store day started automatically.">
               <img class="workspace-capture workspace-capture--light" src="../../assets/athena-opening-handoff-light.png" alt="" aria-hidden="true" loading="lazy" width="3072" height="2624">
               <img class="workspace-capture workspace-capture--dark" src="../../assets/athena-opening-handoff-dark.png" alt="" aria-hidden="true" loading="lazy" width="3072" height="2624">
             </button>
           </li>
           <li>
-            <button type="button" class="shot-thumb" aria-current="false" aria-label="Show the point-of-sale capture" data-hero-caption="Point of sale. The register between customers, ready for whoever walks in next." data-hero-alt="The POS register ready for the next sale: an empty cart, a fresh sale started, and the product lookup entry in focus.">
+            <button type="button" class="shot-thumb" aria-current="false" aria-label="Show the point-of-sale capture" data-hero-note="Shown with illustrative data." data-hero-caption="Point of sale. The register between customers, ready for whoever walks in next." data-hero-alt="The POS register ready for the next sale: an empty cart, a fresh sale started, and the product lookup entry in focus.">
               <img class="workspace-capture workspace-capture--light" src="../../assets/athena-pos-register-light.png" alt="" aria-hidden="true" loading="lazy" width="2506" height="1318">
               <img class="workspace-capture workspace-capture--dark" src="../../assets/athena-pos-register-dark.png" alt="" aria-hidden="true" loading="lazy" width="2506" height="1318">
             </button>
           </li>
           <li>
-            <button type="button" class="shot-thumb" aria-current="false" aria-label="Show the day&rsquo;s-activity capture" data-hero-caption="The day&rsquo;s activity. The money coming in, what&rsquo;s selling, and the day unfolding as it happens." data-hero-alt="Daily Operations detail: today's money tiles, the week's sales at a glance, today's sales trend, top items and payment mix, and the live activity timeline.">
+            <button type="button" class="shot-thumb" aria-current="false" aria-label="Show the day&rsquo;s-activity capture" data-hero-note="Shown with illustrative data." data-hero-caption="The day&rsquo;s activity. The money coming in, what&rsquo;s selling, and the day unfolding as it happens." data-hero-alt="Daily Operations detail: today's money tiles, the week's sales at a glance, today's sales trend, top items and payment mix, and the live activity timeline.">
               <img class="workspace-capture workspace-capture--light" src="../../assets/athena-daily-ops-metrics-light.png" alt="" aria-hidden="true" loading="lazy" width="3072" height="2720">
               <img class="workspace-capture workspace-capture--dark" src="../../assets/athena-daily-ops-metrics-dark.png" alt="" aria-hidden="true" loading="lazy" width="3072" height="2720">
             </button>
           </li>
           <li>
-            <button type="button" class="shot-thumb" aria-current="false" aria-label="Show the EOD Review capture" data-hero-caption="EOD Review. Counting the day down: totals checked, a small variance explained, tomorrow already prepped." data-hero-alt="Athena's EOD Review workspace: the day's net sales, cash, card and mobile money, a small approved cash variance, and an inventory review carried into tomorrow's opening.">
+            <button type="button" class="shot-thumb" aria-current="false" aria-label="Show the EOD Review capture" data-hero-note="Shown with illustrative data." data-hero-caption="EOD Review. Counting the day down: totals checked, a small variance explained, tomorrow already prepped." data-hero-alt="Athena's EOD Review workspace: the day's net sales, cash, card and mobile money, a small approved cash variance, and an inventory review carried into tomorrow's opening.">
               <img class="workspace-capture workspace-capture--light" src="../../assets/athena-eod-review-light.png" alt="" aria-hidden="true" loading="lazy" width="3072" height="2458">
               <img class="workspace-capture workspace-capture--dark" src="../../assets/athena-eod-review-dark.png" alt="" aria-hidden="true" loading="lazy" width="3072" height="2458">
             </button>
