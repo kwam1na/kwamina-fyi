@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { animate, onScroll, remove, set, split, stagger } from 'animejs'
 import { NAVIGABLE_PATHS } from './routes.js'
 import { recordNavigation, returnLabels, returnStack } from './return-stack.js'
 
@@ -33,6 +34,13 @@ function addRouteBreadcrumbs(body, pagePath) {
 const scrollRestorePaths = new Set(['/'])
 const savedScrollPositions = new Map()
 let hasPlayedHomeNavEntry = false
+
+// The introduction reveals itself once per session, the same bargain the
+// homepage's nav and headline entrances make. Scrolling back up to it, or
+// returning to the homepage from a write-up, finds it already delivered —
+// a line that re-introduces itself every time you pass stops being an
+// introduction and becomes furniture.
+let hasRevealedIntro = false
 
 // Pages whose footer sits pinned beneath the page: the content scrolls as one
 // opaque layer above it, so the footer stays hidden until the reader reaches
@@ -389,6 +397,190 @@ export function StaticPage({ documentHtml, pagePath, title }) {
         candidate.pause()
       })
     }
+  }, [documentHtml])
+
+  // How near the pointer is to the headline's operative word, published as
+  // --craft-focus for the stylesheet to dim the rest of the line against.
+  // Reaching for a word is a gradual thing, so the emphasis is gradual too:
+  // it builds as the reader closes in and relaxes as they drift off, rather
+  // than snapping on the moment the headline is touched anywhere.
+  useEffect(() => {
+    const title = containerRef.current?.querySelector('#hero-title')
+    const craft = title?.querySelector('.hook-craft')
+    if (!craft) return undefined
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return undefined
+
+    let frame = 0
+    let pointerX = 0
+    let pointerY = 0
+
+    const apply = () => {
+      frame = 0
+      const rect = craft.getBoundingClientRect()
+      // Distance to the nearest edge rather than to the centre, so the whole
+      // word reads as "here" instead of just the middle of it.
+      const dx = Math.max(rect.left - pointerX, 0, pointerX - rect.right)
+      const dy = Math.max(rect.top - pointerY, 0, pointerY - rect.bottom)
+      const distance = Math.hypot(dx, dy)
+      // Scaled off the word so the falloff holds at any type size, and wide
+      // enough to cover its neighbours: at twice the word's width the reach
+      // died inside the very next word, so resting on it barely dimmed it.
+      const radius = Math.max(rect.width * 3.2, 420)
+      const nearness = Math.max(0, 1 - distance / radius)
+
+      // Two responses to the same approach, shaped differently on purpose.
+      // The dimming runs on a smoothstep, which eases in at the far edge but
+      // climbs through the middle — a pointer resting on the words either
+      // side of "craft" is unmistakably in its orbit, so they should read as
+      // clearly recessed rather than faintly tinted.
+      const focus = nearness * nearness * (3 - 2 * nearness)
+      title.style.setProperty('--craft-focus', focus.toFixed(3))
+
+      // The rule holds off until the reader is clearly reaching for the word —
+      // otherwise a pointer drifting past leaves a stray nub of ink — and then
+      // draws on a smoothstep, easing in and settling out like a nib.
+      const reach = Math.max(0, (nearness - 0.18) / 0.82)
+      const rule = reach * reach * (3 - 2 * reach)
+      title.style.setProperty('--craft-rule', rule.toFixed(3))
+    }
+
+    const onPointerMove = (event) => {
+      pointerX = event.clientX
+      pointerY = event.clientY
+      if (!frame) frame = window.requestAnimationFrame(apply)
+    }
+
+    const release = () => {
+      window.cancelAnimationFrame(frame)
+      frame = 0
+      title.style.removeProperty('--craft-focus')
+      title.style.removeProperty('--craft-rule')
+    }
+
+    title.addEventListener('pointermove', onPointerMove)
+    title.addEventListener('pointerleave', release)
+
+    return () => {
+      title.removeEventListener('pointermove', onPointerMove)
+      title.removeEventListener('pointerleave', release)
+      release()
+    }
+  }, [documentHtml])
+
+  // The introduction inks itself in as the reader scrolls into it. The words
+  // rest at a low ink level and come up to full strength in reading order,
+  // tied to scroll position rather than to a clock — the reader sets the
+  // pace. Nothing is ever hidden, only quieter: a sentence with a hole in it
+  // reads as broken rather than as arriving, which is the lesson the hero
+  // headline's entrance already learned.
+  //
+  // Each block fills over its own approach, since the two are separate
+  // thoughts sitting most of a screen apart. A filled block stays filled —
+  // re-dimming an introduction on the way back up would turn it into
+  // furniture — so a block retires its own scroll machinery once it lands.
+  useLayoutEffect(() => {
+    const copy = containerRef.current?.querySelector('.bridge-copy')
+    if (!copy || hasRevealedIntro) return undefined
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
+
+    const blocks = [...copy.querySelectorAll('.bridge-block')]
+    if (!blocks.length) return undefined
+
+    // The lines already sit at 65% ink from the stylesheet, so this
+    // multiplies down against that rather than against full black: the
+    // resting state lands near 5% effective alpha — present as a shape on
+    // the page, not yet readable as a sentence.
+    const RESTING_INK = 0.08
+
+    const teardowns = []
+    let landed = 0
+
+    blocks.forEach((block) => {
+      // The splitter wraps words while leaving the inline markup — the
+      // emphasis spans and the Athena link — intact, and keeps the original
+      // wording exposed to assistive tech rather than a bag of spans.
+      //
+      // One splitter per line, not one per block: TextSplitter takes a single
+      // element and silently keeps only the first of a list, which left every
+      // line after the opening greeting undimmed and out of the cascade.
+      const splitters = [...block.querySelectorAll('.bridge-line')].map((line) => (
+        split(line, { words: true, chars: false, accessible: true })
+      ))
+      const words = splitters.flatMap((splitter) => splitter.words)
+
+      // The splitter only wraps text, so an inline icon would sit at full ink
+      // while the words around it are still faint. The Athena arrow joins the
+      // cascade in its reading position instead.
+      //
+      // Accessible mode leaves a clipped clone of the whole line — markup and
+      // icon included — ahead of the visible words, so an icon only counts as
+      // visible if it follows the first word span in document order.
+      const isVisible = (node) => words.length > 0 && Boolean(
+        words[0].compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING,
+      )
+      const icons = [...block.querySelectorAll('.inline-link-icon')].filter(isVisible)
+
+      const tokens = [...words, ...icons].sort((a, b) => (
+        a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1
+      ))
+      set(tokens, { opacity: RESTING_INK })
+
+      // The completion callback can fire while onScroll() is still
+      // constructing — a reader restored partway down the page lands with
+      // this block already past its fill range — so the callback is routed
+      // through a slot that is only armed once both handles exist.
+      let onLanded = () => {}
+
+      const observer = onScroll({
+        target: block,
+        // Starts as the block's first line clears the fold and finishes
+        // while the block is still short of centre, so a reader finishes
+        // reading it before it settles rather than after it has gone by.
+        enter: 'bottom top',
+        leave: 'center center',
+        // Under 1 follows the scroll with a little lag, which keeps the
+        // ramp from stepping on a trackpad's coarser scroll deltas.
+        sync: 0.6,
+        onSyncComplete: () => onLanded(),
+      })
+
+      animate(tokens, {
+        opacity: 1,
+        // Held linear: this is ink arriving, not an object travelling, and
+        // the scroll position — not an easing curve — is the storyteller.
+        ease: 'linear',
+        duration: 420,
+        delay: stagger(60),
+        autoplay: observer,
+      })
+
+      let retired = false
+      // `didFill` separates the two ways a block stops being animated. Only
+      // a block the reader actually filled counts towards retiring the whole
+      // section; leaving the homepage before ever reaching the introduction
+      // must not spend its one reveal.
+      const retire = (didFill) => {
+        if (retired) return
+        retired = true
+        observer.revert()
+        // Hand the words back to the stylesheet at full strength, then put
+        // the original markup back now that nothing is animating it.
+        remove(tokens)
+        splitters.forEach((splitter) => splitter.revert())
+        if (!didFill) return
+        landed += 1
+        if (landed === blocks.length) hasRevealedIntro = true
+      }
+
+      onLanded = () => retire(true)
+      teardowns.push(() => retire(false))
+
+      // Covers the same already-past-the-range case: the callback fired into
+      // the empty slot above, so the block has to be retired here instead.
+      if (observer.completed) retire(true)
+    })
+
+    return () => teardowns.forEach((retire) => retire())
   }, [documentHtml])
 
   // Mobile-only lightbox for workspace captures, borrowed from Athena's

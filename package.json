@@ -13,6 +13,7 @@
   "dependencies": {
     "@tanstack/react-router": "^1.170.17",
     "@vitejs/plugin-react": "latest",
+    "animejs": "^4.5.0",
     "react": "latest",
     "react-dom": "latest",
     "vite": "latest"

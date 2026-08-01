@@ -143,6 +143,7 @@
         min-height: 92vh;
         display: grid;
         align-items: center;
+        cursor: pointer;
       }
 
       .hero-inner,
@@ -180,6 +181,99 @@
         font-size: 1.06em;
         font-style: italic;
         font-weight: 500;
+      }
+
+      /* The hero line settles in on a first visit: the words resolve in
+         reading order on a short overlapping cascade, so the sentence reads
+         as one gesture arriving rather than as parts assembling. Every word
+         is in the cascade, including the italic — holding one back leaves a
+         hole in the line, and a sentence with a hole reads as broken instead
+         of as arriving. The stagger is shorter than each word's own fade, so
+         no word is ever alone on the page.
+         Keyed off the same first-entry flag as the nav, so returning to the
+         homepage mid-session never replays it.
+
+         The fade and the rise run as two animations because they want
+         opposite curves. The site's --ease-out is near-expo: it spends 90% of
+         its progress in the first 40% of the run, which is right for a thing
+         travelling into place but wrong for a fade — it snaps each word to
+         full ink almost at once, and seven snaps in sequence read as a
+         stutter rather than a sweep. So the fade is held close to linear over
+         a longer window, and only the rise keeps the house easing. */
+      .hero-word {
+        display: inline-block;
+      }
+
+      .has-home-nav-entry .hero-word {
+        animation:
+          hero-word-ink 760ms cubic-bezier(0.37, 0.06, 0.28, 0.96)
+            calc(140ms + var(--word-index) * 44ms) both,
+          hero-word-rise 540ms var(--ease-out)
+            calc(140ms + var(--word-index) * 44ms) both;
+      }
+
+      @keyframes hero-word-ink {
+        from {
+          opacity: 0;
+        }
+
+        to {
+          opacity: 1;
+        }
+      }
+
+      @keyframes hero-word-rise {
+        from {
+          transform: translateY(0.06em);
+        }
+
+        to {
+          transform: none;
+        }
+      }
+
+      /* Marginalia for the attentive: reaching for the headline's operative
+         word draws an ink rule beneath it, and the nearer the pointer gets
+         the further the rule is drawn. Painted as a background so it costs no
+         layout — an underline cannot reflow what it sits beneath.
+
+         Both this and the dimming below are driven by how close the pointer
+         is to the word, published by StaticPage. The rule gets its own
+         variable rather than sharing one: it holds back until the reader has
+         clearly committed, then draws quickly, where the dimming starts
+         earlier and stays gentle the whole way. */
+      .hook-craft {
+        background: linear-gradient(currentColor, currentColor) 0 88% /
+          calc(var(--craft-rule, 0) * 100%) 0.045em no-repeat;
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        /* Both follow the pointer, so the transition only has to smooth the
+           gap between frames — long enough not to jitter, short enough that
+           the line still feels attached to the hand. The character lives in
+           the falloff curves now, not in an easing. */
+        .hero-word {
+          transition: background-size 160ms linear, color 160ms linear;
+        }
+      }
+
+      /* The rest of the line recedes as the reader closes in on the operative
+         word: --craft-focus is the pointer's nearness to "craft", set by
+         StaticPage, and it drives how far the other words pull back. No
+         proximity, no dimming — so the line only resolves to one word for
+         someone actually reaching for it, and relaxes as they drift away.
+         Untouched at rest, and on touch, where the variable is never set.
+
+         Dimming is done on colour rather than opacity because the entrance
+         animation still owns opacity: it fills forwards, and a filling
+         animation outranks anything the stylesheet has to say, so an opacity
+         rule here would simply never apply. */
+      .hero-word:not(.hook-craft) {
+        color: color-mix(
+          in srgb,
+          var(--ink) calc(100% - var(--craft-focus, 0) * 65%),
+          transparent
+        );
       }
 
       h2 {
@@ -677,7 +771,13 @@
         <div class="hero-inner">
           <div class="hero-copy">
             <h1 id="hero-title">
-              I <span class="hook-craft">craft</span> software with clarity and care.
+              <span class="hero-word" style="--word-index: 0">I</span>
+              <span class="hero-word hook-craft" style="--word-index: 1">craft</span>
+              <span class="hero-word" style="--word-index: 2">software</span>
+              <span class="hero-word" style="--word-index: 3">with</span>
+              <span class="hero-word" style="--word-index: 4">clarity</span>
+              <span class="hero-word" style="--word-index: 5">and</span>
+              <span class="hero-word" style="--word-index: 6">care.</span>
             </h1>
           </div>
         </div>

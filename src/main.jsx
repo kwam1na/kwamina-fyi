@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   createRootRoute,
@@ -11,6 +11,7 @@ import {
 import { StaticPage } from './static-page.jsx'
 import { ThemeToggle } from './theme-toggle.jsx'
 import { NotFoundPage } from './not-found-page.jsx'
+import { ErrorPage } from './error-page.jsx'
 import { LEGACY_REDIRECTS, ROUTE_PATHS } from './routes.js'
 import homepage from '../docs/content/homepage.html?raw'
 import about from '../docs/content/about.html?raw'
@@ -32,6 +33,7 @@ function RootLayout() {
 const rootRoute = createRootRoute({
   component: RootLayout,
   notFoundComponent: NotFoundPage,
+  errorComponent: ErrorPage,
 })
 
 const homeRoute = createRoute({
@@ -92,6 +94,9 @@ const routeTree = rootRoute.addChildren([
 
 const router = createRouter({
   routeTree,
+  // Every route without its own error handling falls back to the site's own
+  // error page rather than the router's built-in stack trace.
+  defaultErrorComponent: ErrorPage,
 })
 
 createRoot(document.getElementById('root')).render(<RouterProvider router={router} />)
