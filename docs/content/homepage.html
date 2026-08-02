@@ -1,189 +1,186 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Kwamina Essuah Mensah</title>
-    <meta
-      name="description"
-      content="The work, projects, and perspective of Kwamina Essuah Mensah."
-    >
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,650;1,6..72,500;1,6..72,650&display=swap"
-      rel="stylesheet"
-    >
-    <style>
-      :root {
-        --paper: var(--color-paper);
-        --ink: var(--color-ink);
-        --copy: var(--color-copy);
-        --muted: var(--color-muted);
-        --line: var(--color-line);
-        --line-strong: var(--color-line-strong);
-        --focus: var(--color-focus);
-        --sans: var(--font-sans);
-        --serif: var(--font-serif);
-        --content-width: 1180px;
-        --gutter: 48px;
-        --section-space: 112px;
-        --ease-in: var(--ease-portfolio-in);
-        --ease-out: var(--ease-portfolio);
-        --nav-surface: rgba(252, 252, 251, 0.86);
-        color-scheme: light;
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kwamina Essuah Mensah</title>
+  <meta name="description" content="The work, projects, and perspective of Kwamina Essuah Mensah.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,650;1,6..72,500;1,6..72,650&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --paper: var(--color-paper);
+      --ink: var(--color-ink);
+      --copy: var(--color-copy);
+      --muted: var(--color-muted);
+      --line: var(--color-line);
+      --line-strong: var(--color-line-strong);
+      --focus: var(--color-focus);
+      --sans: var(--font-sans);
+      --serif: var(--font-serif);
+      --content-width: 1180px;
+      --gutter: 48px;
+      --section-space: 112px;
+      --ease-in: var(--ease-portfolio-in);
+      --ease-out: var(--ease-portfolio);
+      --nav-surface: rgba(252, 252, 251, 0.86);
+      color-scheme: light;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.6;
+      text-rendering: optimizeLegibility;
+    }
+
+    ::selection {
+      background: rgba(47, 96, 123, 0.18);
+    }
+
+    a {
+      color: color-mix(in srgb, var(--ink) 68%, transparent);
+      text-decoration: none;
+      transition: transform 160ms var(--ease-out), color 160ms var(--ease-out);
+    }
+
+    .brand,
+    .skip-link {
+      color: var(--ink);
+    }
+
+    a:focus-visible,
+    button:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 4px;
+    }
+
+    .skip-link {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 100;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      transform: translateY(-160%);
+      transition: transform 160ms var(--ease-out);
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+
+    .site-nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 18px 32px;
+      background: var(--nav-surface);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand {
+      --nav-entry-x: -18px;
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .nav-link {
+      --nav-entry-x: 18px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .has-home-nav-entry .site-nav .brand,
+    .has-home-nav-entry .site-nav .nav-link {
+      animation: nav-item-enter 800ms var(--ease-out) 80ms both;
+    }
+
+    .has-home-nav-entry .site-nav .nav-link {
+      animation-delay: 150ms;
+    }
+
+    @keyframes nav-item-enter {
+      from {
+        opacity: 0;
+        transform: translateX(var(--nav-entry-x));
       }
 
-      * {
-        box-sizing: border-box;
+      to {
+        opacity: 1;
+        transform: translateX(0);
       }
+    }
 
-      body {
-        margin: 0;
-        background: var(--paper);
-        color: var(--ink);
-        font-family: var(--sans);
-        font-size: 16px;
-        line-height: 1.6;
-        text-rendering: optimizeLegibility;
-      }
+    .hero {
+      min-height: 92vh;
+      display: grid;
+      align-items: center;
+      cursor: default;
+    }
 
-      ::selection {
-        background: rgba(47, 96, 123, 0.18);
-      }
+    .hero-inner,
+    .section-inner {
+      position: relative;
+      width: min(var(--content-width), calc(100% - var(--gutter)));
+      margin: 0 auto;
+    }
 
-      a {
-        color: color-mix(in srgb, var(--ink) 68%, transparent);
-        text-decoration: none;
-        transition: transform 160ms var(--ease-out), color 160ms var(--ease-out);
-      }
+    .hero-copy {
+      max-width: 760px;
+      padding: 126px 0 96px;
+    }
 
-      .brand,
-      .skip-link {
-        color: var(--ink);
-      }
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      line-height: 1.02;
+    }
 
-      a:focus-visible,
-      button:focus-visible {
-        outline: 2px solid var(--focus);
-        outline-offset: 4px;
-      }
+    h2 {
+      font-family: var(--serif);
+    }
 
-      .skip-link {
-        position: fixed;
-        top: 16px;
-        left: 16px;
-        z-index: 100;
-        padding: 10px 14px;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: var(--paper);
-        transform: translateY(-160%);
-        transition: transform 160ms var(--ease-out);
-      }
+    h1 {
+      max-width: 820px;
+      font-family: var(--serif);
+      font-size: 4.25rem;
+      font-weight: 400;
+    }
 
-      .skip-link:focus {
-        transform: translateY(0);
-      }
+    .hook-craft {
+      font-family: var(--serif);
+      font-size: 1.06em;
+      font-style: italic;
+      font-weight: 500;
+    }
 
-      .site-nav {
-        position: sticky;
-        top: 0;
-        z-index: 20;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 24px;
-        padding: 18px 32px;
-        background: var(--nav-surface);
-        -webkit-backdrop-filter: blur(16px);
-        backdrop-filter: blur(16px);
-      }
-
-      .brand {
-        --nav-entry-x: -18px;
-        display: inline-flex;
-        align-items: center;
-        font-size: 0.8rem;
-        font-weight: 500;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }
-
-      .nav-link {
-        --nav-entry-x: 18px;
-        font-size: 0.8rem;
-        font-weight: 500;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }
-
-      .has-home-nav-entry .site-nav .brand,
-      .has-home-nav-entry .site-nav .nav-link {
-        animation: nav-item-enter 800ms var(--ease-out) 80ms both;
-      }
-
-      .has-home-nav-entry .site-nav .nav-link {
-        animation-delay: 150ms;
-      }
-
-      @keyframes nav-item-enter {
-        from {
-          opacity: 0;
-          transform: translateX(var(--nav-entry-x));
-        }
-
-        to {
-          opacity: 1;
-          transform: translateX(0);
-        }
-      }
-
-      .hero {
-        min-height: 92vh;
-        display: grid;
-        align-items: center;
-        cursor: pointer;
-      }
-
-      .hero-inner,
-      .section-inner {
-        position: relative;
-        width: min(var(--content-width), calc(100% - var(--gutter)));
-        margin: 0 auto;
-      }
-
-      .hero-copy {
-        max-width: 760px;
-        padding: 126px 0 96px;
-      }
-
-      h1,
-      h2,
-      h3 {
-        margin: 0;
-        line-height: 1.02;
-      }
-
-      h2 {
-        font-family: var(--serif);
-      }
-
-      h1 {
-        max-width: 820px;
-        font-family: var(--serif);
-        font-size: 4.25rem;
-        font-weight: 400;
-      }
-
-      .hook-craft {
-        font-family: var(--serif);
-        font-size: 1.06em;
-        font-style: italic;
-        font-weight: 500;
-      }
-
-      /* The hero line settles in on a first visit: the words resolve in
+    /* The hero line settles in on a first visit: the words resolve in
          reading order on a short overlapping cascade, so the sentence reads
          as one gesture arriving rather than as parts assembling. Every word
          is in the cascade, including the italic — holding one back leaves a
@@ -200,39 +197,37 @@
          full ink almost at once, and seven snaps in sequence read as a
          stutter rather than a sweep. So the fade is held close to linear over
          a longer window, and only the rise keeps the house easing. */
-      .hero-word {
-        display: inline-block;
+    .hero-word {
+      display: inline-block;
+    }
+
+    .has-home-nav-entry .hero-word {
+      animation:
+        hero-word-ink 760ms cubic-bezier(0.37, 0.06, 0.28, 0.96) calc(140ms + var(--word-index) * 44ms) both,
+        hero-word-rise 540ms var(--ease-out) calc(140ms + var(--word-index) * 44ms) both;
+    }
+
+    @keyframes hero-word-ink {
+      from {
+        opacity: 0;
       }
 
-      .has-home-nav-entry .hero-word {
-        animation:
-          hero-word-ink 760ms cubic-bezier(0.37, 0.06, 0.28, 0.96)
-            calc(140ms + var(--word-index) * 44ms) both,
-          hero-word-rise 540ms var(--ease-out)
-            calc(140ms + var(--word-index) * 44ms) both;
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes hero-word-rise {
+      from {
+        transform: translateY(0.06em);
       }
 
-      @keyframes hero-word-ink {
-        from {
-          opacity: 0;
-        }
-
-        to {
-          opacity: 1;
-        }
+      to {
+        transform: none;
       }
+    }
 
-      @keyframes hero-word-rise {
-        from {
-          transform: translateY(0.06em);
-        }
-
-        to {
-          transform: none;
-        }
-      }
-
-      /* Marginalia for the attentive: reaching for the headline's operative
+    /* Marginalia for the attentive: reaching for the headline's operative
          word draws an ink rule beneath it, and the nearer the pointer gets
          the further the rule is drawn. Painted as a background so it costs no
          layout — an underline cannot reflow what it sits beneath.
@@ -242,22 +237,22 @@
          variable rather than sharing one: it holds back until the reader has
          clearly committed, then draws quickly, where the dimming starts
          earlier and stays gentle the whole way. */
-      .hook-craft {
-        background: linear-gradient(currentColor, currentColor) 0 88% /
-          calc(var(--craft-rule, 0) * 100%) 0.045em no-repeat;
-      }
+    .hook-craft {
+      background: linear-gradient(currentColor, currentColor) 0 88% / calc(var(--craft-rule, 0) * 100%) 0.045em no-repeat;
+    }
 
-      @media (hover: hover) and (pointer: fine) {
-        /* Both follow the pointer, so the transition only has to smooth the
+    @media (hover: hover) and (pointer: fine) {
+
+      /* Both follow the pointer, so the transition only has to smooth the
            gap between frames — long enough not to jitter, short enough that
            the line still feels attached to the hand. The character lives in
            the falloff curves now, not in an easing. */
-        .hero-word {
-          transition: background-size 160ms linear, color 160ms linear;
-        }
+      .hero-word {
+        transition: background-size 160ms linear, color 160ms linear;
       }
+    }
 
-      /* The rest of the line recedes as the reader closes in on the operative
+    /* The rest of the line recedes as the reader closes in on the operative
          word: --craft-focus is the pointer's nearness to "craft", set by
          StaticPage, and it drives how far the other words pull back. No
          proximity, no dimming — so the line only resolves to one word for
@@ -268,634 +263,686 @@
          animation still owns opacity: it fills forwards, and a filling
          animation outranks anything the stylesheet has to say, so an opacity
          rule here would simply never apply. */
-      .hero-word:not(.hook-craft) {
-        color: color-mix(
-          in srgb,
+    .hero-word:not(.hook-craft) {
+      color: color-mix(in srgb,
           var(--ink) calc(100% - var(--craft-focus, 0) * 65%),
-          transparent
-        );
-      }
+          transparent);
+    }
 
-      h2 {
-        font-size: 3.2rem;
-        font-weight: 650;
-      }
+    h2 {
+      font-size: 3.2rem;
+      font-weight: 650;
+    }
 
-      h3 {
-        font-size: 1.08rem;
-        font-weight: 700;
-      }
+    h3 {
+      font-size: 1.08rem;
+      font-weight: 700;
+    }
 
-      .project-action {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        color: color-mix(in srgb, var(--ink) 68%, transparent);
-        font-size: 0.95rem;
-        font-weight: 500;
-        transition: transform 160ms var(--ease-out), color 160ms var(--ease-out);
-      }
+    .project-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: color-mix(in srgb, var(--ink) 68%, transparent);
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: transform 160ms var(--ease-out), color 160ms var(--ease-out);
+    }
 
-      .project-action:active {
-        transform: scale(0.97);
-      }
+    .project-action:active {
+      transform: scale(0.97);
+    }
 
-      .project-action {
-        margin-top: 32px;
-      }
+    .project-action {
+      margin-top: 32px;
+    }
 
-      .project-section {
-        padding: 176px 0;
-      }
+    .project-section {
+      padding: 176px 0;
+    }
 
-      .project-masthead,
-      .career-masthead {
-        display: grid;
-        grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
-        gap: 64px;
-        align-items: end;
-      }
+    .project-masthead,
+    .career-masthead {
+      display: grid;
+      grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
+      gap: 64px;
+      align-items: end;
+    }
 
-      .project-masthead {
-        margin-bottom: 88px;
-      }
+    .project-masthead {
+      margin-bottom: 88px;
+    }
 
-      .project-masthead h2,
-      .career-masthead h2 {
-        max-width: 760px;
-        margin: 0;
-        color: var(--ink);
-        font-size: 4.2rem;
-        line-height: 0.98;
-      }
+    .project-masthead h2,
+    .career-masthead h2 {
+      max-width: 760px;
+      margin: 0;
+      color: var(--ink);
+      font-size: 4.2rem;
+      line-height: 0.98;
+    }
 
-      .project-feature {
-        display: grid;
-        grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
-        gap: 64px;
-      }
+    .project-feature {
+      display: grid;
+      grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
+      gap: 64px;
+    }
 
-      .project-feature h3 {
-        margin: 0;
-        color: var(--ink);
-        font-family: var(--serif);
-        font-size: 3.25rem;
-        font-weight: 650;
-        line-height: 0.96;
-      }
+    .project-feature h3 {
+      margin: 0;
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 3.25rem;
+      font-weight: 650;
+      line-height: 0.96;
+    }
 
-      .project-copy {
-        max-width: 760px;
-      }
+    .project-copy {
+      max-width: 760px;
+    }
 
-      .project-lede {
-        margin: 0;
-        color: var(--copy);
-        font-size: 1.15rem;
-        line-height: 1.65;
-      }
+    .project-lede {
+      margin: 0;
+      color: var(--copy);
+      font-size: 1.15rem;
+      line-height: 1.65;
+    }
 
-      .project-proofs {
-        margin-top: 40px;
-      }
+    .project-proofs {
+      margin-top: 40px;
+    }
 
-      .project-proof {
-        display: grid;
-        grid-template-columns: minmax(180px, 0.38fr) minmax(0, 1fr);
-        gap: 32px;
-        padding: 26px 0;
-        border-top: 1px solid var(--line);
-      }
+    .project-proof {
+      display: grid;
+      grid-template-columns: minmax(180px, 0.38fr) minmax(0, 1fr);
+      gap: 32px;
+      padding: 26px 0;
+      border-top: 1px solid var(--line);
+    }
 
-      .project-proof:last-child {
-        padding-bottom: 0;
-      }
+    .project-proof:last-child {
+      padding-bottom: 0;
+    }
 
-      .project-proof h4 {
-        margin: 0;
-        color: var(--ink);
-        font-size: 0.95rem;
-        font-weight: 650;
-        line-height: 1.45;
-      }
+    .project-proof h4 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 0.95rem;
+      font-weight: 650;
+      line-height: 1.45;
+    }
 
-      .project-proof p {
-        margin: 0;
-        color: var(--copy);
-        font-size: 0.95rem;
-        line-height: 1.62;
-      }
+    .project-proof p {
+      margin: 0;
+      color: var(--copy);
+      font-size: 0.95rem;
+      line-height: 1.62;
+    }
 
-      .career-masthead {
-        margin-bottom: 72px;
-      }
+    .career-masthead {
+      margin-bottom: 72px;
+    }
 
-      .career-kicker {
-        margin: 0 0 10px;
-        color: var(--muted);
-        font-family: var(--sans);
-        font-size: 0.78rem;
-        font-weight: 600;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }
+    .career-kicker {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
 
-      .link-icon {
-        width: 0.9em;
-        height: 0.9em;
-        flex: none;
-        transition: transform 160ms var(--ease-out);
-      }
+    .link-icon {
+      width: 0.9em;
+      height: 0.9em;
+      flex: none;
+      transition: transform 160ms var(--ease-out);
+    }
 
-      .inline-link-icon {
-        width: 0.78em;
-        height: 0.78em;
-        margin-left: 2px;
-        vertical-align: -0.08em;
-        transition: transform 160ms var(--ease-out);
-      }
+    .inline-link-icon {
+      width: 0.78em;
+      height: 0.78em;
+      margin-left: 2px;
+      vertical-align: -0.08em;
+      transition: transform 160ms var(--ease-out);
+    }
 
-      .writing-section {
-        padding: 16px 0 192px;
-      }
+    .writing-section {
+      padding: 16px 0 192px;
+    }
 
-      .writing-masthead {
-        margin-bottom: 48px;
-      }
+    .writing-masthead {
+      margin-bottom: 48px;
+    }
 
-      .writing-item {
-        display: grid;
-        grid-template-columns: minmax(240px, 0.44fr) minmax(0, 1fr);
-        gap: 56px;
-        padding: 40px 0;
-        border-top: 1px solid var(--line);
-      }
+    .writing-item {
+      display: grid;
+      grid-template-columns: minmax(240px, 0.44fr) minmax(0, 1fr);
+      gap: 56px;
+      padding: 40px 0;
+      border-top: 1px solid var(--line);
+    }
 
-      .writing-item h3 {
-        margin: 0;
-        color: var(--ink);
-        font-family: var(--serif);
-        font-size: 2rem;
-        font-weight: 650;
-        line-height: 1.06;
-      }
+    .writing-item h3 {
+      margin: 0;
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 2rem;
+      font-weight: 650;
+      line-height: 1.06;
+    }
 
-      .writing-item p {
-        max-width: 620px;
-        margin: 0;
-        color: var(--copy);
-        font-size: 1rem;
-        line-height: 1.68;
-      }
+    .writing-item p {
+      max-width: 620px;
+      margin: 0;
+      color: var(--copy);
+      font-size: 1rem;
+      line-height: 1.68;
+    }
 
-      .bridge {
-        min-height: 112vh;
-        display: grid;
-        align-items: center;
-        padding: 116px 0;
-      }
+    .bridge {
+      min-height: 112vh;
+      display: grid;
+      align-items: center;
+      padding: 116px 0;
+    }
 
-      .bridge-layout {
-        display: block;
-      }
+    .bridge-layout {
+      display: block;
+    }
 
-      .bridge-copy {
-        max-width: 860px;
-      }
+    .bridge-copy {
+      max-width: 860px;
+    }
 
-      .bridge-block + .bridge-block {
-        margin-top: 144px;
-      }
+    .bridge-block+.bridge-block {
+      margin-top: 144px;
+    }
 
-      /* The bridge copy recedes so its emphasised phrases — and the Athena
+    /* The bridge copy recedes so its emphasised phrases — and the Athena
          link — carry the lines. */
-      .bridge-line {
-        margin: 0;
-        color: color-mix(in srgb, var(--ink) 65%, transparent);
-        font-size: 3.45rem;
-        font-weight: 400;
-        line-height: 1.1;
-      }
+    .bridge-line {
+      margin: 0;
+      color: color-mix(in srgb, var(--ink) 65%, transparent);
+      font-size: 3.45rem;
+      font-weight: 400;
+      line-height: 1.1;
+    }
 
-      .bridge-line + .bridge-line {
-        margin-top: 18px;
-      }
+    .bridge-line+.bridge-line {
+      margin-top: 18px;
+    }
 
-      .bridge-emphasis {
-        color: var(--ink);
-        font-family: var(--serif);
-        font-size: 1.06em;
-        font-style: italic;
-        font-weight: 500;
-      }
+    .bridge-emphasis {
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 1.06em;
+      font-style: italic;
+      font-weight: 500;
+    }
 
-      .bridge-line a {
-        color: var(--ink);
-      }
+    .bridge-line a {
+      color: var(--ink);
+    }
 
-      .site-footer {
-        padding: 104px 0 24px;
-      }
+    .site-footer {
+      padding: 104px 0 24px;
+    }
 
-      .footer-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 1.1fr) minmax(180px, 0.7fr) minmax(180px, 0.7fr) minmax(180px, 0.7fr);
-        gap: 64px;
-        padding-top: 40px;
-      }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(180px, 0.7fr) minmax(180px, 0.7fr) minmax(180px, 0.7fr);
+      gap: 64px;
+      padding-top: 40px;
+    }
 
-      /* Footer links rest dimmed and come up to full strength one at a time
+    /* Footer links rest dimmed and come up to full strength one at a time
          on hover or keyboard focus, the same way the write-ups' context rail
          behaves. Labels and prose stay at full. Pointer devices only, so
          touch readers see everything at full. */
-      @media (hover: hover) and (pointer: fine) {
-        .footer-grid .footer-link {
-          opacity: 0.58;
-          transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out);
-        }
-
-        .footer-grid .footer-link:hover,
-        .footer-grid .footer-link:focus-visible {
-          opacity: 1;
-        }
+    @media (hover: hover) and (pointer: fine) {
+      .footer-grid .footer-link {
+        opacity: 0.58;
+        transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out);
       }
 
-      .footer-links {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
+      .footer-grid .footer-link:hover,
+      .footer-grid .footer-link:focus-visible {
+        opacity: 1;
       }
+    }
 
-      .footer-label {
-        margin: 0 0 14px;
-        color: var(--muted);
-        font-size: 0.72rem;
-        font-weight: 600;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }
+    .footer-links {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
 
-      .footer-copy {
-        max-width: 300px;
-        margin: 0;
-        color: var(--copy);
-        font-size: 0.95rem;
-        line-height: 1.55;
-      }
+    .footer-label {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
 
-      .footer-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        max-width: 100%;
+    .footer-copy {
+      max-width: 300px;
+      margin: 0;
+      color: var(--copy);
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+
+    .footer-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      max-width: 100%;
+      color: var(--ink);
+      font-size: 0.95rem;
+      font-weight: 500;
+      overflow-wrap: anywhere;
+      transition: transform 160ms var(--ease-out);
+    }
+
+    .footer-link:active {
+      transform: scale(0.97);
+    }
+
+    .footer-meta {
+      margin-top: 88px;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .footer-name {
+      margin: 72px 0 0;
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 6.4rem;
+      font-weight: 650;
+      line-height: 0.88;
+      text-transform: uppercase;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      a:hover {
         color: var(--ink);
-        font-size: 0.95rem;
-        font-weight: 500;
-        overflow-wrap: anywhere;
-        transition: transform 160ms var(--ease-out);
       }
 
-      .footer-link:active {
-        transform: scale(0.97);
+      a:hover .link-icon,
+      a:hover .inline-link-icon {
+        transform: translate(2px, -2px);
+        transition-duration: 140ms;
+        transition-timing-function: var(--ease-in);
+      }
+    }
+
+    @media (max-width: 980px) {
+      .site-nav {
+        padding: 16px 24px;
       }
 
-      .footer-meta {
-        margin-top: 88px;
-        color: var(--muted);
-        font-size: 0.78rem;
+      .hero-copy {
+        padding: 104px 0 80px;
+      }
+
+      h1 {
+        font-size: 3.25rem;
+      }
+
+      .career-masthead,
+      .project-masthead,
+      .project-feature {
+        grid-template-columns: 1fr;
+        gap: 28px;
+      }
+
+      .career-masthead h2,
+      .project-masthead h2 {
+        font-size: 3.4rem;
+      }
+
+      .writing-item {
+        grid-template-columns: minmax(210px, 0.42fr) minmax(0, 1fr);
+        gap: 28px;
+      }
+
+      .bridge {
+        padding: 92px 0;
+      }
+
+      .bridge-line {
+        font-size: 2.85rem;
+      }
+
+      .footer-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 48px 32px;
+      }
+
+      .footer-grid> :first-child {
+        grid-column: 1 / -1;
       }
 
       .footer-name {
-        margin: 72px 0 0;
-        color: var(--ink);
-        font-family: var(--serif);
-        font-size: 6.4rem;
-        font-weight: 650;
-        line-height: 0.88;
-        text-transform: uppercase;
+        font-size: 4.6rem;
       }
 
-      @media (hover: hover) and (pointer: fine) {
-        a:hover {
-          color: var(--ink);
-        }
+    }
 
-        a:hover .link-icon,
-        a:hover .inline-link-icon {
-          transform: translate(2px, -2px);
-          transition-duration: 140ms;
-          transition-timing-function: var(--ease-in);
-        }
+    @media (max-width: 620px) {
+      body {
+        font-size: 15px;
       }
 
-      @media (max-width: 980px) {
-        .site-nav {
-          padding: 16px 24px;
-        }
-
-        .hero-copy {
-          padding: 104px 0 80px;
-        }
-
-        h1 {
-          font-size: 3.25rem;
-        }
-
-        .career-masthead,
-        .project-masthead,
-        .project-feature {
-          grid-template-columns: 1fr;
-          gap: 28px;
-        }
-
-        .career-masthead h2,
-        .project-masthead h2 {
-          font-size: 3.4rem;
-        }
-
-        .writing-item {
-          grid-template-columns: minmax(210px, 0.42fr) minmax(0, 1fr);
-          gap: 28px;
-        }
-
-        .bridge {
-          padding: 92px 0;
-        }
-
-        .bridge-line {
-          font-size: 2.85rem;
-        }
-
-        .footer-grid {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 48px 32px;
-        }
-
-        .footer-grid > :first-child {
-          grid-column: 1 / -1;
-        }
-
-        .footer-name {
-          font-size: 4.6rem;
-        }
-
+      .hero-inner,
+      .section-inner {
+        width: min(100% - 32px, var(--content-width));
       }
 
-      @media (max-width: 620px) {
-        body {
-          font-size: 15px;
-        }
-
-        .hero-inner,
-        .section-inner {
-          width: min(100% - 32px, var(--content-width));
-        }
-
-        h1 {
-          font-size: 2.55rem;
-        }
-
-        .bridge {
-          min-height: auto;
-          padding: 96px 0 120px;
-        }
-
-        .bridge-line {
-          font-size: 2.1rem;
-          line-height: 1.08;
-        }
-
-        .bridge-line + .bridge-line {
-          margin-top: 14px;
-        }
-
-        .bridge-block + .bridge-block {
-          margin-top: 112px;
-        }
-
-        .project-section {
-          padding: 120px 0;
-        }
-
-        .writing-section {
-          padding: 0 0 120px;
-        }
-
-        .career-masthead {
-          margin-bottom: 48px;
-        }
-
-        .project-masthead {
-          margin-bottom: 56px;
-        }
-
-        .career-masthead h2,
-        .project-masthead h2 {
-          font-size: 2.7rem;
-          line-height: 1.02;
-        }
-
-        .project-feature {
-          gap: 32px;
-        }
-
-        .project-feature h3 {
-          font-size: 2.6rem;
-        }
-
-        .project-lede {
-          font-size: 1.05rem;
-        }
-
-        .project-proof {
-          grid-template-columns: 1fr;
-          gap: 8px;
-          padding: 24px 0;
-        }
-
-        .writing-item {
-          grid-template-columns: 1fr;
-          gap: 14px;
-          padding: 32px 0;
-        }
-
-        .site-footer {
-          padding: 80px 0 20px;
-        }
-
-        .footer-grid {
-          grid-template-columns: 1fr;
-          gap: 36px;
-          padding-top: 32px;
-        }
-
-        .footer-grid > :first-child {
-          grid-column: auto;
-        }
-
-        .footer-meta {
-          margin-top: 64px;
-        }
-
-        .footer-name {
-          margin-top: 56px;
-          font-size: 3.2rem;
-          line-height: 0.92;
-        }
+      h1 {
+        font-size: 2.55rem;
       }
 
-      @media (prefers-reduced-motion: reduce) {
-        *,
-        *::before,
-        *::after {
-          animation-duration: 1ms !important;
-          scroll-behavior: auto !important;
-          transition-duration: 1ms !important;
-        }
+      .bridge {
+        min-height: auto;
+        padding: 96px 0 120px;
       }
-    </style>
-  </head>
-  <body>
-    <a class="skip-link" href="#main">Skip to content</a>
 
-    <nav class="site-nav" aria-label="Primary navigation">
-      <a class="brand" href="#">
-        <span>kwamina.fyi</span>
-      </a>
-      <a class="nav-link" href="about">About</a>
-    </nav>
+      .bridge-line {
+        font-size: 2.1rem;
+        line-height: 1.08;
+      }
 
-    <main id="main">
-      <section id="home" class="hero" aria-labelledby="hero-title">
-        <div class="hero-inner">
-          <div class="hero-copy">
-            <h1 id="hero-title">
-              <span class="hero-word" style="--word-index: 0">I</span>
-              <span class="hero-word hook-craft" style="--word-index: 1">craft</span>
-              <span class="hero-word" style="--word-index: 2">software</span>
-              <span class="hero-word" style="--word-index: 3">with</span>
-              <span class="hero-word" style="--word-index: 4">clarity</span>
-              <span class="hero-word" style="--word-index: 5">and</span>
-              <span class="hero-word" style="--word-index: 6">care.</span>
-            </h1>
-          </div>
+      .bridge-line+.bridge-line {
+        margin-top: 14px;
+      }
+
+      .bridge-block+.bridge-block {
+        margin-top: 112px;
+      }
+
+      .project-section {
+        padding: 120px 0;
+      }
+
+      .writing-section {
+        padding: 0 0 120px;
+      }
+
+      .career-masthead {
+        margin-bottom: 48px;
+      }
+
+      .project-masthead {
+        margin-bottom: 56px;
+      }
+
+      .career-masthead h2,
+      .project-masthead h2 {
+        font-size: 2.7rem;
+        line-height: 1.02;
+      }
+
+      .project-feature {
+        gap: 32px;
+      }
+
+      .project-feature h3 {
+        font-size: 2.6rem;
+      }
+
+      .project-lede {
+        font-size: 1.05rem;
+      }
+
+      .project-proof {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 24px 0;
+      }
+
+      .writing-item {
+        grid-template-columns: 1fr;
+        gap: 14px;
+        padding: 32px 0;
+      }
+
+      .site-footer {
+        padding: 80px 0 20px;
+      }
+
+      .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 36px;
+        padding-top: 32px;
+      }
+
+      .footer-grid> :first-child {
+        grid-column: auto;
+      }
+
+      .footer-meta {
+        margin-top: 64px;
+      }
+
+      .footer-name {
+        margin-top: 56px;
+        font-size: 3.2rem;
+        line-height: 0.92;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: 1ms !important;
+        scroll-behavior: auto !important;
+        transition-duration: 1ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <nav class="site-nav" aria-label="Primary navigation">
+    <a class="brand" href="#">
+      <span>kwamina.fyi</span>
+    </a>
+    <a class="nav-link" href="about">About</a>
+  </nav>
+
+  <main id="main">
+    <section id="home" class="hero" aria-labelledby="hero-title">
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <h1 id="hero-title">
+            <span class="hero-word" style="--word-index: 0">I</span>
+            <span class="hero-word hook-craft" style="--word-index: 1">craft</span>
+            <span class="hero-word" style="--word-index: 2">software</span>
+            <span class="hero-word" style="--word-index: 3">with</span>
+            <span class="hero-word" style="--word-index: 4">clarity</span>
+            <span class="hero-word" style="--word-index: 5">and</span>
+            <span class="hero-word" style="--word-index: 6">care.</span>
+          </h1>
         </div>
-      </section>
-
-      <section id="intro" class="bridge" aria-label="Introduction">
-        <div class="section-inner bridge-layout">
-          <div class="bridge-copy">
-            <div class="bridge-block">
-              <p class="bridge-line">Hi, I&rsquo;m Kwamina.</p>
-              <p class="bridge-line">
-                I&rsquo;m a
-                <span class="bridge-emphasis">product-minded builder</span>
-                drawn to problems that reward curiosity, taste, and close attention to detail.
-              </p>
-            </div>
-            <div class="bridge-block">
-              <p class="bridge-line">
-                Right now, I&rsquo;m building <a href="work/athena/">Athena <svg class="inline-link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a> with AI agents.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="current-work" class="project-section" aria-labelledby="current-work-title">
-        <div class="section-inner">
-          <header class="project-masthead">
-            <p class="career-kicker">Current work</p>
-            <h2 id="current-work-title">A business OS for owner-led retail.</h2>
-          </header>
-
-          <article class="project-feature">
-            <h3>Athena</h3>
-            <div class="project-copy">
-              <p class="project-lede" data-claim="claim-wigclub-context">The owner should not have to reconstruct the business before running it. Athena keeps sales, stock, cash, services, and staff work on one operating record &mdash; and runs the operating day at <a href="https://wigclub.store" target="_blank" rel="noreferrer">Wigclub <svg class="inline-link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>, a retail and service business in Ghana, in production today.</p>
-
-              <div class="project-proofs" aria-label="Athena engineering highlights">
-                <article class="project-proof">
-                  <h4>One connected operating record</h4>
-                  <p>In-person and online sales share context with inventory, cash, services, and staff work &mdash; the day&rsquo;s evidence lives in one place, not across disconnected tools.</p>
-                </article>
-                <article class="project-proof">
-                  <h4>Built for real operating conditions</h4>
-                  <p>The local-first register records the work before it reports success, keeps selling through unreliable connectivity, and reconciles without rewriting history when the network returns.</p>
-                </article>
-                <article class="project-proof">
-                  <h4>Engineered for humans and AI agents</h4>
-                  <p>I build Athena with AI agents inside a repository that audits its own delivery: generated maps orient contributors, evidence follows every change, and each failure that escapes becomes a new sensor. The quality bar stays human.</p>
-                </article>
-              </div>
-              <a class="project-action" href="work/athena/">Read the story <svg class="inline-link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section id="writing" class="writing-section" aria-labelledby="writing-title">
-        <div class="section-inner">
-          <header class="writing-masthead">
-            <p id="writing-title" class="career-kicker">Writing</p>
-          </header>
-
-          <div class="writing-list">
-            <a class="writing-item" href="work/athena/">
-              <h3>The Athena story</h3>
-              <p>The product problem, operating model, and current state of a business OS for owner-led retail.</p>
-            </a>
-            <a class="writing-item" href="work/athena/local-first-pos">
-              <h3>Local-first point of sale</h3>
-              <p>How the register records the work before it reports success and keeps selling through unreliable connectivity.</p>
-            </a>
-            <a class="writing-item" href="work/athena/agent-ready-repository">
-              <h3>Agent-ready repository</h3>
-              <p>How the repository is structured so AI agents can contribute, with evidence following every change.</p>
-            </a>
-            <a class="writing-item" href="work/athena/read-optimized-reporting">
-              <h3>Read-optimized reporting</h3>
-              <p>How one fact ledger and one pure fold turn a store&rsquo;s operating record into reports that cost a single read.</p>
-            </a>
-          </div>
-        </div>
-      </section>
-
-    </main>
-
-    <footer class="site-footer">
-      <div class="section-inner">
-        <div class="footer-grid">
-          <div>
-            <p class="footer-label">About</p>
-              <p class="footer-copy">Kwamina is a software craftsman who enjoys solving hard problems and building on the web.</p>
-          </div>
-          <div>
-            <p class="footer-label">Navigate</p>
-            <div class="footer-links">
-              <a class="footer-link" href="about">About</a>
-              <a class="footer-link" href="work/athena/">Athena</a>
-            </div>
-          </div>
-          <div>
-            <p class="footer-label">Contact</p>
-            <div class="footer-links">
-              <a class="footer-link" href="mailto:kwami.nuh@gmail.com">kwami.nuh@gmail.com <svg class="link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
-              <a class="footer-link" href="/docs/resume.pdf" target="_blank" rel="noreferrer">Resume <svg class="link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
-            </div>
-          </div>
-          <div>
-            <p class="footer-label">Elsewhere</p>
-            <div class="footer-links">
-              <a class="footer-link" href="https://linkedin.com/in/ernestmens" target="_blank" rel="noreferrer">LinkedIn <svg class="link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
-              <a class="footer-link" href="https://github.com/kwam1na" target="_blank" rel="noreferrer">GitHub <svg class="link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
-            </div>
-          </div>
-        </div>
-        <p class="footer-meta">&copy; 2026 Kwamina Essuah Mensah</p>
-        <p class="footer-name" aria-hidden="true">Kwamina Essuah Mensah</p>
       </div>
-    </footer>
-  </body>
+    </section>
+
+    <section id="intro" class="bridge" aria-label="Introduction">
+      <div class="section-inner bridge-layout">
+        <div class="bridge-copy">
+          <div class="bridge-block">
+            <p class="bridge-line">Hi, I&rsquo;m Kwamina.</p>
+            <p class="bridge-line">
+              I&rsquo;m a
+              <span class="bridge-emphasis">product-minded builder</span>
+              drawn to problems that reward curiosity, taste, and close attention to detail.
+            </p>
+          </div>
+          <div class="bridge-block">
+            <p class="bridge-line">
+              Right now, I&rsquo;m building <a href="work/athena/">Athena <svg class="inline-link-icon"
+                  xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  aria-hidden="true">
+                  <path d="M7 7h10v10" />
+                  <path d="M7 17 17 7" />
+                </svg></a> with AI agents.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="current-work" class="project-section" aria-labelledby="current-work-title">
+      <div class="section-inner">
+        <header class="project-masthead">
+          <p class="career-kicker">Current work</p>
+          <h2 id="current-work-title">A business OS for owner-led retail.</h2>
+        </header>
+
+        <article class="project-feature">
+          <h3>Athena</h3>
+          <div class="project-copy">
+            <p class="project-lede" data-claim="claim-wigclub-context">The owner should not have to reconstruct the
+              business before running it. Athena keeps sales, stock, cash, services, and staff work on one operating
+              record &mdash; and runs the operating day at <a href="https://wigclub.store" target="_blank"
+                rel="noreferrer">Wigclub <svg class="inline-link-icon" xmlns="http://www.w3.org/2000/svg" width="24"
+                  height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M7 7h10v10" />
+                  <path d="M7 17 17 7" />
+                </svg></a>, a retail and service business in Ghana, in production today.</p>
+
+            <div class="project-proofs" aria-label="Athena engineering highlights">
+              <article class="project-proof">
+                <h4>One connected operating record</h4>
+                <p>In-person and online sales share context with inventory, cash, services, and staff work &mdash; the
+                  day&rsquo;s evidence lives in one place, not across disconnected tools.</p>
+              </article>
+              <article class="project-proof">
+                <h4>Built for real operating conditions</h4>
+                <p>The local-first register records the work before it reports success, keeps selling through unreliable
+                  connectivity, and reconciles without rewriting history when the network returns.</p>
+              </article>
+              <article class="project-proof">
+                <h4>Engineered for humans and AI agents</h4>
+                <p>I build Athena with AI agents inside a repository that audits its own delivery: generated maps orient
+                  contributors, evidence follows every change, and each failure that escapes becomes a new sensor. The
+                  quality bar stays human.</p>
+              </article>
+            </div>
+            <a class="project-action" href="work/athena/">Read the story <svg class="inline-link-icon"
+                xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true">
+                <path d="M7 7h10v10" />
+                <path d="M7 17 17 7" />
+              </svg></a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="writing" class="writing-section" aria-labelledby="writing-title">
+      <div class="section-inner">
+        <header class="writing-masthead">
+          <p id="writing-title" class="career-kicker">Writing</p>
+        </header>
+
+        <div class="writing-list">
+          <a class="writing-item" href="work/athena/">
+            <h3>The Athena story</h3>
+            <p>The product problem, operating model, and current state of a business OS for owner-led retail.</p>
+          </a>
+          <a class="writing-item" href="work/athena/local-first-pos">
+            <h3>Local-first point of sale</h3>
+            <p>How the register records the work before it reports success and keeps selling through unreliable
+              connectivity.</p>
+          </a>
+          <a class="writing-item" href="work/athena/agent-ready-repository">
+            <h3>Agent-ready repository</h3>
+            <p>How the repository is structured so AI agents can contribute, with evidence following every change.</p>
+          </a>
+          <a class="writing-item" href="work/athena/read-optimized-reporting">
+            <h3>Read-optimized reporting</h3>
+            <p>How one fact ledger and one pure fold turn a store&rsquo;s operating record into reports that cost a
+              single read.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="section-inner">
+      <div class="footer-grid">
+        <div>
+          <p class="footer-label">About</p>
+          <p class="footer-copy">Kwamina is a software craftsman who enjoys solving hard problems and building on the
+            web.</p>
+        </div>
+        <div>
+          <p class="footer-label">Navigate</p>
+          <div class="footer-links">
+            <a class="footer-link" href="about">About</a>
+            <a class="footer-link" href="work/athena/">Athena</a>
+          </div>
+        </div>
+        <div>
+          <p class="footer-label">Contact</p>
+          <div class="footer-links">
+            <a class="footer-link" href="mailto:kwami.nuh@gmail.com">kwami.nuh@gmail.com <svg class="link-icon"
+                xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true">
+                <path d="M7 7h10v10" />
+                <path d="M7 17 17 7" />
+              </svg></a>
+            <a class="footer-link" href="/docs/resume.pdf" target="_blank" rel="noreferrer">Resume <svg
+                class="link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true">
+                <path d="M7 7h10v10" />
+                <path d="M7 17 17 7" />
+              </svg></a>
+          </div>
+        </div>
+        <div>
+          <p class="footer-label">Elsewhere</p>
+          <div class="footer-links">
+            <a class="footer-link" href="https://linkedin.com/in/ernestmens" target="_blank" rel="noreferrer">LinkedIn
+              <svg class="link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true">
+                <path d="M7 7h10v10" />
+                <path d="M7 17 17 7" />
+              </svg></a>
+            <a class="footer-link" href="https://github.com/kwam1na" target="_blank" rel="noreferrer">GitHub <svg
+                class="link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true">
+                <path d="M7 7h10v10" />
+                <path d="M7 17 17 7" />
+              </svg></a>
+          </div>
+        </div>
+      </div>
+      <p class="footer-meta">&copy; 2026 Kwamina Essuah Mensah</p>
+      <p class="footer-name" aria-hidden="true">Kwamina Essuah Mensah</p>
+    </div>
+  </footer>
+</body>
+
 </html>
