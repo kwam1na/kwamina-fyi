@@ -275,6 +275,88 @@ body::after {
   color: var(--color-paper);
 }
 
+/* Scroll-to-top, ported from Athena's docs workspace. Sits opposite the theme
+ * toggle and borrows its resting opacity, blur, and easing, so the two read as
+ * one pair of floating controls rather than two separate ideas. The ring
+ * reports how far through the page the reader is. */
+.scroll-top {
+  position: fixed;
+  z-index: 40;
+  right: 24px;
+  bottom: 24px;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--nav-surface, var(--paper));
+  box-shadow: 0 4px 16px rgba(21, 24, 33, 0.08);
+  color: var(--copy);
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  opacity: 0;
+  pointer-events: none;
+  /* Never animate from scale(0) — the control shrinks toward its resting
+   * place rather than materialising out of nothing. */
+  transform: translateY(18px) scale(0.92);
+  transition: transform 160ms var(--ease-portfolio), color 160ms ease, background-color 160ms ease, opacity 160ms ease;
+}
+
+.scroll-top.is-visible {
+  opacity: 0.52;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.scroll-top:active {
+  transform: scale(0.97);
+}
+
+.scroll-top:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+}
+
+.scroll-top.is-on-footer {
+  background: color-mix(in srgb, var(--footer-surface) 86%, transparent);
+  color: var(--color-paper);
+}
+
+.scroll-top-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  /* Start the sweep at 12 o'clock instead of 3. */
+  transform: rotate(-90deg);
+}
+
+.scroll-top-track {
+  stroke: color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.scroll-top-progress {
+  /* pathLength="1" normalises the circle, so the offset is just 1 - progress
+   * and no circumference maths has to agree with the radius. */
+  stroke: currentColor;
+  stroke-dasharray: 1;
+  transition: stroke-dashoffset 80ms linear;
+}
+
+.scroll-top-glyph {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
 .theme-toggle-icon {
   position: absolute;
   width: 18px;
@@ -312,13 +394,35 @@ body::after {
   .theme-toggle.is-on-footer:hover {
     color: var(--color-paper);
   }
+
+  .scroll-top.is-visible:hover {
+    color: var(--ink);
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+
+  .scroll-top.is-on-footer:hover {
+    color: var(--color-paper);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .theme-toggle,
-  .theme-toggle-icon {
+  .theme-toggle-icon,
+  .scroll-top {
     animation-duration: 1ms;
     transition-duration: 1ms;
+  }
+
+  /* A gentler equivalent, not no feedback: keep the fade, drop the travel. */
+  .scroll-top,
+  .scroll-top.is-visible,
+  .scroll-top:active {
+    transform: none;
+  }
+
+  .scroll-top-progress {
+    transition: none;
   }
 }
 
@@ -379,6 +483,19 @@ body::after {
   .theme-toggle-icon {
     width: 16px;
     height: 16px;
+  }
+
+  /* The theme toggle vacates the bottom of the screen on mobile, so the
+   * scroll-to-top keeps the corner to itself — just tucked in tighter. */
+  .scroll-top {
+    right: 16px;
+    bottom: 16px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .scroll-top.is-visible {
+    opacity: 0.64;
   }
 }
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useFooterOverlap } from './use-footer-overlap.js'
 
 const storageKey = 'kwamina-fyi-theme'
 
@@ -11,8 +12,8 @@ function getTheme() {
 export function ThemeToggle() {
   const [theme, setTheme] = useState(getTheme)
   const [isVisible, setIsVisible] = useState(false)
-  const [isOnFooter, setIsOnFooter] = useState(false)
   const toggleRef = useRef(null)
+  const isOnFooter = useFooterOverlap(toggleRef)
   const isDark = theme === 'dark'
 
   useEffect(() => {
@@ -23,12 +24,9 @@ export function ThemeToggle() {
   useEffect(() => {
     let frame = 0
 
-    const updatePositionState = () => {
+    const updateVisibility = () => {
       frame = 0
       const nav = document.querySelector('.site-nav')
-      const footer = document.querySelector('.site-footer')
-      const toggle = toggleRef.current
-
       const navIsSticky = nav && window.getComputedStyle(nav).position === 'sticky'
       setIsVisible(
         nav
@@ -37,32 +35,10 @@ export function ThemeToggle() {
             : nav.getBoundingClientRect().bottom <= 0
           : window.scrollY > 0,
       )
-
-      if (!footer || !toggle) {
-        setIsOnFooter(false)
-        return
-      }
-
-      const routedPage = footer.closest('.routed-page')
-      const main = routedPage?.querySelector('main')
-      const footerBounds = footer.getBoundingClientRect()
-      const toggleBounds = toggle.getBoundingClientRect()
-      const toggleCenter = toggleBounds.top + toggleBounds.height / 2
-      const hasInvertedFooter = routedPage?.classList.contains('has-revealed-footer')
-      const hasPinnedFooter = hasInvertedFooter
-        && !routedPage.classList.contains('has-inline-footer')
-
-      setIsOnFooter(
-        hasInvertedFooter && (
-          hasPinnedFooter && main
-            ? main.getBoundingClientRect().bottom <= toggleCenter
-            : toggleCenter >= footerBounds.top && toggleCenter <= footerBounds.bottom
-        ),
-      )
     }
 
     const scheduleUpdate = () => {
-      if (!frame) frame = window.requestAnimationFrame(updatePositionState)
+      if (!frame) frame = window.requestAnimationFrame(updateVisibility)
     }
 
     const pageObserver = new MutationObserver(scheduleUpdate)
