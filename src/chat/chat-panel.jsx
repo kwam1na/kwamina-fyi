@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useChat, fetchServerSentEvents } from '@tanstack/ai-react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { animate } from 'animejs'
@@ -7,10 +7,6 @@ import { chatTextParts } from './chat-links.js'
 import { fetchStoredMessages } from './chat-transcript.js'
 import { chatPageLabelForPath, chatTitleForPath } from './chat-title.js'
 import { FlipText } from './flip-text.jsx'
-import {
-  shouldAutoFocusChatComposer,
-  watchMobileChatViewport,
-} from './mobile-viewport.js'
 import { revealDuration, revealedPrefix } from './stream-reveal.js'
 
 const STARTERS = [
@@ -222,15 +218,6 @@ export default function ChatPanel({
     }
   }, [replayStatus, thread.id, setMessages])
 
-  // A virtual keyboard can shrink the visual viewport without changing the
-  // layout viewport that 100dvh measures, so the takeover follows that height.
-  // Its position remains fixed; browser-driven viewport panning must not move
-  // the panel a second time.
-  useLayoutEffect(
-    () => watchMobileChatViewport(panelRef.current, { isMobile: isMobileTakeover }),
-    [isMobileTakeover],
-  )
-
   // Follow the answer as it streams, but never yank the view away from someone
   // who has scrolled up to reread something.
   const followLatest = useCallback(() => {
@@ -432,7 +419,7 @@ export default function ChatPanel({
         <textarea
           ref={inputRef}
           className="site-chat-input"
-          autoFocus={shouldAutoFocusChatComposer({ isMobileTakeover })}
+          autoFocus={!isMobileTakeover}
           value={input}
           rows={2}
           placeholder="Ask a question&hellip;"
