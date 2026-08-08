@@ -22,10 +22,12 @@ const GITHUB_URL = 'https://github.com/kwam1na'
 const LINKEDIN_URL = 'https://linkedin.com/in/ernestmens'
 const RESUME_PATH = '/docs/resume.pdf'
 const ATHENA_PRODUCT_URL = 'https://athena.wigclub.store/landing'
+const ATHENA_REPOSITORY_URL = `${GITHUB_URL}/athena`
 
 const RESOURCE_DESTINATIONS = {
   [RESUME_PATH]: 'Resume',
   [ATHENA_PRODUCT_URL]: 'Athena product overview',
+  [ATHENA_REPOSITORY_URL]: 'Athena repository',
 }
 
 const resourceSource = Object.keys(RESOURCE_DESTINATIONS)
@@ -42,6 +44,8 @@ const chatResourcePattern = new RegExp(
   `(^|[^A-Za-z0-9_:/])(${resourceSource})(?![A-Za-z0-9_/-])`,
   'g',
 )
+
+const chatLabeledLinkPattern = /\[([^\]\n]+)\]\(\s*[^)\s]+\s*\)/g
 
 const CONTACT_DESTINATIONS = {
   [EMAIL]: `mailto:${EMAIL}`,
@@ -114,6 +118,19 @@ function linkParts(text, bold = false) {
       type: 'external-link',
       text: RESOURCE_DESTINATIONS[href],
       href,
+    })
+  }
+
+  // Treat every complete Markdown link as one unit. Allowlisted
+  // destinations above become links; unsupported destinations keep only their
+  // readable label instead of leaking syntax or matching contact names inside
+  // the label and URL independently.
+  for (const match of text.matchAll(chatLabeledLinkPattern)) {
+    matches.push({
+      start: match.index,
+      end: match.index + match[0].length,
+      type: 'text',
+      text: match[1],
     })
   }
 

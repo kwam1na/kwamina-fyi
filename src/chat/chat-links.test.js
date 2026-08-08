@@ -34,6 +34,30 @@ describe('chatTextParts', () => {
     ])
   })
 
+  it('renders the Athena repository as one first-class link', () => {
+    expect(chatTextParts(
+      'The [GitHub repository](https://github.com/kwam1na/athena) is authoritative.',
+    )).toEqual([
+      { type: 'text', text: 'The ' },
+      {
+        type: 'external-link',
+        text: 'GitHub repository',
+        href: 'https://github.com/kwam1na/athena',
+      },
+      { type: 'text', text: ' is authoritative.' },
+    ])
+  })
+
+  it('keeps unsupported Markdown links atomic instead of linking words inside them', () => {
+    expect(chatTextParts(
+      'Read the [GitHub guide](https://example.com/github) for more.',
+    )).toEqual([
+      { type: 'text', text: 'Read the ' },
+      { type: 'text', text: 'GitHub guide' },
+      { type: 'text', text: ' for more.' },
+    ])
+  })
+
   it('uses concise labels when resource destinations are returned without Markdown', () => {
     expect(chatTextParts(
       'Open /docs/resume.pdf or https://athena.wigclub.store/landing.',
@@ -50,9 +74,11 @@ describe('chatTextParts', () => {
     ])
   })
 
-  it('leaves labeled links to unknown site paths as literal text', () => {
+  it('keeps only the readable label for unknown site paths', () => {
     expect(chatTextParts('Read [A missing page](/not-a-page).')).toEqual([
-      { type: 'text', text: 'Read [A missing page](/not-a-page).' },
+      { type: 'text', text: 'Read ' },
+      { type: 'text', text: 'A missing page' },
+      { type: 'text', text: '.' },
     ])
   })
 

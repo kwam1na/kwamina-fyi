@@ -28,9 +28,10 @@ describe('assistant contract', () => {
     expect(INSTRUCTIONS).toContain('not the LinkedIn and GitHub restriction')
   })
 
-  it('teaches the model the allowlisted resume and product destinations', () => {
+  it('teaches the model the allowlisted resource destinations', () => {
     expect(INSTRUCTIONS).toContain('[Resume](/docs/resume.pdf)')
     expect(INSTRUCTIONS).toContain('[Athena product overview](https://athena.wigclub.store/landing)')
+    expect(INSTRUCTIONS).toContain('[Athena repository](https://github.com/kwam1na/athena)')
   })
 
   it('marks evaluation traffic only with the server-held token', () => {
