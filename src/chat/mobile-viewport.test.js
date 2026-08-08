@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'bun:test'
-import { watchMobileChatViewport } from './mobile-viewport.js'
+import {
+  shouldAutoFocusChatComposer,
+  watchMobileChatViewport,
+} from './mobile-viewport.js'
 
 function viewportFixture() {
   const listeners = new Map()
   return {
     height: 844,
-    offsetTop: 0,
     addEventListener(type, listener) {
       listeners.set(type, listener)
     },
@@ -23,9 +25,12 @@ function viewportFixture() {
 
 function panelFixture() {
   const properties = new Map()
+  const writes = []
   return {
+    writes,
     style: {
       setProperty(name, value) {
+        writes.push([name, value])
         properties.set(name, value)
       },
       removeProperty(name) {
@@ -39,30 +44,34 @@ function panelFixture() {
 }
 
 describe('mobile chat visual viewport', () => {
-  it('tracks the keyboard-sized viewport from the first focus', () => {
+  it('tracks the keyboard-sized viewport after explicit focus', () => {
     const panel = panelFixture()
     const viewport = viewportFixture()
     const stopWatching = watchMobileChatViewport(panel, { isMobile: true, viewport })
 
     expect(panel.style.getPropertyValue('--mobile-chat-viewport-height')).toBe('844px')
-    expect(panel.style.getPropertyValue('--mobile-chat-viewport-top')).toBe('0px')
 
     viewport.height = 430
-    viewport.offsetTop = 12
     viewport.dispatch('resize')
 
     expect(panel.style.getPropertyValue('--mobile-chat-viewport-height')).toBe('430px')
-    expect(panel.style.getPropertyValue('--mobile-chat-viewport-top')).toBe('12px')
 
-    viewport.offsetTop = 18
     viewport.dispatch('scroll')
-    expect(panel.style.getPropertyValue('--mobile-chat-viewport-top')).toBe('18px')
+    expect(viewport.hasListener('scroll')).toBe(false)
+    expect(panel.style.getPropertyValue('--mobile-chat-viewport-height')).toBe('430px')
 
     stopWatching()
     expect(viewport.hasListener('resize')).toBe(false)
-    expect(viewport.hasListener('scroll')).toBe(false)
     expect(panel.style.getPropertyValue('--mobile-chat-viewport-height')).toBe('')
-    expect(panel.style.getPropertyValue('--mobile-chat-viewport-top')).toBe('')
+  })
+
+  it('does not rewrite an unchanged viewport height during resize bursts', () => {
+    const panel = panelFixture()
+    const viewport = viewportFixture()
+    watchMobileChatViewport(panel, { isMobile: true, viewport })
+
+    viewport.dispatch('resize')
+    expect(panel.writes).toEqual([['--mobile-chat-viewport-height', '844px']])
   })
 
   it('keeps the CSS fallback outside mobile visual viewports', () => {
@@ -74,5 +83,12 @@ describe('mobile chat visual viewport', () => {
 
     expect(viewport.hasListener('resize')).toBe(false)
     expect(panel.style.getPropertyValue('--mobile-chat-viewport-height')).toBe('')
+  })
+})
+
+describe('chat composer focus', () => {
+  it('waits for an explicit tap in takeover mode and autofocuses otherwise', () => {
+    expect(shouldAutoFocusChatComposer({ isMobileTakeover: true })).toBe(false)
+    expect(shouldAutoFocusChatComposer({ isMobileTakeover: false })).toBe(true)
   })
 })

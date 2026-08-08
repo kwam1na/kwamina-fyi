@@ -7,7 +7,10 @@ import { chatTextParts } from './chat-links.js'
 import { fetchStoredMessages } from './chat-transcript.js'
 import { chatPageLabelForPath, chatTitleForPath } from './chat-title.js'
 import { FlipText } from './flip-text.jsx'
-import { watchMobileChatViewport } from './mobile-viewport.js'
+import {
+  shouldAutoFocusChatComposer,
+  watchMobileChatViewport,
+} from './mobile-viewport.js'
 import { revealDuration, revealedPrefix } from './stream-reveal.js'
 
 const STARTERS = [
@@ -219,18 +222,14 @@ export default function ChatPanel({
     }
   }, [replayStatus, thread.id, setMessages])
 
-  // Install this before the passive autofocus effect. On iOS the keyboard
-  // shrinks window.visualViewport after focus without changing the layout
-  // viewport that 100dvh measures, so the takeover must follow that resize to
-  // keep its bottom-anchored composer visible on the very first interaction.
+  // A virtual keyboard can shrink the visual viewport without changing the
+  // layout viewport that 100dvh measures, so the takeover follows that height.
+  // Its position remains fixed; browser-driven viewport panning must not move
+  // the panel a second time.
   useLayoutEffect(
     () => watchMobileChatViewport(panelRef.current, { isMobile: isMobileTakeover }),
     [isMobileTakeover],
   )
-
-  useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
 
   // Follow the answer as it streams, but never yank the view away from someone
   // who has scrolled up to reread something.
@@ -433,6 +432,7 @@ export default function ChatPanel({
         <textarea
           ref={inputRef}
           className="site-chat-input"
+          autoFocus={shouldAutoFocusChatComposer({ isMobileTakeover })}
           value={input}
           rows={2}
           placeholder="Ask a question&hellip;"

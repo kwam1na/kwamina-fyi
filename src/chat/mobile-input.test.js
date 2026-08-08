@@ -23,7 +23,7 @@ describe('mobile chat composer', () => {
     overflow: hidden;
   }`)
     expect(styles).toContain(`  .site-chat-panel {
-    top: var(--mobile-chat-viewport-top, 0px);
+    top: 0;
     right: 0;
     bottom: auto;
     left: 0;
