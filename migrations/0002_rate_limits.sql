@@ -5,10 +5,10 @@
 -- a sequence of requests gets spread across. D1 has one primary, so a count
 -- kept here is the same count for every request regardless of where it lands.
 --
--- `id` is a truncated SHA-256 of the caller's address salted with the current
--- day, so it is a counter key rather than an address: it cannot be joined
--- against anything else, and it stops being derivable at midnight. Rows are
--- swept hourly by the scheduled handler.
+-- `id` is a truncated HMAC-SHA-256 of the caller's address and current day,
+-- keyed by the dedicated RATE_LIMIT_KEY Worker secret. It is a counter key
+-- rather than an address: a D1 reader cannot enumerate ordinary IPv4 values,
+-- and the key stops matching new requests at midnight. Rows are swept hourly.
 
 CREATE TABLE rate_limits (
   id TEXT PRIMARY KEY,

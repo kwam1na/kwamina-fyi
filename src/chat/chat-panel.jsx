@@ -1,9 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useChat, fetchServerSentEvents } from '@tanstack/ai-react'
+import { Link, useRouterState } from '@tanstack/react-router'
+import { animate } from 'animejs'
+import { NoticeArrow } from '../notice-page.jsx'
+import { chatTextParts } from './chat-links.js'
+import { fetchStoredMessages } from './chat-transcript.js'
+import { chatPageLabelForPath, chatTitleForPath } from './chat-title.js'
+import { FlipText } from './flip-text.jsx'
+import { revealDuration, revealedPrefix } from './stream-reveal.js'
 
 const STARTERS = [
-  'What is Athena?',
   "What's Kwamina's background?",
+  'What is Athena?',
   'How does he work with AI agents?',
 ]
 
@@ -15,6 +23,94 @@ function messageText(message) {
 }
 
 const GENERIC_ERROR = 'Something went wrong. Try asking again.'
+const TRANSCRIPT_TIMEOUT_MS = 8_000
+
+function ChatLink({ part }) {
+  if (part.type === 'link') return <Link to={part.to}>{part.text}</Link>
+  if (part.type !== 'external-link') return part.text
+
+  const opensNewTab = part.href.startsWith('http')
+  return (
+    <a
+      href={part.href}
+      target={opensNewTab ? '_blank' : undefined}
+      rel={opensNewTab ? 'noreferrer' : undefined}
+    >
+      {part.text}
+      <NoticeArrow className="inline-link-icon" />
+    </a>
+  )
+}
+
+function ChatText({ text, hideIncompleteSiteLink = false }) {
+  return chatTextParts(text, { hideIncompleteSiteLink }).map((part, index) => {
+    if (part.bold) {
+      return <strong key={`strong-${index}`}><ChatLink part={part} /></strong>
+    }
+
+    return part.type === 'link' || part.type === 'external-link'
+      ? <ChatLink key={`${part.to ?? part.href}-${index}`} part={part} />
+      : part.text
+  })
+}
+
+function StreamingText({ text, isStreaming, onReveal }) {
+  const [visibleText, setVisibleText] = useState(() => (isStreaming ? '' : text))
+  const visibleRef = useRef(visibleText)
+  const animationRef = useRef(null)
+
+  useEffect(() => {
+    const revealImmediately = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      || !text.startsWith(visibleRef.current)
+
+    animationRef.current?.cancel()
+    animationRef.current = null
+
+    if (revealImmediately) {
+      visibleRef.current = text
+      setVisibleText(text)
+      onReveal()
+      return undefined
+    }
+
+    const visibleLength = Array.from(visibleRef.current).length
+    const targetLength = Array.from(text).length
+    const pendingCharacters = targetLength - visibleLength
+    if (pendingCharacters <= 0) return undefined
+
+    const progress = { characters: visibleLength }
+    animationRef.current = animate(progress, {
+      characters: targetLength,
+      duration: revealDuration(pendingCharacters, isStreaming),
+      ease: 'linear',
+      onUpdate: () => {
+        const nextText = revealedPrefix(text, progress.characters)
+        if (nextText === visibleRef.current) return
+        visibleRef.current = nextText
+        setVisibleText(nextText)
+        onReveal()
+      },
+      onComplete: () => {
+        visibleRef.current = text
+        setVisibleText(text)
+        animationRef.current = null
+        onReveal()
+      },
+    })
+
+    return () => {
+      animationRef.current?.cancel()
+      animationRef.current = null
+    }
+  }, [isStreaming, onReveal, text])
+
+  return (
+    <ChatText
+      text={visibleText}
+      hideIncompleteSiteLink={isStreaming || visibleText !== text}
+    />
+  )
+}
 
 // The Worker explains its own refusals — "that was a little fast", "questions
 // are limited to 2000 characters" — but none of that wording can reach the
@@ -48,12 +144,15 @@ async function chatFetch(input, init, messageRef) {
 // Default-exported so the launcher can reach it through React.lazy. The
 // TanStack AI client is ~150kB of the bundle; a reader who never opens the
 // chat should never download it.
-export default function ChatPanel({ thread, onClose }) {
+export default function ChatPanel({ thread, onClose, onNewChat }) {
   const [input, setInput] = useState('')
-  const [isRehydrating, setIsRehydrating] = useState(thread.isReturning)
+  const [replayStatus, setReplayStatus] = useState(thread.isReturning ? 'loading' : 'idle')
+  const isRehydrating = replayStatus === 'loading'
+  const replayError = replayStatus === 'failed'
   const panelRef = useRef(null)
   const inputRef = useRef(null)
   const logRef = useRef(null)
+  const isSubmittingRef = useRef(false)
 
   // Written by chatFetch on the failing request, read on the render that
   // failure causes. Built once so the hook keeps one connection identity.
@@ -65,37 +164,52 @@ export default function ChatPanel({ thread, onClose }) {
     [],
   )
 
+  // The panel floats over the page and the reader can keep navigating with it
+  // open, so this has to track the route rather than be captured once. useChat
+  // pushes a changed value down to the client, which reads it when the next
+  // message is sent — so "tell me about this page" means whichever page they
+  // are on at the moment they ask, not the one they opened the chat from.
+  const pagePath = useRouterState({ select: (state) => state.location.pathname })
+  const forwardedProps = useMemo(() => ({ pagePath }), [pagePath])
+  const chatTitle = chatTitleForPath(pagePath)
+  const chatPageLabel = chatPageLabelForPath(pagePath)
+
   const { messages, sendMessage, setMessages, isLoading, error } = useChat({
     connection,
     threadId: thread.id,
+    forwardedProps,
   })
 
   // A returning reader's transcript lives only on the server, so the panel
-  // replays it before accepting a new question. Failing quietly is right here:
-  // an unreachable transcript should cost them their scrollback, not their
-  // ability to ask something.
+  // replays it before accepting a new question. A failed replay stays visible
+  // and retryable; the composer remains available so a network blip never
+  // traps the reader in a dead-end state.
   useEffect(() => {
-    if (!thread.isReturning) return undefined
+    if (replayStatus !== 'loading') return undefined
 
     const abort = new AbortController()
+    let disposed = false
+    const timeout = window.setTimeout(() => abort.abort(), TRANSCRIPT_TIMEOUT_MS)
 
-    fetch(`/api/chat/${thread.id}`, { signal: abort.signal })
-      .then((response) => (response.ok ? response.json() : { messages: [] }))
-      .then((data) => {
-        const stored = (data.messages ?? []).map((message, index) => ({
-          id: `stored-${index}`,
-          role: message.role,
-          parts: [{ type: 'text', content: message.content }],
-        }))
-        if (stored.length) setMessages(stored)
+    fetchStoredMessages(thread.id, { signal: abort.signal })
+      .then((stored) => {
+        if (disposed) return
+        setMessages(stored)
+        setReplayStatus('loaded')
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!disposed) setReplayStatus('failed')
+      })
       .finally(() => {
-        if (!abort.signal.aborted) setIsRehydrating(false)
+        window.clearTimeout(timeout)
       })
 
-    return () => abort.abort()
-  }, [thread.id, thread.isReturning, setMessages])
+    return () => {
+      disposed = true
+      window.clearTimeout(timeout)
+      abort.abort()
+    }
+  }, [replayStatus, thread.id, setMessages])
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -103,12 +217,16 @@ export default function ChatPanel({ thread, onClose }) {
 
   // Follow the answer as it streams, but never yank the view away from someone
   // who has scrolled up to reread something.
-  useEffect(() => {
+  const followLatest = useCallback(() => {
     const log = logRef.current
     if (!log) return
     const isNearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 120
     if (isNearBottom) log.scrollTop = log.scrollHeight
-  }, [messages])
+  }, [])
+
+  useEffect(() => {
+    followLatest()
+  }, [followLatest, messages])
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -142,14 +260,46 @@ export default function ChatPanel({ thread, onClose }) {
   const submit = useCallback(
     (text) => {
       const question = text.trim()
-      if (!question || isLoading) return
-      sendMessage(question)
+      if (!question || isLoading || isRehydrating || isSubmittingRef.current) return
+      isSubmittingRef.current = true
+      if (replayStatus === 'failed') setReplayStatus('continued')
+      void sendMessage(question, { whenBusy: 'drop' }).finally(() => {
+        isSubmittingRef.current = false
+      })
       setInput('')
     },
-    [isLoading, sendMessage],
+    [isLoading, isRehydrating, replayStatus, sendMessage],
   )
 
+  const retryTranscript = useCallback(() => {
+    inputRef.current?.focus()
+    setReplayStatus('loading')
+  }, [])
+
   const isEmpty = messages.length === 0
+
+  const surfaceRef = useRef(null)
+
+  // The searchlight follows the pointer by writing two custom properties the
+  // grid's mask reads. Direct style and class writes, not state: this fires on
+  // every pointer move, and a re-render per move would repaint the whole
+  // transcript to reposition a gradient.
+  //
+  // Lighting is gated on the event's own pointerType rather than a hover media
+  // query: a touch drag fires these events too, but there is no cursor to
+  // search with, so a finger keeps the quiet base grid.
+  const onSurfaceMove = useCallback((event) => {
+    const surface = surfaceRef.current
+    if (!surface || event.pointerType !== 'mouse') return
+    const bounds = surface.getBoundingClientRect()
+    surface.style.setProperty('--spot-x', `${event.clientX - bounds.left}px`)
+    surface.style.setProperty('--spot-y', `${event.clientY - bounds.top}px`)
+    surface.classList.add('is-lit')
+  }, [])
+
+  const onSurfaceLeave = useCallback(() => {
+    surfaceRef.current?.classList.remove('is-lit')
+  }, [])
 
   return (
     <div
@@ -157,21 +307,54 @@ export default function ChatPanel({ thread, onClose }) {
       ref={panelRef}
       role="dialog"
       aria-modal="false"
-      aria-label="Ask about Kwamina"
+      aria-label={chatTitle}
     >
       <header className="site-chat-header">
-        <p className="site-chat-title">Ask about Kwamina</p>
-        <button type="button" className="site-chat-close" onClick={onClose} aria-label="Close chat">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
-        </button>
+        <p className="site-chat-title">Ask about <FlipText value={chatPageLabel} /></p>
+        <div className="site-chat-header-actions">
+          {!isEmpty && (
+            <button type="button" className="site-chat-new" onClick={onNewChat}>New chat</button>
+          )}
+          <button type="button" className="site-chat-close" onClick={onClose} aria-label="Close chat">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
       </header>
 
-      <div className="site-chat-log" ref={logRef} role="log" aria-live="polite" aria-busy={isLoading}>
+      {/* Everything below the header shares one textured surface: the dot
+          grid sits on this wrapper, behind the transcript and the composer
+          alike, so the searchlight sweeps one continuous field rather than
+          restarting at the composer's edge. The header stays outside it. */}
+      <div
+        className="site-chat-surface"
+        ref={surfaceRef}
+        onPointerMove={onSurfaceMove}
+        onPointerLeave={onSurfaceLeave}
+      >
+      <div
+        className="site-chat-log"
+        ref={logRef}
+        role="log"
+        aria-live={isLoading ? 'off' : 'polite'}
+        aria-busy={isLoading}
+      >
         {isRehydrating && <p className="site-chat-note">Picking up where you left off&hellip;</p>}
 
-        {isEmpty && !isRehydrating && (
+        {replayError && (
+          <div className="site-chat-replay-error" role="alert">
+            <p>Couldn&rsquo;t load your earlier conversation.</p>
+            <div className="site-chat-replay-actions">
+              <button type="button" onClick={retryTranscript} disabled={isLoading}>
+                Retry
+              </button>
+              <button type="button" onClick={onNewChat}>Start new chat</button>
+            </div>
+          </div>
+        )}
+
+        {isEmpty && !isRehydrating && !replayError && (
           <div className="site-chat-intro">
             <p>
               Answers come from this site&rsquo;s own pages, so anything here is something you could
@@ -195,9 +378,15 @@ export default function ChatPanel({ thread, onClose }) {
         {messages
           .map((message) => ({ message, text: messageText(message) }))
           .filter(({ text }) => text.trim())
-          .map(({ message, text }) => (
+          .map(({ message, text }, index, renderedMessages) => (
             <p key={message.id} className={`site-chat-message is-${message.role}`}>
-              {text}
+              {message.role === 'assistant' ? (
+                <StreamingText
+                  text={text}
+                  isStreaming={isLoading && index === renderedMessages.length - 1}
+                  onReveal={followLatest}
+                />
+              ) : text}
             </p>
           ))}
 
@@ -227,7 +416,7 @@ export default function ChatPanel({ thread, onClose }) {
           ref={inputRef}
           className="site-chat-input"
           value={input}
-          rows={1}
+          rows={2}
           placeholder="Ask a question&hellip;"
           maxLength={2000}
           onChange={(event) => setInput(event.target.value)}
@@ -240,12 +429,18 @@ export default function ChatPanel({ thread, onClose }) {
             }
           }}
         />
-        <button type="submit" className="site-chat-send" disabled={!input.trim() || isLoading} aria-label="Send">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 12h13M12 5l7 7-7 7" />
-          </svg>
-        </button>
+        {/* Its own row rather than floating over the text, which would leave
+            the last line running underneath the button. */}
+        <div className="site-chat-actions">
+          <button type="submit" className="site-chat-send" disabled={!input.trim() || isLoading || isRehydrating} aria-label="Send">
+            {/* The same arrow the scroll-to-top control uses. */}
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 19V5M5.5 11.5 12 5l6.5 6.5" />
+            </svg>
+          </button>
+        </div>
       </form>
+      </div>
     </div>
   )
 }

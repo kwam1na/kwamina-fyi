@@ -17,9 +17,9 @@
       "/api/*"
     ]
   },
-  // Per-IP ceiling on the chat endpoint. The D1 limits are per conversation,
-  // so a script that mints a fresh thread id per request walks straight past
-  // them; this is keyed on the caller instead. Counters are per Cloudflare
+  // Per-IP burst ceiling on the chat endpoint. Like the D1 backstop, this is
+  // keyed on the caller, so minting fresh thread ids does not reset it.
+  // Counters are per Cloudflare
   // location rather than global, so the real ceiling is this number times the
   // locations an attacker spreads across — a cost ceiling, not an access
   // control.
