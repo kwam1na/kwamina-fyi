@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { createThread, returningThread, syncChatPageOpen } from './chat-widget.jsx'
+import { createThread, lockMobilePageScroll, returningThread } from './chat-widget.jsx'
 
 describe('createThread', () => {
   it('starts and persists a fresh conversation without transcript replay', () => {
@@ -35,17 +35,79 @@ describe('returningThread', () => {
   })
 })
 
-describe('syncChatPageOpen', () => {
-  it('marks and clears the page while the chat takeover is open', () => {
-    const changes = []
-    const classList = { toggle: (...args) => changes.push(args) }
+describe('lockMobilePageScroll', () => {
+  it('freezes the mobile page and restores its exact scroll position', () => {
+    const classes = new Set()
+    const body = {
+      classList: {
+        add: (name) => classes.add(name),
+        remove: (name) => classes.delete(name),
+      },
+      style: {
+        position: 'relative',
+        top: '',
+        left: '',
+        right: '',
+        width: '',
+        overflow: 'visible',
+      },
+    }
+    const root = { style: { overflow: 'clip' } }
+    const scrollCalls = []
 
-    syncChatPageOpen(classList, true)
-    syncChatPageOpen(classList, false)
+    const unlock = lockMobilePageScroll({
+      body,
+      root,
+      scrollY: 684,
+      scrollTo: (...args) => scrollCalls.push(args),
+      isMobile: true,
+    })
 
-    expect(changes).toEqual([
-      ['site-chat-open', true],
-      ['site-chat-open', false],
-    ])
+    expect(classes.has('site-chat-open')).toBe(true)
+    expect(body.style).toEqual({
+      position: 'fixed',
+      top: '-684px',
+      left: '0px',
+      right: '0px',
+      width: '100%',
+      overflow: 'hidden',
+    })
+    expect(root.style.overflow).toBe('hidden')
+
+    unlock()
+
+    expect(classes.has('site-chat-open')).toBe(false)
+    expect(body.style).toEqual({
+      position: 'relative',
+      top: '',
+      left: '',
+      right: '',
+      width: '',
+      overflow: 'visible',
+    })
+    expect(root.style.overflow).toBe('clip')
+    expect(scrollCalls).toEqual([[0, 684]])
+  })
+
+  it('does not alter the page outside the mobile takeover breakpoint', () => {
+    const body = {
+      classList: {
+        add: () => { throw new Error('should not add a class') },
+        remove: () => { throw new Error('should not remove a class') },
+      },
+      style: {},
+    }
+    const root = { style: {} }
+
+    const unlock = lockMobilePageScroll({
+      body,
+      root,
+      isMobile: false,
+      scrollTo: () => { throw new Error('should not restore scroll') },
+    })
+
+    unlock()
+    expect(body.style).toEqual({})
+    expect(root.style).toEqual({})
   })
 })

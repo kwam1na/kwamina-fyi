@@ -45,8 +45,45 @@ export function returningThread(thread) {
   return { ...thread, isReturning: true }
 }
 
-export function syncChatPageOpen(classList, isOpen) {
-  classList.toggle('site-chat-open', isOpen)
+const lockedBodyProperties = ['position', 'top', 'left', 'right', 'width', 'overflow']
+
+export function lockMobilePageScroll({
+  body = document.body,
+  root = document.documentElement,
+  isMobile = window.matchMedia('(max-width: 620px)').matches,
+  scrollY,
+  scrollTo,
+} = {}) {
+  if (!isMobile) return () => {}
+
+  const lockedScrollY = scrollY ?? window.scrollY
+  const restoreScroll = scrollTo ?? ((...args) => window.scrollTo(...args))
+  const previousBodyStyles = Object.fromEntries(
+    lockedBodyProperties.map((property) => [property, body.style[property]]),
+  )
+  const previousRootOverflow = root.style.overflow
+
+  body.classList.add('site-chat-open')
+  Object.assign(body.style, {
+    position: 'fixed',
+    top: `-${lockedScrollY}px`,
+    left: '0px',
+    right: '0px',
+    width: '100%',
+    overflow: 'hidden',
+  })
+  root.style.overflow = 'hidden'
+
+  let isUnlocked = false
+  return () => {
+    if (isUnlocked) return
+    isUnlocked = true
+
+    body.classList.remove('site-chat-open')
+    Object.assign(body.style, previousBodyStyles)
+    root.style.overflow = previousRootOverflow
+    restoreScroll(0, lockedScrollY)
+  }
 }
 
 // The launcher shares its corner with the scroll-to-top control, which appears
@@ -111,8 +148,8 @@ export function ChatWidget() {
   const shouldCollapse = isCollapsed || isOpen
 
   useEffect(() => {
-    syncChatPageOpen(document.body.classList, isOpen)
-    return () => syncChatPageOpen(document.body.classList, false)
+    if (!isOpen) return undefined
+    return lockMobilePageScroll()
   }, [isOpen])
 
   useEffect(() => {
