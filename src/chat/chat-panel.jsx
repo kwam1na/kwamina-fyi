@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useChat, fetchServerSentEvents } from '@tanstack/ai-react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { animate } from 'animejs'
@@ -7,6 +7,7 @@ import { chatTextParts } from './chat-links.js'
 import { fetchStoredMessages } from './chat-transcript.js'
 import { chatPageLabelForPath, chatTitleForPath } from './chat-title.js'
 import { FlipText } from './flip-text.jsx'
+import { watchMobileChatViewport } from './mobile-viewport.js'
 import { revealDuration, revealedPrefix } from './stream-reveal.js'
 
 const STARTERS = [
@@ -145,7 +146,13 @@ async function chatFetch(input, init, messageRef) {
 // Default-exported so the launcher can reach it through React.lazy. The
 // TanStack AI client is ~150kB of the bundle; a reader who never opens the
 // chat should never download it.
-export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }) {
+export default function ChatPanel({
+  thread,
+  isMobileTakeover,
+  onClose,
+  onNewChat,
+  onSiteNavigate,
+}) {
   const [input, setInput] = useState('')
   const [replayStatus, setReplayStatus] = useState(thread.isReturning ? 'loading' : 'idle')
   const isRehydrating = replayStatus === 'loading'
@@ -211,6 +218,15 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
       abort.abort()
     }
   }, [replayStatus, thread.id, setMessages])
+
+  // Install this before the passive autofocus effect. On iOS the keyboard
+  // shrinks window.visualViewport after focus without changing the layout
+  // viewport that 100dvh measures, so the takeover must follow that resize to
+  // keep its bottom-anchored composer visible on the very first interaction.
+  useLayoutEffect(
+    () => watchMobileChatViewport(panelRef.current, { isMobile: isMobileTakeover }),
+    [isMobileTakeover],
+  )
 
   useEffect(() => {
     inputRef.current?.focus()
