@@ -159,7 +159,8 @@
           <section id="proving-ground" class="story-section" aria-labelledby="proving-ground-title">
             <p class="section-kicker">Proving ground</p>
             <h2 id="proving-ground-title">Built with Wigclub. Live in production.</h2>
-            <p data-claim="claim-wigclub-context">Athena runs the operating day at <a href="https://wigclub.store" target="_blank" rel="noreferrer">Wigclub <svg class="inline-link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>, a retail and service business in Ghana: register sales, storefront orders, inventory, procurement, cash controls, and Daily Close. The register records cash, card, and mobile money tenders; online payments settle through Paystack. Connectivity there is a real constraint rather than an edge case, and the resilience decisions on this page follow from that.</p>
+            <p data-claim="claim-wigclub-context">Athena runs the operating day at <a href="https://wigclub.store" target="_blank" rel="noreferrer">Wigclub <svg class="inline-link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>, a retail and service business in Ghana: register sales, storefront orders, inventory, procurement, cash controls, and Daily Close. The register records cash, card, and mobile money tenders; online payments settle through Paystack.</p>
+            <p data-claim="claim-connectivity-boundary">Connectivity does not sit on the critical path of an in-person sale.</p>
             <p data-claim="claim-system-facts">The engineering claims here trace back to the <a class="prose-link" href="https://github.com/kwam1na/athena" target="_blank" rel="noreferrer">Athena repository <svg class="inline-link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>: more than 650 test files across unit, component, and end-to-end suites, plus 40 more covering the delivery harness itself; four CI workflows, including scripted production rollback; and a static money-entry audit that fails validation whenever money is parsed outside the shared minor-unit helpers.</p>
           </section>
 
@@ -222,12 +223,12 @@
           <section id="local-first" class="story-section" aria-labelledby="local-first-title">
             <p class="section-kicker">Resilient operations</p>
             <h2 id="local-first-title">The register records the work before it reports success.</h2>
-            <p data-claim="claim-local-first-origin">Local-first was not an architectural preference. It started as a field constraint: Wigclub&rsquo;s register cannot depend on the network at the moment a customer is ready to pay. So offline is the register&rsquo;s initial posture, not a fallback mode.</p>
+            <p data-claim="claim-local-first-origin">Local-first was an operating-boundary decision. Wigclub&rsquo;s register records a sale locally before reporting success, so a cloud round trip never decides whether checkout can continue. Offline continuity follows from that single operating path rather than being added as a separate fallback mode.</p>
             <p data-claim="claim-local-first-command">A provisioned, locally authorized register writes each cashier event to its durable local record before returning success, whether or not the browser appears online. A mobile money sale completed during an outage looks exactly like one completed on a healthy connection: the event is appended, the receipt is issued, and the register keeps selling. When connectivity returns, the terminal uploads its events in order.</p>
             <ol class="proof-sequence" aria-label="Local-first point-of-sale sequence">
               <li><span>01</span><div><strong>Check local authority</strong><p>Terminal integrity, staff identity, drawer authority, and a durable local destination still matter.</p></div></li>
               <li><span>02</span><div><strong>Append local evidence</strong><p>The register event exists before the cashier sees success.</p></div></li>
-              <li><span>03</span><div><strong>Continue the operation</strong><p>The local read model keeps the active register usable through unreliable connectivity.</p></div></li>
+              <li><span>03</span><div><strong>Continue the operation</strong><p>The local read model keeps the active register usable regardless of connectivity state.</p></div></li>
               <li><span>04</span><div><strong>Synchronize and reconcile</strong><p>Ordered, idempotent upload maps local records to cloud records and surfaces conflicts for review.</p></div></li>
             </ol>
             <p data-claim="claim-local-sync-boundary">The boundary is deliberately narrow: point of sale is Athena&rsquo;s offline-first workflow, and Convex becomes the cloud source of truth after accepted projection. If last-known stock or permission evidence drifted while the register was offline, Athena preserves the completed sale and creates review work. It never rewrites the receipt or hides the history.</p>
@@ -268,7 +269,7 @@
             <h2 id="deeper-reading-title">Deeper reading</h2>
             <p>These reflections go into the engineering decisions that carry the most weight, including the reversals and bugs that shaped them.</p>
             <div class="deep-links deep-links--trio">
-              <a class="deep-link" href="local-first-pos/"><span>Local-first point of sale</span><small>Why the store cannot wait for the network, and the bug that taught the sync model.</small></a>
+              <a class="deep-link" href="local-first-pos/"><span>Local-first point of sale</span><small>Why checkout does not wait for a cloud round trip, and the bug that taught the sync model.</small></a>
               <a class="deep-link" href="agent-ready-repository/"><span>Agent-ready repository</span><small>How maps, sensors, and evidence change AI-assisted work.</small></a>
               <a class="deep-link" href="read-optimized-reporting/"><span>Read-optimized reporting</span><small>How the operating record becomes reports, and what that costs.</small></a>
             </div>

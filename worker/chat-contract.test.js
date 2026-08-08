@@ -13,6 +13,9 @@ describe('assistant contract', () => {
     expect(INSTRUCTIONS).toContain('Never transfer a technology, metric, date, or employment claim')
     expect(INSTRUCTIONS).toContain('do not infer that Athena is full-time or exclusive work')
     expect(INSTRUCTIONS).toContain('copy its label and value exactly')
+    expect(INSTRUCTIONS).toContain('Do not characterize or speculate about the quality, speed, availability, or reliability of internet service at Wigclub')
+    expect(INSTRUCTIONS).toContain('checkout does not depend on a cloud round trip')
+    expect(INSTRUCTIONS).toContain('synchronization happens in the background')
   })
 
   it('sets response budgets and limits contact deflection', () => {
@@ -78,5 +81,11 @@ describe('assistant contract', () => {
   it('keeps public destinations in the model corpus', () => {
     expect(corpus).toContain('LinkedIn (https://linkedin.com/in/ernestmens)')
     expect(corpus).toContain('GitHub (https://github.com/kwam1na)')
+  })
+
+  it('keeps the generated corpus neutral about Wigclub connectivity', () => {
+    expect(corpus).toMatch(/checkout independent of a\s+cloud round trip/)
+    expect(corpus).not.toContain('Connectivity there is a real constraint')
+    expect(corpus).not.toContain('internet access in the field is not reliable enough')
   })
 })

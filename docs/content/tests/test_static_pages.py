@@ -10,6 +10,7 @@ from urllib.parse import unquote, urlsplit
 
 CONTENT_ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_ROOT = CONTENT_ROOT.parents[1] / "public"
+EVIDENCE_LEDGER = CONTENT_ROOT / "work" / "athena" / "evidence.md"
 PAGES = {
     "homepage": CONTENT_ROOT / "homepage.html",
     "read_optimized_reporting": CONTENT_ROOT
@@ -183,7 +184,7 @@ def resolve_site_reference(source: Path, reference: str) -> Path | None:
 
 
 def evidence_rows() -> dict[str, dict[str, str]]:
-    ledger = CONTENT_ROOT / "work" / "athena" / "evidence.md"
+    ledger = EVIDENCE_LEDGER
     if not ledger.exists():
         return {}
     rows: dict[str, dict[str, str]] = {}
@@ -210,7 +211,7 @@ def evidence_rows() -> dict[str, dict[str, str]]:
 
 
 def claim_rows() -> dict[str, dict[str, str]]:
-    ledger = CONTENT_ROOT / "work" / "athena" / "evidence.md"
+    ledger = EVIDENCE_LEDGER
     if not ledger.exists():
         return {}
     rows: dict[str, dict[str, str]] = {}
@@ -405,6 +406,9 @@ class StaticPageTests(unittest.TestCase):
         html = PAGES["athena"].read_text(encoding="utf-8").lower()
         self.assertIn("provisioned, locally authorized register", html)
         self.assertIn("not yet a complete cross-domain command center", html)
+        self.assertIn("connectivity does not sit on the critical path", html)
+        self.assertNotIn("connectivity there is a real constraint", html)
+        self.assertNotIn("through unreliable connectivity", html)
         for unsupported in (
             "automatically reorders",
             "predicts demand",
@@ -413,6 +417,24 @@ class StaticPageTests(unittest.TestCase):
             "agents develop athena autonomously",
         ):
             self.assertNotIn(unsupported, html)
+
+    def test_local_first_messaging_does_not_characterize_wigclub_connectivity(self) -> None:
+        sources = {
+            "homepage": PAGES["homepage"].read_text(encoding="utf-8"),
+            "athena": PAGES["athena"].read_text(encoding="utf-8"),
+            "local-first": PAGES["local_first_pos"].read_text(encoding="utf-8"),
+            "evidence": EVIDENCE_LEDGER.read_text(encoding="utf-8"),
+        }
+        sources = {name: re.sub(r"\s+", " ", source.lower()) for name, source in sources.items()}
+        for name, source in sources.items():
+            with self.subTest(source=name):
+                self.assertNotIn("connectivity there is a real constraint", source)
+                self.assertNotIn("internet access in the field is not reliable enough", source)
+                self.assertNotIn("field connectivity constraints at the proving store", source)
+
+        self.assertIn("checkout independent of a cloud round trip", sources["homepage"])
+        self.assertIn("connectivity is not an acceptance dependency", sources["evidence"])
+        self.assertIn("makes no claim about the quality or reliability", sources["evidence"])
 
     def test_local_first_pos_reflection_contract(self) -> None:
         path = PAGES["local_first_pos"]
@@ -434,6 +456,8 @@ class StaticPageTests(unittest.TestCase):
         self.assertIn("pos is athena&rsquo;s offline-first workflow", lowered)
         self.assertIn("last-known stock can drift", lowered)
         self.assertIn("accepted cloud projection becomes the cloud source of truth", lowered)
+        self.assertIn("a sale should not depend on a cloud round trip", lowered)
+        self.assertNotIn("internet access in the field is not reliable enough", lowered)
         self.assertNotIn("any browser can sell offline", lowered)
 
         sequence_terms = (

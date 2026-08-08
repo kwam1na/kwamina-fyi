@@ -56,10 +56,10 @@
         <article class="story">
           <section id="online-first" class="story-section" aria-labelledby="online-first-title">
             <p class="section-kicker">The failure mode</p>
-            <h2 id="online-first-title">A store cannot wait for the network to decide whether the sale happened.</h2>
-            <p data-claim="claim-pos-online-first">An online-first register makes the cashier&rsquo;s success depend on a cloud round trip: send the command, wait, update the screen. When connectivity is slow, intermittent, or lying about being available, the cashier loses receipt context, repeats commands, or cannot tell whether the customer has paid. Bolting an offline fallback beside that path just creates a second register with different guarantees.</p>
+            <h2 id="online-first-title">A sale should not depend on a cloud round trip.</h2>
+            <p data-claim="claim-pos-online-first">An online-first register makes the cashier&rsquo;s success depend on a cloud round trip: send the command, wait, update the screen. Latency, interruptions, and ambiguous responses can leave a cashier unsure whether a sale was recorded. Adding an offline fallback beside that path creates a second register with different guarantees.</p>
             <p class="thesis-line" data-claim="claim-pos-stakes">In an offline cash system, the failure that matters most is money changing hands while the record goes missing or wrong.</p>
-            <p data-claim="claim-local-first-origin">This is not hypothetical at Wigclub, the store Athena runs. The design decision was plain: internet access in the field is not reliable enough to be a dependency during checkout. So offline is the initial posture, not an added mode.</p>
+            <p data-claim="claim-local-first-origin">Athena instead makes local acceptance the primary path in every condition. Connectivity supports synchronization, refreshes cloud context, and carries accepted records upstream; it does not determine whether the register can accept and record an in-person sale.</p>
             <p data-claim="claim-pos-production-tenure">This register has been Wigclub&rsquo;s production till since May 2026.</p>
           </section>
 
