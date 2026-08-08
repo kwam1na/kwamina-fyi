@@ -29,7 +29,7 @@ function ChatLink({ part }) {
   if (part.type === 'link') return <Link to={part.to}>{part.text}</Link>
   if (part.type !== 'external-link') return part.text
 
-  const opensNewTab = part.href.startsWith('http')
+  const opensNewTab = part.href.startsWith('http') || part.href.endsWith('.pdf')
   return (
     <a
       href={part.href}

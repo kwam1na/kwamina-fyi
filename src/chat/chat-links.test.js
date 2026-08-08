@@ -18,6 +18,38 @@ describe('chatTextParts', () => {
     ])
   })
 
+  it('renders the resume and Athena product overview as first-class resource links', () => {
+    expect(chatTextParts(
+      'View his [resume](/docs/resume.pdf) or [view the product](https://athena.wigclub.store/landing).',
+    )).toEqual([
+      { type: 'text', text: 'View his ' },
+      { type: 'external-link', text: 'resume', href: '/docs/resume.pdf' },
+      { type: 'text', text: ' or ' },
+      {
+        type: 'external-link',
+        text: 'view the product',
+        href: 'https://athena.wigclub.store/landing',
+      },
+      { type: 'text', text: '.' },
+    ])
+  })
+
+  it('uses concise labels when resource destinations are returned without Markdown', () => {
+    expect(chatTextParts(
+      'Open /docs/resume.pdf or https://athena.wigclub.store/landing.',
+    )).toEqual([
+      { type: 'text', text: 'Open ' },
+      { type: 'external-link', text: 'Resume', href: '/docs/resume.pdf' },
+      { type: 'text', text: ' or ' },
+      {
+        type: 'external-link',
+        text: 'Athena product overview',
+        href: 'https://athena.wigclub.store/landing',
+      },
+      { type: 'text', text: '.' },
+    ])
+  })
+
   it('leaves labeled links to unknown site paths as literal text', () => {
     expect(chatTextParts('Read [A missing page](/not-a-page).')).toEqual([
       { type: 'text', text: 'Read [A missing page](/not-a-page).' },

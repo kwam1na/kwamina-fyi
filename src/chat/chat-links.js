@@ -20,6 +20,28 @@ const chatBoldPattern = /\*\*([^*\n]+)\*\*/g
 const EMAIL = 'kwami.nuh@gmail.com'
 const GITHUB_URL = 'https://github.com/kwam1na'
 const LINKEDIN_URL = 'https://linkedin.com/in/ernestmens'
+const RESUME_PATH = '/docs/resume.pdf'
+const ATHENA_PRODUCT_URL = 'https://athena.wigclub.store/landing'
+
+const RESOURCE_DESTINATIONS = {
+  [RESUME_PATH]: 'Resume',
+  [ATHENA_PRODUCT_URL]: 'Athena product overview',
+}
+
+const resourceSource = Object.keys(RESOURCE_DESTINATIONS)
+  .sort((left, right) => right.length - left.length)
+  .map((destination) => destination.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  .join('|')
+
+const chatLabeledResourcePattern = new RegExp(
+  String.raw`\[([^\]\n]+)\]\(\s*(${resourceSource})\s*\)`,
+  'g',
+)
+
+const chatResourcePattern = new RegExp(
+  `(^|[^A-Za-z0-9_:/])(${resourceSource})(?![A-Za-z0-9_/-])`,
+  'g',
+)
 
 const CONTACT_DESTINATIONS = {
   [EMAIL]: `mailto:${EMAIL}`,
@@ -67,10 +89,32 @@ function linkParts(text, bold = false) {
     })
   }
 
+  for (const match of text.matchAll(chatLabeledResourcePattern)) {
+    matches.push({
+      start: match.index,
+      end: match.index + match[0].length,
+      type: 'external-link',
+      text: match[1],
+      href: match[2],
+    })
+  }
+
   for (const match of text.matchAll(chatRoutePattern)) {
     const route = match[2]
     const start = match.index + match[1].length
     matches.push({ start, end: start + route.length, type: 'link', text: route, to: route })
+  }
+
+  for (const match of text.matchAll(chatResourcePattern)) {
+    const href = match[2]
+    const start = match.index + match[1].length
+    matches.push({
+      start,
+      end: start + href.length,
+      type: 'external-link',
+      text: RESOURCE_DESTINATIONS[href],
+      href,
+    })
   }
 
   for (const match of text.matchAll(chatContactPattern)) {
