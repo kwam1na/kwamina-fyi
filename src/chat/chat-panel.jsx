@@ -25,8 +25,8 @@ function messageText(message) {
 const GENERIC_ERROR = 'Something went wrong. Try asking again.'
 const TRANSCRIPT_TIMEOUT_MS = 8_000
 
-function ChatLink({ part }) {
-  if (part.type === 'link') return <Link to={part.to}>{part.text}</Link>
+function ChatLink({ part, onSiteNavigate }) {
+  if (part.type === 'link') return <Link to={part.to} onClick={onSiteNavigate}>{part.text}</Link>
   if (part.type !== 'external-link') return part.text
 
   const opensNewTab = part.href.startsWith('http') || part.href.endsWith('.pdf')
@@ -42,19 +42,19 @@ function ChatLink({ part }) {
   )
 }
 
-function ChatText({ text, hideIncompleteSiteLink = false }) {
+function ChatText({ text, hideIncompleteSiteLink = false, onSiteNavigate }) {
   return chatTextParts(text, { hideIncompleteSiteLink }).map((part, index) => {
     if (part.bold) {
-      return <strong key={`strong-${index}`}><ChatLink part={part} /></strong>
+      return <strong key={`strong-${index}`}><ChatLink part={part} onSiteNavigate={onSiteNavigate} /></strong>
     }
 
     return part.type === 'link' || part.type === 'external-link'
-      ? <ChatLink key={`${part.to ?? part.href}-${index}`} part={part} />
+      ? <ChatLink key={`${part.to ?? part.href}-${index}`} part={part} onSiteNavigate={onSiteNavigate} />
       : part.text
   })
 }
 
-function StreamingText({ text, isStreaming, onReveal }) {
+function StreamingText({ text, isStreaming, onReveal, onSiteNavigate }) {
   const [visibleText, setVisibleText] = useState(() => (isStreaming ? '' : text))
   const visibleRef = useRef(visibleText)
   const animationRef = useRef(null)
@@ -108,6 +108,7 @@ function StreamingText({ text, isStreaming, onReveal }) {
     <ChatText
       text={visibleText}
       hideIncompleteSiteLink={isStreaming || visibleText !== text}
+      onSiteNavigate={onSiteNavigate}
     />
   )
 }
@@ -144,7 +145,7 @@ async function chatFetch(input, init, messageRef) {
 // Default-exported so the launcher can reach it through React.lazy. The
 // TanStack AI client is ~150kB of the bundle; a reader who never opens the
 // chat should never download it.
-export default function ChatPanel({ thread, onClose, onNewChat }) {
+export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }) {
   const [input, setInput] = useState('')
   const [replayStatus, setReplayStatus] = useState(thread.isReturning ? 'loading' : 'idle')
   const isRehydrating = replayStatus === 'loading'
@@ -385,6 +386,7 @@ export default function ChatPanel({ thread, onClose, onNewChat }) {
                   text={text}
                   isStreaming={isLoading && index === renderedMessages.length - 1}
                   onReveal={followLatest}
+                  onSiteNavigate={onSiteNavigate}
                 />
               ) : text}
             </p>

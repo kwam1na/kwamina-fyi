@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'bun:test'
-import { createThread, lockMobilePageScroll, returningThread } from './chat-widget.jsx'
+import {
+  collapseMobileChatOnSiteNavigation,
+  createThread,
+  lockMobilePageScroll,
+  returningThread,
+  subscribeToMobileTakeover,
+} from './chat-widget.jsx'
 
 describe('createThread', () => {
   it('starts and persists a fresh conversation without transcript replay', () => {
@@ -32,6 +38,61 @@ describe('returningThread', () => {
       id: 'thread-123',
       isReturning: true,
     })
+  })
+})
+
+describe('collapseMobileChatOnSiteNavigation', () => {
+  it('collapses the takeover before an internal route opens on mobile', () => {
+    const events = []
+
+    expect(collapseMobileChatOnSiteNavigation({
+      isMobile: true,
+      collapse: () => events.push('collapse'),
+    })).toBe(true)
+    expect(events).toEqual(['collapse'])
+  })
+
+  it('leaves the desktop panel open during internal navigation', () => {
+    expect(collapseMobileChatOnSiteNavigation({
+      isMobile: false,
+      collapse: () => { throw new Error('should not collapse') },
+    })).toBe(false)
+  })
+
+  it('ignores modified and non-primary link activations', () => {
+    for (const event of [
+      { defaultPrevented: true },
+      { button: 1 },
+      { metaKey: true },
+      { ctrlKey: true },
+      { shiftKey: true },
+      { altKey: true },
+    ]) {
+      expect(collapseMobileChatOnSiteNavigation({
+        isMobile: true,
+        event,
+        collapse: () => { throw new Error('should not collapse') },
+      })).toBe(false)
+    }
+  })
+})
+
+describe('subscribeToMobileTakeover', () => {
+  it('keeps takeover behavior aligned when the breakpoint changes', () => {
+    const states = []
+    const media = {
+      matches: false,
+      addEventListener: (_name, listener) => { media.listener = listener },
+      removeEventListener: (_name, listener) => { media.removed = listener },
+    }
+
+    const unsubscribe = subscribeToMobileTakeover((matches) => states.push(matches), media)
+    media.matches = true
+    media.listener()
+    unsubscribe()
+
+    expect(states).toEqual([false, true])
+    expect(media.removed).toBe(media.listener)
   })
 })
 

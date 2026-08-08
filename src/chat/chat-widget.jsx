@@ -9,6 +9,7 @@ import { animateSplit } from './launcher-split.js'
 const ChatPanel = lazy(() => import('./chat-panel.jsx'))
 
 const threadStorageKey = 'kwamina-fyi-chat-thread'
+const MOBILE_TAKEOVER_QUERY = '(max-width: 620px)'
 
 export function createThread({
   randomUUID = () => window.crypto.randomUUID(),
@@ -45,12 +46,40 @@ export function returningThread(thread) {
   return { ...thread, isReturning: true }
 }
 
+export function collapseMobileChatOnSiteNavigation({
+  isMobile = window.matchMedia(MOBILE_TAKEOVER_QUERY).matches,
+  event,
+  collapse,
+} = {}) {
+  if (
+    !isMobile
+    || event?.defaultPrevented
+    || event?.button > 0
+    || event?.metaKey
+    || event?.ctrlKey
+    || event?.shiftKey
+    || event?.altKey
+  ) return false
+  collapse()
+  return true
+}
+
+export function subscribeToMobileTakeover(
+  onChange,
+  media = window.matchMedia(MOBILE_TAKEOVER_QUERY),
+) {
+  const update = () => onChange(media.matches)
+  update()
+  media.addEventListener('change', update)
+  return () => media.removeEventListener('change', update)
+}
+
 const lockedBodyProperties = ['position', 'top', 'left', 'right', 'width', 'overflow']
 
 export function lockMobilePageScroll({
   body = document.body,
   root = document.documentElement,
-  isMobile = window.matchMedia('(max-width: 620px)').matches,
+  isMobile = window.matchMedia(MOBILE_TAKEOVER_QUERY).matches,
   scrollY,
   scrollTo,
 } = {}) {
@@ -133,14 +162,25 @@ function useIsCollapsed() {
   return isCollapsed
 }
 
+function useMobileTakeover() {
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia(MOBILE_TAKEOVER_QUERY).matches,
+  )
+
+  useEffect(() => subscribeToMobileTakeover(setIsMobile), [])
+  return isMobile
+}
+
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
   const [thread, setThread] = useState(null)
   const launcherRef = useRef(null)
   const labelRef = useRef(null)
   const timelineRef = useRef(null)
+  const unlockPageRef = useRef(null)
   const hasAnimatedRef = useRef(false)
   const isCollapsed = useIsCollapsed()
+  const isMobileTakeover = useMobileTakeover()
   const isOnFooter = useFooterOverlap(launcherRef)
 
   // An open panel holds the launcher at its collapsed disc: a pill expanding
@@ -149,8 +189,13 @@ export function ChatWidget() {
 
   useEffect(() => {
     if (!isOpen) return undefined
-    return lockMobilePageScroll()
-  }, [isOpen])
+    const unlock = lockMobilePageScroll({ isMobile: isMobileTakeover })
+    unlockPageRef.current = unlock
+    return () => {
+      if (unlockPageRef.current === unlock) unlockPageRef.current = null
+      unlock()
+    }
+  }, [isMobileTakeover, isOpen])
 
   useEffect(() => {
     const launcher = launcherRef.current
@@ -174,7 +219,7 @@ export function ChatWidget() {
     // Crossing the breakpoint changes both the pill's widths and the distance
     // the ring travels. Re-apply without animating: the reader resized the
     // window, they did not cross the scroll threshold.
-    const breakpoint = window.matchMedia('(max-width: 620px)')
+    const breakpoint = window.matchMedia(MOBILE_TAKEOVER_QUERY)
     const onBreakpointChange = () => play(true)
     breakpoint.addEventListener('change', onBreakpointChange)
 
@@ -191,10 +236,25 @@ export function ChatWidget() {
     setIsOpen(true)
   }
 
-  const close = useCallback(() => {
+  const collapse = useCallback(({ restoreFocus = false } = {}) => {
+    // Internal navigation can swap the page before React unmounts the panel.
+    // Release the mobile page lock synchronously so its old scroll position
+    // cannot be restored onto the destination page.
+    unlockPageRef.current?.()
+    unlockPageRef.current = null
     setIsOpen(false)
-    launcherRef.current?.focus()
+    if (restoreFocus) launcherRef.current?.focus()
   }, [])
+
+  const close = useCallback(() => collapse({ restoreFocus: true }), [collapse])
+
+  const onSiteNavigate = useCallback((event) => {
+    collapseMobileChatOnSiteNavigation({
+      isMobile: isMobileTakeover,
+      event,
+      collapse,
+    })
+  }, [collapse, isMobileTakeover])
 
   const startNewChat = useCallback(() => {
     setThread(createThread())
@@ -225,7 +285,13 @@ export function ChatWidget() {
 
       {isOpen && thread && (
         <Suspense fallback={null}>
-          <ChatPanel key={thread.id} thread={thread} onClose={close} onNewChat={startNewChat} />
+          <ChatPanel
+            key={thread.id}
+            thread={thread}
+            onClose={close}
+            onNewChat={startNewChat}
+            onSiteNavigate={onSiteNavigate}
+          />
         </Suspense>
       )}
     </>
