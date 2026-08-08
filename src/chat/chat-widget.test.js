@@ -4,6 +4,7 @@ import {
   createThread,
   lockMobilePageScroll,
   returningThread,
+  shouldRestoreLauncherFocus,
   subscribeToMobileTakeover,
 } from './chat-widget.jsx'
 
@@ -93,6 +94,18 @@ describe('subscribeToMobileTakeover', () => {
 
     expect(states).toEqual([false, true])
     expect(media.removed).toBe(media.listener)
+  })
+})
+
+describe('shouldRestoreLauncherFocus', () => {
+  it('does not paint focus around the launcher after a mobile tap closes chat', () => {
+    expect(shouldRestoreLauncherFocus({ isMobile: true, event: { detail: 1 } })).toBe(false)
+  })
+
+  it('preserves return focus for keyboard and desktop closures', () => {
+    expect(shouldRestoreLauncherFocus({ isMobile: true })).toBe(true)
+    expect(shouldRestoreLauncherFocus({ isMobile: true, event: { detail: 0 } })).toBe(true)
+    expect(shouldRestoreLauncherFocus({ isMobile: false, event: { detail: 1 } })).toBe(true)
   })
 })
 
