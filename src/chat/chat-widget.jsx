@@ -45,6 +45,10 @@ export function returningThread(thread) {
   return { ...thread, isReturning: true }
 }
 
+export function syncChatPageOpen(classList, isOpen) {
+  classList.toggle('site-chat-open', isOpen)
+}
+
 // The launcher shares its corner with the scroll-to-top control, which appears
 // at the same threshold. Rather than stack them, the pill sheds its label and
 // contracts to a disc as that control separates out from underneath it — one
@@ -105,6 +109,11 @@ export function ChatWidget() {
   // An open panel holds the launcher at its collapsed disc: a pill expanding
   // underneath an open panel is motion with nothing to say.
   const shouldCollapse = isCollapsed || isOpen
+
+  useEffect(() => {
+    syncChatPageOpen(document.body.classList, isOpen)
+    return () => syncChatPageOpen(document.body.classList, false)
+  }, [isOpen])
 
   useEffect(() => {
     const launcher = launcherRef.current

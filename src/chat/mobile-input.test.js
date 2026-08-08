@@ -17,4 +17,18 @@ describe('mobile chat composer', () => {
     font-size: 1rem;
   }`)
   })
+
+  it('turns the panel into an edge-to-edge page takeover', () => {
+    expect(styles).toContain(`  body.site-chat-open {
+    overflow: hidden;
+  }`)
+    expect(styles).toContain(`  .site-chat-panel {
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }`)
+  })
 })

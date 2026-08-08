@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { createThread, returningThread } from './chat-widget.jsx'
+import { createThread, returningThread, syncChatPageOpen } from './chat-widget.jsx'
 
 describe('createThread', () => {
   it('starts and persists a fresh conversation without transcript replay', () => {
@@ -32,5 +32,20 @@ describe('returningThread', () => {
       id: 'thread-123',
       isReturning: true,
     })
+  })
+})
+
+describe('syncChatPageOpen', () => {
+  it('marks and clears the page while the chat takeover is open', () => {
+    const changes = []
+    const classList = { toggle: (...args) => changes.push(args) }
+
+    syncChatPageOpen(classList, true)
+    syncChatPageOpen(classList, false)
+
+    expect(changes).toEqual([
+      ['site-chat-open', true],
+      ['site-chat-open', false],
+    ])
   })
 })
