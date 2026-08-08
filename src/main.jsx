@@ -11,6 +11,7 @@ import {
 import { StaticPage } from './static-page.jsx'
 import { ThemeToggle } from './theme-toggle.jsx'
 import { ScrollToTop } from './scroll-to-top.jsx'
+import { ChatWidget } from './chat/chat-widget.jsx'
 import { NotFoundPage } from './not-found-page.jsx'
 import { ErrorPage } from './error-page.jsx'
 import { LEGACY_REDIRECTS, ROUTE_PATHS } from './routes.js'
@@ -28,6 +29,7 @@ function RootLayout() {
       <Outlet />
       <ThemeToggle />
       <ScrollToTop />
+      <ChatWidget />
     </>
   )
 }

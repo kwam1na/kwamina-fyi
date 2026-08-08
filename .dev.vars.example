@@ -1,0 +1,3 @@
+# Copy to .dev.vars for local development (`bun run preview`).
+# In production this is set with: wrangler secret put ANTHROPIC_API_KEY
+ANTHROPIC_API_KEY=sk-ant-...
