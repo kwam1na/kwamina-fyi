@@ -1,0 +1,7 @@
+# Copy to .dev.vars for local development (`bun run preview`).
+# In production this is set with: wrangler secret put ANTHROPIC_API_KEY
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Dedicated HMAC key for privacy-preserving D1 rate-limit identifiers.
+# Generate a random value; do not reuse the Anthropic or evaluation secret.
+RATE_LIMIT_KEY=replace-with-a-random-secret

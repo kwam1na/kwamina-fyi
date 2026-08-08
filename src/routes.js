@@ -27,3 +27,8 @@ export const LEGACY_REDIRECTS = {
 // they resolve through a full load and the router's redirect, which keeps the
 // canonical URL as the only one worth linking to from content.
 export const NAVIGABLE_PATHS = new Set(Object.values(ROUTE_PATHS))
+
+export function normalisePath(pathname) {
+  if (pathname === '/homepage.html') return ROUTE_PATHS.home
+  return pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+}

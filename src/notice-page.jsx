@@ -6,10 +6,10 @@ import { Link } from '@tanstack/react-router'
 // same folio rule. What differs is the display mark and the copy beneath it,
 // which each page supplies as children.
 
-export function NoticeArrow() {
+export function NoticeArrow({ className = 'notice-link-icon' }) {
   return (
     <svg
-      className="notice-link-icon"
+      className={className}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

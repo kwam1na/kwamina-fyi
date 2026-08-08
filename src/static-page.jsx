@@ -1,13 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { animate, onScroll, remove, set, split, stagger } from 'animejs'
-import { NAVIGABLE_PATHS } from './routes.js'
+import { NAVIGABLE_PATHS, normalisePath } from './routes.js'
 import { recordNavigation, returnLabels, returnStack } from './return-stack.js'
-
-function normalisePath(pathname) {
-  if (pathname === '/homepage.html') return '/'
-  return pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname
-}
 
 function addRouteBreadcrumbs(body, pagePath) {
   const segments = normalisePath(pagePath).split('/').filter(Boolean)
@@ -255,6 +250,32 @@ export function StaticPage({ documentHtml, pagePath, title }) {
     return () => {
       observer?.disconnect()
       window.removeEventListener('resize', measure)
+    }
+  }, [documentHtml, pagePath])
+
+  // The footer's dot grid carries the same pointer searchlight as the chat
+  // surface: two custom properties position the accent layer's mask, and the
+  // is-lit class fades it in. Direct style and class writes — this fires per
+  // pointer move, and the styling lives entirely in styles.css. Gated on the
+  // event's own pointerType so a touch drag never lights it.
+  useEffect(() => {
+    const footer = containerRef.current?.querySelector('.site-footer')
+    if (!footer || !revealedFooterPaths.has(pagePath)) return undefined
+
+    const onMove = (event) => {
+      if (event.pointerType !== 'mouse') return
+      const bounds = footer.getBoundingClientRect()
+      footer.style.setProperty('--spot-x', `${event.clientX - bounds.left}px`)
+      footer.style.setProperty('--spot-y', `${event.clientY - bounds.top}px`)
+      footer.classList.add('is-lit')
+    }
+    const onLeave = () => footer.classList.remove('is-lit')
+
+    footer.addEventListener('pointermove', onMove)
+    footer.addEventListener('pointerleave', onLeave)
+    return () => {
+      footer.removeEventListener('pointermove', onMove)
+      footer.removeEventListener('pointerleave', onLeave)
     }
   }, [documentHtml, pagePath])
 
