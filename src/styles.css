@@ -1551,6 +1551,13 @@ body::after {
     height: calc(100vh - 110px);
   }
 
+  /* iOS Safari zooms the visual viewport when a focused form control is
+   * smaller than 16px. Keep the compact desktop type, but meet that threshold
+   * inside the existing mobile layout. */
+  .site-chat-input {
+    font-size: 1rem;
+  }
+
   /* Matches the disc size the other floating controls take on mobile, so the
    * pair still reads as one family once the split has happened. */
   .site-chat-launcher {
