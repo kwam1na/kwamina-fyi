@@ -19,6 +19,7 @@ const ChatPanel = lazy(() => import('./chat-panel.jsx'))
 const threadStorageKey = 'kwamina-fyi-chat-thread'
 const MOBILE_TAKEOVER_QUERY = '(max-width: 620px)'
 const restoredViewportTolerance = 1
+const layoutRecoveryDelays = [250, 500, 1000, 1500]
 
 export function ChatPanelFallback({ onClose }) {
   return (
@@ -155,31 +156,49 @@ export function watchMobileViewportRestoration({
   root = document.documentElement,
   isMobile = window.matchMedia(MOBILE_TAKEOVER_QUERY).matches,
   viewport = window.visualViewport,
+  documentObject = globalThis.document,
+  windowObject = globalThis.window,
   requestFrame = (callback) => window.requestAnimationFrame(callback),
   cancelFrame = (frame) => window.cancelAnimationFrame(frame),
+  setTimer = (callback, delay) => globalThis.setTimeout(callback, delay),
+  clearTimer = (timer) => globalThis.clearTimeout(timer),
 } = {}) {
   if (!isMobile || !viewport) return () => {}
 
   let frame = null
-  const restore = () => {
-    frame = null
-    if (Math.abs(viewport.height - root.clientHeight) > restoredViewportTolerance) return
-
-    // WebKit may leave the document at the keyboard-era offset after the
-    // visual viewport expands. The takeover is the only visible root child,
-    // so its canonical position is always the document origin while open.
+  const timers = []
+  const resetScrollOffset = () => {
     root.scrollTop = 0
     body.scrollTop = 0
   }
+  const restoreFromViewport = () => {
+    frame = null
+    if (Math.abs(viewport.height - root.clientHeight) > restoredViewportTolerance) return
+    resetScrollOffset()
+  }
   const scheduleRestore = () => {
     if (frame !== null) return
-    frame = requestFrame(restore)
+    frame = requestFrame(restoreFromViewport)
+  }
+  const restoreFromLayout = () => {
+    if (documentObject?.activeElement?.tagName === 'TEXTAREA') return
+    if (Math.abs(windowObject.innerHeight - root.clientHeight) > restoredViewportTolerance) return
+    resetScrollOffset()
+  }
+  const onFocusOut = (event) => {
+    if (event.target?.tagName !== 'TEXTAREA') return
+    for (const delay of layoutRecoveryDelays) {
+      timers.push(setTimer(restoreFromLayout, delay))
+    }
   }
 
   viewport.addEventListener('resize', scheduleRestore)
+  documentObject?.addEventListener('focusout', onFocusOut)
   return () => {
     viewport.removeEventListener('resize', scheduleRestore)
+    documentObject?.removeEventListener('focusout', onFocusOut)
     if (frame !== null) cancelFrame(frame)
+    for (const timer of timers) clearTimer(timer)
   }
 }
 

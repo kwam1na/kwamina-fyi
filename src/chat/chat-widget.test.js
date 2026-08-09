@@ -244,4 +244,54 @@ describe('watchMobileViewportRestoration', () => {
     stopWatching()
     expect(listeners.has('resize')).toBe(false)
   })
+
+  it('clears Safari keyboard scroll after layout height returns before visualViewport', () => {
+    const documentListeners = new Map()
+    const timers = []
+    const textarea = { tagName: 'TEXTAREA' }
+    const documentObject = {
+      activeElement: null,
+      addEventListener: (type, listener) => documentListeners.set(type, listener),
+      removeEventListener: (type, listener) => {
+        if (documentListeners.get(type) === listener) documentListeners.delete(type)
+      },
+    }
+    const windowObject = { innerHeight: 430 }
+    const viewport = {
+      height: 430,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }
+    const root = { clientHeight: 844, scrollTop: 318 }
+    const body = { scrollTop: 318 }
+
+    const stopWatching = watchMobileViewportRestoration({
+      isMobile: true,
+      viewport,
+      root,
+      body,
+      documentObject,
+      windowObject,
+      setTimer: (callback, delay) => {
+        timers.push({ callback, delay })
+        return timers.length
+      },
+      clearTimer: () => {},
+    })
+
+    documentListeners.get('focusout')({ target: textarea })
+    timers.find(({ delay }) => delay === 250).callback()
+    expect(root.scrollTop).toBe(318)
+
+    // Production Safari reports the full layout height around a second before
+    // visualViewport.height and offsetTop catch up.
+    windowObject.innerHeight = 844
+    timers.find(({ delay }) => delay === 1000).callback()
+    expect(viewport.height).toBe(430)
+    expect(root.scrollTop).toBe(0)
+    expect(body.scrollTop).toBe(0)
+
+    stopWatching()
+    expect(documentListeners.has('focusout')).toBe(false)
+  })
 })
