@@ -1,925 +1,1135 @@
 <!doctype html>
 <html lang="en">
-
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>About &mdash; Kwamina Essuah Mensah</title>
-  <meta name="description" content="The work history and education of Kwamina Essuah Mensah.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,650;1,6..72,500;1,6..72,650&display=swap"
-    rel="stylesheet">
-  <style>
-    :root {
-      --paper: var(--color-paper);
-      --ink: var(--color-ink);
-      --copy: var(--color-copy);
-      --muted: var(--color-muted);
-      --line: var(--color-line);
-      --line-strong: var(--color-line-strong);
-      --focus: var(--color-focus);
-      --sans: var(--font-sans);
-      --serif: var(--font-serif);
-      --content-width: 1180px;
-      --gutter: 48px;
-      --section-space: 112px;
-      --ease-in: var(--ease-portfolio-in);
-      --ease-out: var(--ease-portfolio);
-      --nav-surface: rgba(252, 252, 251, 0.86);
-      color-scheme: light;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      background: var(--paper);
-      color: var(--ink);
-      font-family: var(--sans);
-      font-size: 16px;
-      line-height: 1.6;
-      text-rendering: optimizeLegibility;
-    }
-
-    ::selection {
-      background: rgba(47, 96, 123, 0.18);
-    }
-
-    a {
-      color: color-mix(in srgb, var(--ink) 68%, transparent);
-      text-decoration: none;
-      transition: transform 160ms var(--ease-out), color 160ms var(--ease-out);
-    }
-
-    .brand,
-    .skip-link {
-      color: var(--ink);
-    }
-
-    a:focus-visible,
-    button:focus-visible {
-      outline: 2px solid var(--focus);
-      outline-offset: 4px;
-    }
-
-    .skip-link {
-      position: fixed;
-      top: 16px;
-      left: 16px;
-      z-index: 100;
-      padding: 10px 14px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--paper);
-      transform: translateY(-160%);
-      transition: transform 160ms var(--ease-out);
-    }
-
-    .skip-link:focus {
-      transform: translateY(0);
-    }
-
-    .site-nav {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
-      padding: 18px 32px;
-      background: var(--nav-surface);
-      -webkit-backdrop-filter: blur(16px);
-      backdrop-filter: blur(16px);
-    }
-
-    .brand,
-    .brand-crumb {
-      display: inline-flex;
-      align-items: center;
-      font-size: 0.8rem;
-      font-weight: 500;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-
-    .section-inner {
-      position: relative;
-      width: min(var(--content-width), calc(100% - var(--gutter)));
-      margin: 0 auto;
-    }
-
-    h2,
-    h3 {
-      margin: 0;
-      line-height: 1.02;
-    }
-
-    h2 {
-      font-family: var(--serif);
-      font-size: 3.2rem;
-      font-weight: 650;
-    }
-
-    h3 {
-      font-size: 1.08rem;
-      font-weight: 700;
-    }
-
-    .career-section {
-      padding: 160px 0 120px;
-    }
-
-    .career-masthead {
-      display: grid;
-      grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
-      gap: 64px;
-      align-items: end;
-      margin-bottom: 72px;
-    }
-
-    .career-masthead h2 {
-      max-width: 760px;
-      margin: 0;
-      color: var(--ink);
-      font-size: 4.2rem;
-      line-height: 0.98;
-    }
-
-    .career-kicker {
-      margin: 0 0 10px;
-      color: var(--muted);
-      font-family: var(--sans);
-      font-size: 0.78rem;
-      font-weight: 600;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-
-    /* A quiet resume link riding with the masthead kicker — present where a
-         reader scanning work history expects it, without competing with the
-         page. Rests dimmed like the footer links. */
-    .masthead-action {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 2px;
-      color: var(--ink);
-      font-size: 0.9rem;
-      font-weight: 500;
-    }
-
-    @media (hover: hover) and (pointer: fine) {
-      .masthead-action {
-        opacity: 0.58;
-        transition: opacity 160ms var(--ease-out);
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>About &mdash; Kwamina Essuah Mensah</title>
+    <meta
+      name="description"
+      content="The work history and education of Kwamina Essuah Mensah."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,650;1,6..72,500;1,6..72,650&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper: var(--color-paper);
+        --ink: var(--color-ink);
+        --copy: var(--color-copy);
+        --muted: var(--color-muted);
+        --line: var(--color-line);
+        --line-strong: var(--color-line-strong);
+        --focus: var(--color-focus);
+        --sans: var(--font-sans);
+        --serif: var(--font-serif);
+        --content-width: 1180px;
+        --gutter: 48px;
+        --section-space: 112px;
+        --ease-in: var(--ease-portfolio-in);
+        --ease-out: var(--ease-portfolio);
+        --nav-surface: rgba(252, 252, 251, 0.86);
+        color-scheme: light;
       }
 
-      .masthead-action:hover,
-      .masthead-action:focus-visible {
-        opacity: 1;
-      }
-    }
-
-    .career-feature {
-      display: grid;
-      grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
-      gap: 64px;
-      padding: 40px 0 64px;
-    }
-
-    .career-meta {
-      color: var(--muted);
-      font-size: 0.92rem;
-      line-height: 1.55;
-    }
-
-    .career-meta p {
-      margin: 0;
-    }
-
-    .career-meta p+p {
-      margin-top: 3px;
-    }
-
-    .career-feature h3 {
-      margin: 0 0 20px;
-      color: var(--ink);
-      font-family: var(--serif);
-      font-size: 3.25rem;
-      font-weight: 650;
-      line-height: 0.96;
-    }
-
-    .career-feature-copy {
-      grid-column: 2;
-      max-width: 760px;
-    }
-
-    .career-feature-copy .career-meta {
-      margin: -8px 0 24px;
-    }
-
-    .career-feature-copy p {
-      margin: 0;
-      color: var(--copy);
-      font-size: 1rem;
-      line-height: 1.68;
-    }
-
-    .career-feature-copy p+p {
-      margin-top: 16px;
-    }
-
-    .career-highlights {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 28px 40px;
-      margin: 32px 0 0;
-      padding: 32px 0 0;
-      border-top: 1px solid var(--line);
-      list-style: none;
-    }
-
-    .career-highlight h4 {
-      margin: 0 0 8px;
-      color: var(--ink);
-      font-size: 0.95rem;
-      font-weight: 650;
-    }
-
-    .career-highlight p {
-      font-size: 0.95rem;
-      line-height: 1.6;
-    }
-
-    .career-highlights+p {
-      margin-top: 28px;
-    }
-
-    .link-icon {
-      width: 0.9em;
-      height: 0.9em;
-      flex: none;
-      transition: transform 160ms var(--ease-out);
-    }
-
-    .inline-link-icon {
-      width: 0.78em;
-      height: 0.78em;
-      margin-left: 2px;
-      vertical-align: -0.08em;
-      transition: transform 160ms var(--ease-out);
-    }
-
-    .career-archive {
-      display: grid;
-      grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
-      gap: 64px;
-      padding-top: 56px;
-    }
-
-    .career-chapter {
-      display: grid;
-      grid-template-columns: minmax(170px, 0.38fr) minmax(0, 1fr);
-      gap: 40px;
-      padding: 34px 0;
-      border-top: 1px solid var(--line);
-    }
-
-    .career-chapter:first-child {
-      padding-top: 0;
-      border-top: 0;
-    }
-
-    .career-chapter:last-child {
-      padding-bottom: 0;
-    }
-
-    .career-chapter h4 {
-      margin: 0 0 8px;
-      color: var(--ink);
-      font-family: var(--serif);
-      font-size: 1.65rem;
-      font-weight: 650;
-      line-height: 1.08;
-    }
-
-    .career-chapter .career-date {
-      margin: 0;
-      margin-top: 4px;
-      color: var(--muted);
-      font-size: 0.9rem;
-      line-height: 1.45;
-    }
-
-    .career-chapter-copy p {
-      margin: 0;
-      color: var(--copy);
-      font-size: 1rem;
-      line-height: 1.68;
-    }
-
-    .career-chapter-copy p+p {
-      margin-top: 14px;
-    }
-
-    .career-chapter-copy a {
-      color: inherit;
-    }
-
-    .career-subchapter+.career-subchapter {
-      margin-top: 32px;
-      padding-top: 32px;
-      border-top: 1px solid var(--line);
-    }
-
-    .career-subchapter-header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 8px 20px;
-      margin-bottom: 12px;
-    }
-
-    .career-subchapter-header h5 {
-      margin: 0;
-      color: var(--ink);
-      font-size: 1rem;
-      font-weight: 700;
-      line-height: 1.4;
-    }
-
-    .career-subchapter-header p {
-      color: var(--muted);
-      font-size: 0.86rem;
-      line-height: 1.4;
-    }
-
-    .education-section {
-      padding: var(--section-space) 0 120px;
-    }
-
-    .education-masthead {
-      margin-bottom: 48px;
-    }
-
-    .education-story {
-      display: grid;
-      grid-template-columns: minmax(240px, 0.44fr) minmax(0, 1fr);
-      gap: 56px;
-      padding: 48px 0;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .education-story:last-child {
-      padding-bottom: 0;
-      border-bottom: 0;
-    }
-
-    .education-story h3 {
-      margin: 0 0 12px;
-      color: var(--ink);
-      font-family: var(--serif);
-      font-size: 2rem;
-      font-weight: 650;
-      line-height: 1.06;
-    }
-
-    .education-degree,
-    .education-date {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.92rem;
-      line-height: 1.45;
-    }
-
-    .education-date {
-      margin-top: 4px;
-    }
-
-    .education-copy p {
-      margin: 0;
-      color: var(--copy);
-      font-size: 1rem;
-      line-height: 1.68;
-    }
-
-    .education-copy p+p {
-      margin-top: 14px;
-    }
-
-    .site-footer {
-      padding: 104px 0 24px;
-    }
-
-    .footer-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(180px, 0.7fr) minmax(180px, 0.7fr) minmax(180px, 0.7fr);
-      gap: 64px;
-      padding-top: 40px;
-    }
-
-    /* Footer links rest dimmed and come up to full strength one at a time
-         on hover or keyboard focus, the same way the write-ups' context rail
-         behaves. Labels and prose stay at full. Pointer devices only, so
-         touch readers see everything at full. */
-    @media (hover: hover) and (pointer: fine) {
-      .footer-grid .footer-link {
-        opacity: 0.58;
-        transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out);
+      * {
+        box-sizing: border-box;
       }
 
-      .footer-grid .footer-link:hover,
-      .footer-grid .footer-link:focus-visible {
-        opacity: 1;
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.6;
+        text-rendering: optimizeLegibility;
       }
-    }
 
-    .footer-links {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 10px;
-    }
+      ::selection {
+        background: rgba(47, 96, 123, 0.18);
+      }
 
-    .footer-label {
-      margin: 0 0 14px;
-      color: var(--muted);
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
+      a {
+        color: color-mix(in srgb, var(--ink) 68%, transparent);
+        text-decoration: none;
+        transition:
+          transform 160ms var(--ease-out),
+          color 160ms var(--ease-out);
+      }
 
-    .footer-copy {
-      max-width: 300px;
-      margin: 0;
-      color: var(--copy);
-      font-size: 0.95rem;
-      line-height: 1.55;
-    }
-
-    .footer-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      max-width: 100%;
-      color: var(--ink);
-      font-size: 0.95rem;
-      font-weight: 500;
-      overflow-wrap: anywhere;
-      transition: transform 160ms var(--ease-out);
-    }
-
-    .footer-link:active {
-      transform: scale(0.97);
-    }
-
-    .footer-meta {
-      margin-top: 88px;
-      color: var(--muted);
-      font-size: 0.78rem;
-    }
-
-    .footer-name {
-      margin: 72px 0 0;
-      color: var(--ink);
-      font-family: var(--serif);
-      font-size: 6.4rem;
-      font-weight: 650;
-      line-height: 0.88;
-      text-transform: uppercase;
-    }
-
-    @media (hover: hover) and (pointer: fine) {
-      a:hover {
+      .brand,
+      .skip-link {
         color: var(--ink);
       }
 
-      a:hover .link-icon,
-      a:hover .inline-link-icon {
-        transform: translate(2px, -2px);
-        transition-duration: 140ms;
-        transition-timing-function: var(--ease-in);
+      a:focus-visible,
+      button:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 4px;
       }
-    }
 
-    @media (max-width: 980px) {
+      .skip-link {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        z-index: 100;
+        padding: 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        transform: translateY(-160%);
+        transition: transform 160ms var(--ease-out);
+      }
+
+      .skip-link:focus {
+        transform: translateY(0);
+      }
+
       .site-nav {
-        padding: 16px 24px;
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 18px 32px;
+        background: var(--nav-surface);
+        -webkit-backdrop-filter: blur(16px);
+        backdrop-filter: blur(16px);
       }
 
-      .career-masthead,
-      .career-feature,
-      .career-archive {
-        grid-template-columns: 1fr;
-        gap: 28px;
-      }
-
-      .career-feature-copy {
-        grid-column: 1;
-      }
-
-      .career-masthead h2 {
-        font-size: 3.4rem;
-      }
-
-      .education-story {
-        grid-template-columns: minmax(210px, 0.42fr) minmax(0, 1fr);
-        gap: 28px;
-      }
-
-      .career-feature h3 {
-        font-size: 3rem;
-      }
-
-      .footer-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 48px 32px;
-      }
-
-      .footer-grid> :first-child {
-        grid-column: 1 / -1;
-      }
-
-      .footer-name {
-        font-size: 4.6rem;
-      }
-    }
-
-    @media (max-width: 620px) {
-      body {
-        font-size: 15px;
+      .brand,
+      .brand-crumb {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.8rem;
+        font-weight: 500;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
       }
 
       .section-inner {
-        width: min(100% - 32px, var(--content-width));
+        position: relative;
+        width: min(var(--content-width), calc(100% - var(--gutter)));
+        margin: 0 auto;
       }
 
-      .career-section {
-        padding: 120px 0 80px;
-      }
-
-      .education-section {
-        padding: 76px 0 80px;
-      }
-
-      .career-masthead {
-        margin-bottom: 48px;
-      }
-
-      .career-masthead h2 {
-        font-size: 2.7rem;
+      h2,
+      h3 {
+        margin: 0;
         line-height: 1.02;
       }
 
-      .education-story {
-        grid-template-columns: 1fr;
-        gap: 18px;
-        padding: 36px 0;
+      h2 {
+        font-family: var(--serif);
+        font-size: 3.2rem;
+        font-weight: 650;
+      }
+
+      h3 {
+        font-size: 1.08rem;
+        font-weight: 700;
+      }
+
+      .career-section {
+        padding: 160px 0 120px;
+      }
+
+      .career-masthead {
+        display: grid;
+        grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
+        gap: 64px;
+        align-items: end;
+        margin-bottom: 72px;
+      }
+
+      .career-masthead h2 {
+        max-width: 760px;
+        margin: 0;
+        color: var(--ink);
+        font-size: 4.2rem;
+        line-height: 0.98;
+      }
+
+      .career-kicker {
+        margin: 0 0 10px;
+        color: var(--muted);
+        font-family: var(--sans);
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      /* A quiet resume link riding with the masthead kicker — present where a
+         reader scanning work history expects it, without competing with the
+         page. Rests dimmed like the footer links. */
+      .masthead-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 2px;
+        color: var(--ink);
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .masthead-action {
+          opacity: 0.58;
+          transition: opacity 160ms var(--ease-out);
+        }
+
+        .masthead-action:hover,
+        .masthead-action:focus-visible {
+          opacity: 1;
+        }
       }
 
       .career-feature {
-        padding: 36px 0 56px;
+        display: grid;
+        grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
+        gap: 64px;
+        padding: 40px 0 64px;
       }
 
-      .career-highlights {
-        grid-template-columns: 1fr;
-        gap: 24px;
+      .career-meta {
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.55;
+      }
+
+      .career-meta p {
+        margin: 0;
+      }
+
+      .career-meta p + p {
+        margin-top: 3px;
       }
 
       .career-feature h3 {
-        margin-bottom: 18px;
-        font-size: 2.6rem;
+        margin: 0 0 20px;
+        color: var(--ink);
+        font-family: var(--serif);
+        font-size: 3.25rem;
+        font-weight: 650;
+        line-height: 0.96;
+      }
+
+      .career-feature-copy {
+        grid-column: 2;
+        max-width: 760px;
+      }
+
+      .career-feature-copy .career-meta {
+        margin: -8px 0 24px;
+      }
+
+      .career-feature-copy p {
+        margin: 0;
+        color: var(--copy);
+        font-size: 1rem;
+        line-height: 1.68;
+      }
+
+      .career-feature-copy p + p {
+        margin-top: 16px;
+      }
+
+      .career-highlights {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 28px 40px;
+        margin: 32px 0 0;
+        padding: 32px 0 0;
+        border-top: 1px solid var(--line);
+        list-style: none;
+      }
+
+      .career-highlight h4 {
+        margin: 0 0 8px;
+        color: var(--ink);
+        font-size: 0.95rem;
+        font-weight: 650;
+      }
+
+      .career-highlight p {
+        font-size: 0.95rem;
+        line-height: 1.6;
+      }
+
+      .career-highlights + p {
+        margin-top: 28px;
+      }
+
+      .link-icon {
+        width: 0.9em;
+        height: 0.9em;
+        flex: none;
+        transition: transform 160ms var(--ease-out);
+      }
+
+      .inline-link-icon {
+        width: 0.78em;
+        height: 0.78em;
+        margin-left: 2px;
+        vertical-align: -0.08em;
+        transition: transform 160ms var(--ease-out);
       }
 
       .career-archive {
-        padding-top: 44px;
+        display: grid;
+        grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
+        gap: 64px;
+        padding-top: 56px;
       }
 
       .career-chapter {
-        grid-template-columns: 1fr;
-        gap: 18px;
-        padding: 30px 0;
+        display: grid;
+        grid-template-columns: minmax(170px, 0.38fr) minmax(0, 1fr);
+        gap: 40px;
+        padding: 34px 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .career-chapter:first-child {
+        padding-top: 0;
+        border-top: 0;
+      }
+
+      .career-chapter:last-child {
+        padding-bottom: 0;
+      }
+
+      .career-chapter h4 {
+        margin: 0 0 8px;
+        color: var(--ink);
+        font-family: var(--serif);
+        font-size: 1.65rem;
+        font-weight: 650;
+        line-height: 1.08;
+      }
+
+      .career-chapter .career-date {
+        margin: 0;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.45;
+      }
+
+      .career-chapter-copy p {
+        margin: 0;
+        color: var(--copy);
+        font-size: 1rem;
+        line-height: 1.68;
+      }
+
+      .career-chapter-copy p + p {
+        margin-top: 14px;
+      }
+
+      .career-chapter-copy a {
+        color: inherit;
+      }
+
+      .career-subchapter + .career-subchapter {
+        margin-top: 32px;
+        padding-top: 32px;
+        border-top: 1px solid var(--line);
+      }
+
+      .career-subchapter-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px 20px;
+        margin-bottom: 12px;
+      }
+
+      .career-subchapter-header h5 {
+        margin: 0;
+        color: var(--ink);
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.4;
+      }
+
+      .career-subchapter-header p {
+        color: var(--muted);
+        font-size: 0.86rem;
+        line-height: 1.4;
+      }
+
+      .education-section {
+        padding: var(--section-space) 0 120px;
+      }
+
+      .education-masthead {
+        margin-bottom: 48px;
+      }
+
+      .education-story {
+        display: grid;
+        grid-template-columns: minmax(240px, 0.44fr) minmax(0, 1fr);
+        gap: 56px;
+        padding: 48px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .education-story:last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+      }
+
+      .education-story h3 {
+        margin: 0 0 12px;
+        color: var(--ink);
+        font-family: var(--serif);
+        font-size: 2rem;
+        font-weight: 650;
+        line-height: 1.06;
+      }
+
+      .education-degree,
+      .education-date {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.45;
+      }
+
+      .education-date {
+        margin-top: 4px;
+      }
+
+      .education-copy p {
+        margin: 0;
+        color: var(--copy);
+        font-size: 1rem;
+        line-height: 1.68;
+      }
+
+      .education-copy p + p {
+        margin-top: 14px;
       }
 
       .site-footer {
-        padding: 80px 0 20px;
+        padding: 104px 0 24px;
       }
 
       .footer-grid {
-        grid-template-columns: 1fr;
-        gap: 36px;
-        padding-top: 32px;
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(180px, 0.7fr) minmax(
+            180px,
+            0.7fr
+          ) minmax(180px, 0.7fr);
+        gap: 64px;
+        padding-top: 40px;
       }
 
-      .footer-grid> :first-child {
-        grid-column: auto;
+      /* Footer links rest dimmed and come up to full strength one at a time
+         on hover or keyboard focus, the same way the write-ups' context rail
+         behaves. Labels and prose stay at full. Pointer devices only, so
+         touch readers see everything at full. */
+      @media (hover: hover) and (pointer: fine) {
+        .footer-grid .footer-link {
+          opacity: 0.58;
+          transition:
+            opacity 160ms var(--ease-out),
+            transform 160ms var(--ease-out);
+        }
+
+        .footer-grid .footer-link:hover,
+        .footer-grid .footer-link:focus-visible {
+          opacity: 1;
+        }
+      }
+
+      .footer-links {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .footer-label {
+        margin: 0 0 14px;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .footer-copy {
+        max-width: 300px;
+        margin: 0;
+        color: var(--copy);
+        font-size: 0.95rem;
+        line-height: 1.55;
+      }
+
+      .footer-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        max-width: 100%;
+        color: var(--ink);
+        font-size: 0.95rem;
+        font-weight: 500;
+        overflow-wrap: anywhere;
+        transition: transform 160ms var(--ease-out);
+      }
+
+      .footer-link:active {
+        transform: scale(0.97);
       }
 
       .footer-meta {
-        margin-top: 64px;
+        margin-top: 88px;
+        color: var(--muted);
+        font-size: 0.78rem;
       }
 
       .footer-name {
-        margin-top: 56px;
-        font-size: 3.2rem;
-        line-height: 0.92;
+        margin: 72px 0 0;
+        color: var(--ink);
+        font-family: var(--serif);
+        font-size: 6.4rem;
+        font-weight: 650;
+        line-height: 0.88;
+        text-transform: uppercase;
       }
-    }
 
-    @media (prefers-reduced-motion: reduce) {
+      @media (hover: hover) and (pointer: fine) {
+        a:hover {
+          color: var(--ink);
+        }
 
-      *,
-      *::before,
-      *::after {
-        animation-duration: 1ms !important;
-        scroll-behavior: auto !important;
-        transition-duration: 1ms !important;
+        a:hover .link-icon,
+        a:hover .inline-link-icon {
+          transform: translate(2px, -2px);
+          transition-duration: 140ms;
+          transition-timing-function: var(--ease-in);
+        }
       }
-    }
-  </style>
-</head>
 
-<body>
-  <a class="skip-link" href="#main">Skip to content</a>
+      @media (max-width: 980px) {
+        .site-nav {
+          padding: 16px 24px;
+        }
 
-  <nav class="site-nav" aria-label="Primary navigation">
-    <a class="brand" href="homepage.html">
-      <span>kwamina.fyi</span>
-    </a>
-  </nav>
+        .career-masthead,
+        .career-feature,
+        .career-archive {
+          grid-template-columns: 1fr;
+          gap: 28px;
+        }
 
-  <main id="main">
-    <section id="now" class="education-section" aria-labelledby="now-title">
-      <div class="section-inner">
-        <header class="education-masthead">
-          <h2 id="now-title" class="career-kicker">Now</h2>
-        </header>
+        .career-feature-copy {
+          grid-column: 1;
+        }
 
-        <div class="education-stories">
-          <article class="education-story">
-            <div>
-              <h3>Building Athena, and open to what&rsquo;s next.</h3>
-              <p class="education-degree">Laurel, Maryland</p>
+        .career-masthead h2 {
+          font-size: 3.4rem;
+        }
+
+        .education-story {
+          grid-template-columns: minmax(210px, 0.42fr) minmax(0, 1fr);
+          gap: 28px;
+        }
+
+        .career-feature h3 {
+          font-size: 3rem;
+        }
+
+        .footer-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 48px 32px;
+        }
+
+        .footer-grid > :first-child {
+          grid-column: 1 / -1;
+        }
+
+        .footer-name {
+          font-size: 4.6rem;
+        }
+      }
+
+      @media (max-width: 620px) {
+        body {
+          font-size: 15px;
+        }
+
+        .section-inner {
+          width: min(100% - 32px, var(--content-width));
+        }
+
+        .career-section {
+          padding: 120px 0 80px;
+        }
+
+        .education-section {
+          padding: 76px 0 80px;
+        }
+
+        .career-masthead {
+          margin-bottom: 48px;
+        }
+
+        .career-masthead h2 {
+          font-size: 2.7rem;
+          line-height: 1.02;
+        }
+
+        .education-story {
+          grid-template-columns: 1fr;
+          gap: 18px;
+          padding: 36px 0;
+        }
+
+        .career-feature {
+          padding: 36px 0 56px;
+        }
+
+        .career-highlights {
+          grid-template-columns: 1fr;
+          gap: 24px;
+        }
+
+        .career-feature h3 {
+          margin-bottom: 18px;
+          font-size: 2.6rem;
+        }
+
+        .career-archive {
+          padding-top: 44px;
+        }
+
+        .career-chapter {
+          grid-template-columns: 1fr;
+          gap: 18px;
+          padding: 30px 0;
+        }
+
+        .site-footer {
+          padding: 80px 0 20px;
+        }
+
+        .footer-grid {
+          grid-template-columns: 1fr;
+          gap: 36px;
+          padding-top: 32px;
+        }
+
+        .footer-grid > :first-child {
+          grid-column: auto;
+        }
+
+        .footer-meta {
+          margin-top: 64px;
+        }
+
+        .footer-name {
+          margin-top: 56px;
+          font-size: 3.2rem;
+          line-height: 0.92;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 1ms !important;
+          scroll-behavior: auto !important;
+          transition-duration: 1ms !important;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <nav class="site-nav" aria-label="Primary navigation">
+      <a class="brand" href="homepage.html">
+        <span>kwamina.fyi</span>
+      </a>
+    </nav>
+
+    <main id="main">
+      <section id="now" class="education-section" aria-labelledby="now-title">
+        <div class="section-inner">
+          <header class="education-masthead">
+            <h2 id="now-title" class="career-kicker">Now</h2>
+          </header>
+
+          <div class="education-stories">
+            <article class="education-story">
+              <div>
+                <h3>Building Athena, and open to what&rsquo;s next.</h3>
+                <p class="education-degree">Laurel, Maryland</p>
+              </div>
+              <div class="education-copy">
+                <p>
+                  I&rsquo;m based in Laurel, Maryland, where I&rsquo;m building
+                  Athena. I&rsquo;m also actively looking for my next full-time
+                  engineering role, and I&rsquo;m open to new opportunities
+                  &mdash; if you think there&rsquo;s a fit, reach out at
+                  <a href="mailto:kwami.nuh@gmail.com"
+                    >kwami.nuh@gmail.com
+                    <svg
+                      class="inline-link-icon"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M7 7h10v10" />
+                      <path d="M7 17 17 7" /></svg></a
+                  >.
+                </p>
+                <p>
+                  What I&rsquo;m looking for: roles that challenge me with hard
+                  problems, room to keep growing as an engineer, and a team
+                  where my work has real impact. I want to build collaboratively
+                  with like-minded engineers who push what we can do. I&rsquo;m
+                  comfortable building with AI, and I&rsquo;d love to bring that
+                  expertise to a team that&rsquo;s working with these tools too.
+                </p>
+                <p>
+                  Day to day I work primarily in TypeScript and React, and
+                  I&rsquo;m comfortable with the frameworks around that
+                  ecosystem. I&rsquo;m also comfortable in Python and other
+                  languages.
+                </p>
+                <p>
+                  Athena is the most substantial thing I&rsquo;ve built so far,
+                  and it has most of my attention these days.
+                </p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="experience"
+        class="career-section"
+        aria-labelledby="experience-title"
+      >
+        <div class="section-inner">
+          <header class="career-masthead">
+            <div class="masthead-meta">
+              <p class="career-kicker">Work experience</p>
+              <a
+                class="masthead-action"
+                href="/docs/resume.pdf"
+                target="_blank"
+                rel="noreferrer"
+                >Resume
+                <svg
+                  class="link-icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M7 7h10v10" />
+                  <path d="M7 17 17 7" /></svg
+              ></a>
             </div>
-            <div class="education-copy">
-              <p>I&rsquo;m based in Laurel, Maryland, where I&rsquo;m building Athena. I&rsquo;m also
-                actively looking for my next full-time engineering role, and I&rsquo;m open to new opportunities &mdash;
-                if you think there&rsquo;s a fit, reach out at <a href="mailto:kwami.nuh@gmail.com">kwami.nuh@gmail.com
-                  <svg class="inline-link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" aria-hidden="true">
-                    <path d="M7 7h10v10" />
-                    <path d="M7 17 17 7" />
-                  </svg></a>.</p>
-              <p>What I&rsquo;m looking for: roles that challenge me with hard problems, room to keep growing as an
-                engineer, and a team where my work has real impact. I want to build collaboratively with like-minded
-                engineers who push what we can do. I&rsquo;m comfortable building with AI, and I&rsquo;d love to bring
-                that experience to a team that&rsquo;s working with these tools too.</p>
-              <p>Day to day I work primarily in TypeScript and React, and I&rsquo;m comfortable with the frameworks
-                around that ecosystem. I&rsquo;m also comfortable in Python and other languages.</p>
-              <p>Athena is the most substantial thing I&rsquo;ve built so far, and it has most of my attention these
-                days.</p>
+            <h2 id="experience-title">
+              Four years at Eventbrite shaped how I build.
+            </h2>
+          </header>
+
+          <article class="career-feature">
+            <div class="career-feature-copy">
+              <h3>Eventbrite</h3>
+              <div class="career-meta">
+                <p>Software Engineer, promoted to Senior Software Engineer</p>
+                <p>Mar 2022 - Apr 2026</p>
+              </div>
+              <p>
+                The way I build software draws on four years at Eventbrite,
+                where I grew from a junior engineer into a senior engineer
+                trusted with business-critical product surfaces. The work was
+                mostly TypeScript and React on the frontend, with services and
+                infrastructure hosted on AWS.
+              </p>
+              <ul
+                class="career-highlights"
+                aria-label="Selected Eventbrite work"
+              >
+                <li class="career-highlight">
+                  <h4>Growth and activation</h4>
+                  <p>
+                    Helped launch a logged-out event-creation experience that
+                    increased event creation by 26.6%, publishing by 5.4%, and
+                    transactions by 2.2%.
+                  </p>
+                </li>
+                <li class="career-highlight">
+                  <h4>Pricing and billing infrastructure</h4>
+                  <p>
+                    Built pricing services and Stripe-backed billing
+                    infrastructure across frontend libraries, service endpoints,
+                    Terraform, AWS Lambda, and DynamoDB.
+                  </p>
+                </li>
+                <li class="career-highlight">
+                  <h4>Payments and fraud</h4>
+                  <p>
+                    Became a go-to engineer for payment flows, led 3D Secure
+                    support for regulated markets, and built fraud prevention
+                    that reduced fraudulent payments by 65% in three months.
+                  </p>
+                </li>
+                <li class="career-highlight">
+                  <h4>Nonprofit plan automation</h4>
+                  <p>
+                    Identified a gap outside the roadmap and drove automated
+                    plan enrollment that improved retention and support outcomes
+                    for roughly 3,200 eligible nonprofit organizations.
+                  </p>
+                </li>
+                <li class="career-highlight">
+                  <h4>Dashboard modernization and reliability</h4>
+                  <p>
+                    Served as a primary engineer modernizing Eventbrite&rsquo;s
+                    creator dashboard, owning work across routing, permissions,
+                    analytics, observability, rollout controls, and user-facing
+                    reliability.
+                  </p>
+                </li>
+                <li class="career-highlight">
+                  <h4>AI-powered creator guidance</h4>
+                  <p>
+                    Defined and led the implementation of Dashy, an embedded AI
+                    assistant that gave creators insights into their events at
+                    each stage of the event lifecycle. Eventbrite&rsquo;s tools
+                    were spread across the platform, so Dashy surfaced the right
+                    tool at the right moment with a direct link, instead of
+                    leaving creators to go searching. The work spanned
+                    lifecycle-aware guidance, backend contracts, responsive
+                    product experiences, telemetry, experimentation, and
+                    feedback capture.
+                  </p>
+                </li>
+              </ul>
+              <p>
+                Across those chapters, I progressed from delivering individual
+                product experiences to becoming a domain expert and leading
+                business-critical systems across frontend, backend, and
+                infrastructure. The pattern stayed consistent: learn difficult
+                domains deeply, connect technical rigor to measurable outcomes,
+                and raise the quality bar for the teams and systems around me.
+              </p>
+              <p>
+                My time there ended in 2026, when Eventbrite was acquired and my
+                role ended in the transition.
+              </p>
             </div>
           </article>
-        </div>
-      </div>
-    </section>
 
-    <section id="experience" class="career-section" aria-labelledby="experience-title">
-      <div class="section-inner">
-        <header class="career-masthead">
-          <div class="masthead-meta">
-            <p class="career-kicker">Work experience</p>
-            <a class="masthead-action" href="/docs/resume.pdf" target="_blank" rel="noreferrer">Resume <svg class="link-icon" xmlns="http://www.w3.org/2000/svg"
-                width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M7 7h10v10" />
-                <path d="M7 17 17 7" />
-              </svg></a>
-          </div>
-          <h2 id="experience-title">Four years at Eventbrite shaped how I build.</h2>
-        </header>
-
-        <article class="career-feature">
-          <div class="career-feature-copy">
-            <h3>Eventbrite</h3>
-            <div class="career-meta">
-              <p>Software Engineer, promoted to Senior Software Engineer</p>
-              <p>Mar 2022 - Apr 2026</p>
+          <div class="career-archive">
+            <h3 class="career-kicker">Earlier chapters</h3>
+            <div>
+              <article class="career-chapter">
+                <div>
+                  <h4>Apple</h4>
+                  <p class="career-date">Oct 2017 - 2024</p>
+                </div>
+                <div class="career-chapter-copy">
+                  <div class="career-subchapter">
+                    <div class="career-subchapter-header">
+                      <h5>Genius</h5>
+                    </div>
+                    <p>
+                      At Apple Columbia, I progressed from Specialist to
+                      Technical Expert to Genius during undergrad. I repaired
+                      Macs and iPhones, mentored teammates, and became a trusted
+                      technical resource, maintaining a same-unit repair rate
+                      above 95%.
+                    </p>
+                  </div>
+                  <div class="career-subchapter">
+                    <div class="career-subchapter-header">
+                      <h5>Software Engineering Career Experience</h5>
+                      <p>Jun 2021 - Nov 2021</p>
+                    </div>
+                    <p>
+                      During a five-month rotation with Apple&rsquo;s Device
+                      Services QA team, I moved API test suites from Java to
+                      Karate, cutting build and test times by 4x and increasing
+                      coverage by more than 40%. I documented the work and
+                      presented it to the broader team to support wider
+                      adoption.
+                    </p>
+                  </div>
+                </div>
+              </article>
+              <article class="career-chapter">
+                <div>
+                  <h4>University of Maryland iSchool</h4>
+                  <p class="career-date">Dec 2019 - May 2021</p>
+                </div>
+                <div class="career-chapter-copy">
+                  <div class="career-subchapter">
+                    <div class="career-subchapter-header">
+                      <h5>Software Engineer / Research Assistant</h5>
+                    </div>
+                    <p>
+                      As part of the Intelligent Assistive Machines lab, I
+                      collaborated with
+                      <a
+                        href="https://jonggi.github.io/"
+                        target="_blank"
+                        rel="noreferrer"
+                        >Jonggi Hong
+                        <svg
+                          class="inline-link-icon"
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M7 7h10v10" />
+                          <path d="M7 17 17 7" /></svg
+                      ></a>
+                      and
+                      <a
+                        href="https://terpconnect.umd.edu/~hernisa/"
+                        target="_blank"
+                        rel="noreferrer"
+                        >Hernisa Kacorri
+                        <svg
+                          class="inline-link-icon"
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M7 7h10v10" />
+                          <path d="M7 17 17 7" /></svg
+                      ></a>
+                      on a teachable object-recognition iOS app that used
+                      machine learning to help blind users identify objects.
+                    </p>
+                    <p>
+                      The work taught me the value of collaboration,
+                      constructive feedback, iterative development, and
+                      designing software that is accessible to more people. I
+                      also co-authored papers presented at ACM ASSETS and CHI.
+                    </p>
+                  </div>
+                </div>
+              </article>
             </div>
-            <p>The way I build software draws on four years at Eventbrite, where I grew from a junior engineer into a
-              senior engineer trusted with business-critical product surfaces. The work was mostly TypeScript and React
-              on the frontend, with services and infrastructure hosted on AWS.</p>
-            <ul class="career-highlights" aria-label="Selected Eventbrite work">
-              <li class="career-highlight">
-                <h4>Growth and activation</h4>
-                <p>Helped launch a logged-out event-creation experience that increased event creation by 26.6%,
-                  publishing by 5.4%, and transactions by 2.2%.</p>
-              </li>
-              <li class="career-highlight">
-                <h4>Pricing and billing infrastructure</h4>
-                <p>Built pricing services and Stripe-backed billing infrastructure across frontend libraries, service
-                  endpoints, Terraform, AWS Lambda, and DynamoDB.</p>
-              </li>
-              <li class="career-highlight">
-                <h4>Payments and fraud</h4>
-                <p>Became a go-to engineer for payment flows, led 3D Secure support for regulated markets, and built
-                  fraud prevention that reduced fraudulent payments by 65% in three months.</p>
-              </li>
-              <li class="career-highlight">
-                <h4>Nonprofit plan automation</h4>
-                <p>Identified a gap outside the roadmap and drove automated plan enrollment that improved retention and
-                  support outcomes for roughly 3,200 eligible nonprofit organizations.</p>
-              </li>
-              <li class="career-highlight">
-                <h4>Dashboard modernization and reliability</h4>
-                <p>Served as a primary engineer modernizing Eventbrite&rsquo;s creator dashboard, owning work across
-                  routing, permissions, analytics, observability, rollout controls, and user-facing reliability.</p>
-              </li>
-              <li class="career-highlight">
-                <h4>AI-powered creator guidance</h4>
-                <p>Defined and led the implementation of Dashy, an embedded AI assistant that gave creators insights
-                  into their events at each stage of the event lifecycle. Eventbrite&rsquo;s tools were spread across
-                  the platform, so Dashy surfaced the right tool at the right moment with a direct link, instead of
-                  leaving creators to go searching. The work spanned lifecycle-aware guidance, backend contracts,
-                  responsive product experiences, telemetry, experimentation, and feedback capture.</p>
-              </li>
-            </ul>
-            <p>Across those chapters, I progressed from delivering individual product experiences to becoming a domain
-              expert and leading business-critical systems across frontend, backend, and infrastructure. The pattern
-              stayed consistent: learn difficult domains deeply, connect technical rigor to measurable outcomes, and
-              raise the quality bar for the teams and systems around me.</p>
-            <p>My time there ended in 2026, when Eventbrite was acquired and my role ended in the transition.</p>
           </div>
-        </article>
+        </div>
+      </section>
 
-        <div class="career-archive">
-          <h3 class="career-kicker">Earlier chapters</h3>
+      <section
+        id="education"
+        class="education-section"
+        aria-labelledby="education-title"
+      >
+        <div class="section-inner">
+          <header class="education-masthead">
+            <h2 id="education-title" class="career-kicker">Education</h2>
+          </header>
+
+          <div class="education-stories">
+            <article class="education-story">
+              <div>
+                <h3>University of Maryland, College Park</h3>
+                <p class="education-degree">BSc. Computer Science</p>
+                <p class="education-date">Aug 2018 - May 2021</p>
+              </div>
+              <div class="education-copy">
+                <p>
+                  <strong>Relevant coursework:</strong> Advanced Data
+                  Structures, Algorithms, Artificial Intelligence, C
+                  Programming, Computer Systems Architecture, Computer and
+                  Network Security, Organization of Programming Languages, and
+                  Programming Handheld Systems for iOS.
+                </p>
+              </div>
+            </article>
+
+            <article class="education-story">
+              <div>
+                <h3>Community College of Baltimore County</h3>
+                <p class="education-degree">ASc. Computer Science</p>
+                <p class="education-date">Aug 2015 - May 2018</p>
+              </div>
+              <div class="education-copy">
+                <p>
+                  <strong>Activities and societies:</strong> Dean&rsquo;s List,
+                  Math and Computer Inspired Scholars, and Phi Theta Kappa.
+                </p>
+                <p>
+                  Completed the Mobile Application Developer certification
+                  course track.
+                </p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="section-inner">
+        <div class="footer-grid">
           <div>
-            <article class="career-chapter">
-              <div>
-                <h4>Apple</h4>
-                <p class="career-date">Oct 2017 - 2024</p>
-              </div>
-              <div class="career-chapter-copy">
-                <div class="career-subchapter">
-                  <div class="career-subchapter-header">
-                    <h5>Genius</h5>
-                  </div>
-                  <p>At Apple Columbia, I progressed from Specialist to Technical Expert to Genius during undergrad. I
-                    repaired Macs and iPhones, mentored teammates, and became a trusted technical resource, maintaining
-                    a same-unit repair rate above 95%.</p>
-                </div>
-                <div class="career-subchapter">
-                  <div class="career-subchapter-header">
-                    <h5>Software Engineering Career Experience</h5>
-                    <p>Jun 2021 - Nov 2021</p>
-                  </div>
-                  <p>During a five-month rotation with Apple&rsquo;s Device Services QA team, I moved API test suites
-                    from Java to Karate, cutting build and test times by 4x and increasing coverage by more than 40%. I
-                    documented the work and presented it to the broader team to support wider adoption.</p>
-                </div>
-              </div>
-            </article>
-            <article class="career-chapter">
-              <div>
-                <h4>University of Maryland iSchool</h4>
-                <p class="career-date">Dec 2019 - May 2021</p>
-              </div>
-              <div class="career-chapter-copy">
-                <div class="career-subchapter">
-                  <div class="career-subchapter-header">
-                    <h5>Software Engineer / Research Assistant</h5>
-                  </div>
-                  <p>As part of the Intelligent Assistive Machines lab, I collaborated with <a
-                      href="https://jonggi.github.io/" target="_blank" rel="noreferrer">Jonggi Hong <svg
-                        class="inline-link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round" aria-hidden="true">
-                        <path d="M7 7h10v10" />
-                        <path d="M7 17 17 7" />
-                      </svg></a> and <a href="https://terpconnect.umd.edu/~hernisa/" target="_blank"
-                      rel="noreferrer">Hernisa Kacorri <svg class="inline-link-icon" xmlns="http://www.w3.org/2000/svg"
-                        width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M7 7h10v10" />
-                        <path d="M7 17 17 7" />
-                      </svg></a> on a teachable object-recognition iOS app that used machine learning to help blind
-                    users identify objects.</p>
-                  <p>The work taught me the value of collaboration, constructive feedback, iterative development, and
-                    designing software that is accessible to more people. I also co-authored papers presented at ACM
-                    ASSETS and CHI.</p>
-                </div>
-              </div>
-            </article>
+            <p class="footer-label">About</p>
+            <p class="footer-copy">
+              Kwamina is a software craftsman who enjoys solving hard problems
+              and building on the web.
+            </p>
+          </div>
+          <div>
+            <p class="footer-label">Navigate</p>
+            <div class="footer-links">
+              <a class="footer-link" href="homepage.html" data-scroll-top
+                >Homepage</a
+              >
+              <a class="footer-link" href="work/athena/">Athena</a>
+            </div>
+          </div>
+          <div>
+            <p class="footer-label">Contact</p>
+            <div class="footer-links">
+              <a class="footer-link" href="mailto:kwami.nuh@gmail.com"
+                >kwami.nuh@gmail.com
+                <svg
+                  class="link-icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M7 7h10v10" />
+                  <path d="M7 17 17 7" /></svg
+              ></a>
+              <a
+                class="footer-link"
+                href="/docs/resume.pdf"
+                target="_blank"
+                rel="noreferrer"
+                >Resume
+                <svg
+                  class="link-icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M7 7h10v10" />
+                  <path d="M7 17 17 7" /></svg
+              ></a>
+            </div>
+          </div>
+          <div>
+            <p class="footer-label">Elsewhere</p>
+            <div class="footer-links">
+              <a
+                class="footer-link"
+                href="https://linkedin.com/in/ernestmens"
+                target="_blank"
+                rel="noreferrer"
+                >LinkedIn
+                <svg
+                  class="link-icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M7 7h10v10" />
+                  <path d="M7 17 17 7" /></svg
+              ></a>
+              <a
+                class="footer-link"
+                href="https://github.com/kwam1na"
+                target="_blank"
+                rel="noreferrer"
+                >GitHub
+                <svg
+                  class="link-icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M7 7h10v10" />
+                  <path d="M7 17 17 7" /></svg
+              ></a>
+            </div>
           </div>
         </div>
+        <p class="footer-meta">&copy; 2026 Kwamina Essuah Mensah</p>
+        <p class="footer-name" aria-hidden="true">Kwamina Essuah Mensah</p>
       </div>
-    </section>
-
-    <section id="education" class="education-section" aria-labelledby="education-title">
-      <div class="section-inner">
-        <header class="education-masthead">
-          <h2 id="education-title" class="career-kicker">Education</h2>
-        </header>
-
-        <div class="education-stories">
-          <article class="education-story">
-            <div>
-              <h3>University of Maryland, College Park</h3>
-              <p class="education-degree">BSc. Computer Science</p>
-              <p class="education-date">Aug 2018 - May 2021</p>
-            </div>
-            <div class="education-copy">
-              <p><strong>Relevant coursework:</strong> Advanced Data Structures, Algorithms, Artificial Intelligence, C
-                Programming, Computer Systems Architecture, Computer and Network Security, Organization of Programming
-                Languages, and Programming Handheld Systems for iOS.</p>
-            </div>
-          </article>
-
-          <article class="education-story">
-            <div>
-              <h3>Community College of Baltimore County</h3>
-              <p class="education-degree">ASc. Computer Science</p>
-              <p class="education-date">Aug 2015 - May 2018</p>
-            </div>
-            <div class="education-copy">
-              <p><strong>Activities and societies:</strong> Dean&rsquo;s List, Math and Computer Inspired Scholars, and
-                Phi Theta Kappa.</p>
-              <p>Completed the Mobile Application Developer certification course track.</p>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <footer class="site-footer">
-    <div class="section-inner">
-      <div class="footer-grid">
-        <div>
-          <p class="footer-label">About</p>
-          <p class="footer-copy">Kwamina is a software craftsman who enjoys solving hard problems and building on the
-            web.</p>
-        </div>
-        <div>
-          <p class="footer-label">Navigate</p>
-          <div class="footer-links">
-            <a class="footer-link" href="homepage.html" data-scroll-top>Homepage</a>
-            <a class="footer-link" href="work/athena/">Athena</a>
-          </div>
-        </div>
-        <div>
-          <p class="footer-label">Contact</p>
-          <div class="footer-links">
-            <a class="footer-link" href="mailto:kwami.nuh@gmail.com">kwami.nuh@gmail.com <svg class="link-icon"
-                xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                aria-hidden="true">
-                <path d="M7 7h10v10" />
-                <path d="M7 17 17 7" />
-              </svg></a>
-            <a class="footer-link" href="/docs/resume.pdf" target="_blank" rel="noreferrer">Resume <svg class="link-icon" xmlns="http://www.w3.org/2000/svg" width="24"
-                height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M7 7h10v10" />
-                <path d="M7 17 17 7" />
-              </svg></a>
-          </div>
-        </div>
-        <div>
-          <p class="footer-label">Elsewhere</p>
-          <div class="footer-links">
-            <a class="footer-link" href="https://linkedin.com/in/ernestmens" target="_blank" rel="noreferrer">LinkedIn
-              <svg class="link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                aria-hidden="true">
-                <path d="M7 7h10v10" />
-                <path d="M7 17 17 7" />
-              </svg></a>
-            <a class="footer-link" href="https://github.com/kwam1na" target="_blank" rel="noreferrer">GitHub <svg
-                class="link-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                aria-hidden="true">
-                <path d="M7 7h10v10" />
-                <path d="M7 17 17 7" />
-              </svg></a>
-          </div>
-        </div>
-      </div>
-      <p class="footer-meta">&copy; 2026 Kwamina Essuah Mensah</p>
-      <p class="footer-name" aria-hidden="true">Kwamina Essuah Mensah</p>
-    </div>
-  </footer>
-</body>
-
+    </footer>
+  </body>
 </html>
