@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useChat, fetchServerSentEvents } from '@tanstack/ai-react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { animate } from 'animejs'
@@ -7,6 +7,7 @@ import { chatTextParts } from './chat-links.js'
 import { fetchStoredMessages } from './chat-transcript.js'
 import { chatPageLabelForPath, chatTitleForPath } from './chat-title.js'
 import { FlipText } from './flip-text.jsx'
+import { watchMobileChatViewport } from './mobile-viewport.js'
 import { revealDuration, revealedPrefix } from './stream-reveal.js'
 
 const STARTERS = [
@@ -217,6 +218,14 @@ export default function ChatPanel({
       abort.abort()
     }
   }, [replayStatus, thread.id, setMessages])
+
+  // A virtual keyboard can shrink the visual viewport without changing the
+  // layout viewport that 100dvh measures, so the takeover follows its height.
+  // Browser-driven viewport panning does not move the panel a second time.
+  useLayoutEffect(
+    () => watchMobileChatViewport(panelRef.current, { isMobile: isMobileTakeover }),
+    [isMobileTakeover],
+  )
 
   // Follow the answer as it streams, but never yank the view away from someone
   // who has scrolled up to reread something.

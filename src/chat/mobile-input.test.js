@@ -24,9 +24,12 @@ describe('mobile chat composer', () => {
     overflow: hidden;
   }`)
     expect(styles).toContain(`  .site-chat-panel {
-    inset: 0;
+    top: 0;
+    right: 0;
+    bottom: auto;
+    left: 0;
     width: 100%;
-    height: 100dvh;
+    height: var(--mobile-chat-viewport-height, 100dvh);
     border: 0;
     border-radius: 0;
     box-shadow: none;

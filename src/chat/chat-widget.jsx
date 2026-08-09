@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { SCROLL_TO_TOP_REVEAL_PX } from '../scroll-progress.js'
 import { useFooterOverlap } from '../use-footer-overlap.js'
 import { animateSplit } from './launcher-split.js'
+import { MOBILE_TAKEOVER_QUERY } from './mobile-viewport.js'
 
 // The panel pulls in the TanStack AI client, which is the single largest
 // dependency on the site. Loading it on first open keeps it off the critical
@@ -9,7 +10,6 @@ import { animateSplit } from './launcher-split.js'
 const ChatPanel = lazy(() => import('./chat-panel.jsx'))
 
 const threadStorageKey = 'kwamina-fyi-chat-thread'
-const MOBILE_TAKEOVER_QUERY = '(max-width: 620px)'
 
 export function createThread({
   randomUUID = () => window.crypto.randomUUID(),
