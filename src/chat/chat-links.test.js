@@ -202,4 +202,15 @@ describe('chatTextParts', () => {
       { type: 'text', text: 'Keep **unfinished emphasis literal.' },
     ])
   })
+
+  it('unwraps the markdown the interface cannot render', () => {
+    // The contract bans these, but transcripts show them slipping through —
+    // and a backtick or heading hash reaches the reader as broken punctuation.
+    expect(chatTextParts('The `reportsContract.ts` file.')).toEqual([
+      { type: 'text', text: 'The reportsContract.ts file.' },
+    ])
+    expect(chatTextParts('## Athena\nA business OS.')).toEqual([
+      { type: 'text', text: 'Athena\nA business OS.' },
+    ])
+  })
 })

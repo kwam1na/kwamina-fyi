@@ -29,6 +29,13 @@ describe('assistant contract', () => {
     // a [Reading: ...] marker" — internal plumbing surfaced as an answer.
     expect(INSTRUCTIONS).toContain('The marker is internal plumbing, and so is its absence')
     expect(INSTRUCTIONS).toContain('Which page are you looking at?')
+    // Eleven transcripts ended with a link appended as a sign-off, and several
+    // answers arrived structured as bold-led sections with stray bullets and
+    // backticks the interface renders as literal punctuation.
+    expect(INSTRUCTIONS).toContain('Never close an answer with a pointer elsewhere')
+    expect(INSTRUCTIONS).toContain('A link supplements an answer; it never replaces one')
+    expect(INSTRUCTIONS).toContain('never open paragraphs with bold labels')
+    expect(INSTRUCTIONS).toContain('literal punctuation')
   })
 
   it('teaches the model how to emit navigable internal site links', () => {

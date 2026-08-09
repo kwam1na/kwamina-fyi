@@ -174,6 +174,14 @@ export function chatTextParts(text, { hideIncompleteSiteLink = false } = {}) {
     (current, pattern) => current.replace(pattern, '$1'),
     readableText,
   )
+    // The interface renders exactly two Markdown forms: labeled links and
+    // bold. The contract tells the model so, but transcripts show backticks
+    // and headings still slipping through occasionally — and everything this
+    // renderer does not handle reaches the reader as literal punctuation. The
+    // two forms that read as broken are unwrapped here; a stray list dash
+    // still reads as prose and is left alone.
+    .replace(/`([^`\n]+)`/g, '$1')
+    .replace(/^#{1,4} /gm, '')
   const parts = []
   let cursor = 0
 
