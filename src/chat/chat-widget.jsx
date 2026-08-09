@@ -293,7 +293,11 @@ export function ChatWidget() {
     }
   }, [isMobileTakeover, isOpen])
 
-  useEffect(() => {
+  // Layout effect, not a passive one: React has already committed the split
+  // geometry by the time this runs, and the timeline's opening move is to put
+  // the icon back where the reader last saw it. A frame painted in between
+  // would show it in its new place and then jump back.
+  useLayoutEffect(() => {
     const launcher = launcherRef.current
     if (!launcher) return undefined
 
@@ -366,6 +370,11 @@ export function ChatWidget() {
         className={[
           'site-chat-launcher',
           shouldCollapse && 'is-collapsed',
+          // The collapsed geometry rides with React rather than being toggled
+          // from the timeline: any re-render — the footer palette swap fires
+          // one mid-scroll — rewrites className and would drop a class the
+          // animation had set behind React's back.
+          shouldCollapse && 'is-split',
           isOpen && 'is-open',
           isOnFooter && 'is-on-footer',
         ].filter(Boolean).join(' ')}
@@ -373,6 +382,10 @@ export function ChatWidget() {
         aria-expanded={isOpen}
         aria-label={isOpen ? 'Close chat' : CHAT_LAUNCHER_ARIA_LABEL}
       >
+        {/* The pill itself. A separate element because collapsing it to a disc
+            is done with transforms on two overlapping opaque pieces, which
+            have to be faded as one group — see styles.css. */}
+        <span className="site-chat-launcher-surface" aria-hidden="true" />
         <svg className="site-chat-launcher-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M20 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3Z" />
         </svg>

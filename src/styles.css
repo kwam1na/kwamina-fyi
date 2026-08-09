@@ -976,6 +976,13 @@ body::after {
    * animation and the layout cannot disagree, and so the breakpoint below can
    * change it in one place. */
   --launcher-expanded: 79px;
+  /* The collapsed disc, which is also the pill's height and therefore the
+   * diameter of both its end caps. */
+  --launcher-size: 42px;
+  /* --nav-surface is exactly --paper at this alpha in both themes, which is
+   * what lets the surface below be built from opaque parts and faded once as
+   * a group. Kept as one number so the two cannot drift apart. */
+  --launcher-surface-alpha: 0.86;
 }
 
 .site-chat-launcher {
@@ -987,35 +994,123 @@ body::after {
   align-items: center;
   justify-content: center;
   gap: var(--launcher-gap);
-  /* Padding would fight the width animation for the same pixels — centring the
-   * contents inside an explicit width gives the same breathing room and leaves
-   * one property to animate. */
+  /* Padding would fight the width for the same pixels — centring the contents
+   * inside an explicit width gives the same breathing room. The width is set
+   * once per threshold crossing rather than tweened; see the surface below. */
   width: var(--launcher-expanded);
-  height: 42px;
+  height: var(--launcher-size);
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: var(--nav-surface, var(--paper));
+  /* The visible pill lives in .site-chat-launcher-surface so it can be shaped
+   * by transforms alone. Only the backdrop blur stays here: a group with
+   * opacity below 1 is a backdrop root, so a blur inside the surface would
+   * have nothing left to sample. */
+  background: none;
+  /* Follows the button's box, which is the resting silhouette at both ends of
+   * the motion; during the 380ms between, it trails the contracting pill by a
+   * few pixels at a tenth of an alpha. */
   box-shadow: 0 4px 16px rgba(21, 24, 33, 0.1);
   color: var(--copy);
   font-family: var(--font-sans);
   font-size: 0.85rem;
   letter-spacing: 0.01em;
   cursor: pointer;
-  overflow: hidden;
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
+  /* Declared, not just defaulted at each use: the timeline tweens both, and a
+   * property with no resolved starting value has nothing to tween from. */
+  --split-x: 0px;
+  --tail-scale: 1;
+  --icon-x: 0px;
   /* The slide off the scroll-to-top control. On `translate` rather than
    * `transform` so the hover lift and active press below keep working — an
    * inline `transform` from the animation would outrank both. */
   translate: var(--split-x, 0px) 0;
-  /* Width, gap and the slide are animated from JS; keeping them out of the
-   * transition leaves one animator on each. */
+  /* Its own layer. Without this the split's transforms still resolve against
+   * the document layer, and profiling showed the whole scrolling layer
+   * repainting for every frame of the motion. */
+  will-change: transform;
+  /* The slide is animated from JS; keeping it out of the transition leaves one
+   * animator on each property. */
   transition: transform 160ms var(--ease-portfolio), opacity 160ms ease,
     color 160ms ease, background-color 160ms ease;
 }
 
+/* The pill, built so that collapsing it to a disc costs only transforms.
+ *
+ * Animating `width` was the obvious way to do this and the expensive one: on a
+ * fixed-position element it invalidates layout for the whole document, and
+ * profiling caught it repainting the entire scrolling layer on every frame of
+ * the 380ms motion — visible as a stutter under the reader's scroll. clip-path
+ * and border-radius were measured too and are no cheaper; only transform and
+ * opacity stay off the layout and paint path.
+ *
+ * So the pill is drawn as two opaque pieces whose union is the exact stadium:
+ * a disc at the right end, and a tail carrying the left cap and the straight
+ * middle. Collapsing scales the tail down onto the disc's centre; the disc,
+ * which is the resting shape, is never transformed and so never distorts.
+ * The caps are wider than the pill is long, so the pieces must overlap —
+ * hence the group alpha here rather than a translucent fill on each, which
+ * would double where they meet. */
+.site-chat-launcher-surface {
+  position: absolute;
+  top: 0;
+  /* Anchored to the pill's right edge and sized from the token, so the shape
+   * is independent of the button's own width — that width can then be set
+   * once per crossing without moving anything the reader can see. */
+  right: 0;
+  width: var(--launcher-expanded);
+  height: 100%;
+  isolation: isolate;
+  opacity: var(--launcher-surface-alpha);
+  pointer-events: none;
+}
+
+/* No shadow on the pieces themselves: they overlap, and the disc's shadow
+ * would fall across the tail as a visible crescent. The shadow stays on the
+ * button, whose box is the resting silhouette at both ends of the motion. */
+.site-chat-launcher-surface::before,
+.site-chat-launcher-surface::after {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: var(--paper);
+  content: '';
+}
+
+/* The right cap, and the whole of the collapsed control. */
+.site-chat-launcher-surface::after {
+  right: 0;
+  width: var(--launcher-size);
+  border-radius: 999px;
+}
+
+/* The left cap plus the straight middle, ending at the disc's centre so the
+ * scale runs the tail into the disc rather than out from under it. */
+.site-chat-launcher-surface::before {
+  left: 0;
+  width: calc(var(--launcher-expanded) - var(--launcher-size) / 2);
+  border-radius: calc(var(--launcher-size) / 2) 0 0 calc(var(--launcher-size) / 2);
+  transform: scaleX(var(--tail-scale, 1));
+  transform-origin: right center;
+}
+
+/* Positioned so they paint above the surface: it is absolutely positioned and
+ * would otherwise sit over its own label, static content losing to positioned
+ * siblings regardless of document order. */
+.site-chat-launcher-icon,
+.site-chat-launcher-label {
+  position: relative;
+}
+
 .site-chat-launcher-icon {
+  /* Driven from a custom property rather than by animating the element
+   * directly: an animator writing to an SVG element reaches for the transform
+   * *attribute*, and changing that invalidates layout on every frame — which
+   * is the cost this whole approach exists to avoid. Composed through
+   * `translate` so it cannot collide with a transform from elsewhere. */
+  translate: var(--icon-x, 0px) 0;
   width: 17px;
   height: 17px;
   flex-shrink: 0;
@@ -1038,6 +1133,25 @@ body::after {
  * neighbours. It has already been seen at full strength on the way down. */
 .site-chat-launcher.is-collapsed {
   opacity: 0.52;
+}
+
+/* The collapsed *geometry*, owned by launcher-split.js rather than by React so
+ * it can be committed at the point in the motion where nothing visible depends
+ * on it. It is a single class flip per crossing — one layout — where the old
+ * width animation paid for a layout on every frame.
+ *
+ * The label leaves the flex row rather than shrinking inside it, so the icon
+ * centres in the disc without a width to tween; it is placed and faded by the
+ * timeline, which knows where it was. */
+.site-chat-launcher.is-split {
+  gap: 0;
+  width: var(--launcher-size);
+}
+
+.site-chat-launcher.is-split .site-chat-launcher-label {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
 }
 
 .site-chat-launcher:hover {
