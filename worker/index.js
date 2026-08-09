@@ -5,6 +5,7 @@
 //
 //   POST /api/chat              stream an answer, then persist the turn
 //   GET  /api/chat/transcript   replay a stored transcript (thread id header)
+//   POST /api/chat/diagnostics  store mobile viewport geometry for debugging
 //
 // The whole site corpus rides in the system prompt rather than a retrieval
 // index. Prompt caching means we pay for it once per five minutes rather than
@@ -28,6 +29,35 @@ const MIN_MS_BETWEEN_MESSAGES = 1500
 const CALLER_WINDOW_MS = 60_000
 const CALLER_WINDOW_LIMIT = 15
 const TURN_RESERVATION_STALE_MS = 120_000
+const THREAD_ID_PATTERN = /^[A-Za-z0-9-]{8,100}$/
+const VIEWPORT_DIAGNOSTIC_TYPES = new Set([
+  'open',
+  'close',
+  'composer_focus',
+  'composer_blur',
+  'settled',
+  'visual_viewport_resize',
+  'visual_viewport_scroll',
+  'window_resize',
+])
+const VIEWPORT_METRICS = new Set([
+  'innerHeight',
+  'layoutHeight',
+  'viewportHeight',
+  'viewportOffsetTop',
+  'viewportPageTop',
+  'viewportScale',
+  'panelTop',
+  'panelBottom',
+  'panelHeight',
+  'composerTop',
+  'composerBottom',
+  'composerHeight',
+  'windowScrollY',
+  'rootScrollTop',
+  'bodyScrollTop',
+  'composerFocused',
+])
 
 const jsonResponse = (body, status = 200, headers = {}) =>
   new Response(JSON.stringify(body), {
@@ -65,6 +95,62 @@ export async function readJsonBody(request) {
   }
 
   return JSON.parse(new TextDecoder().decode(body))
+}
+
+function viewportDiagnosticBatch(body) {
+  if (!THREAD_ID_PATTERN.test(body?.threadId ?? '')) return null
+  if (!Array.isArray(body?.events) || body.events.length < 1 || body.events.length > 25) return null
+
+  const events = []
+  for (const event of body.events) {
+    if (!VIEWPORT_DIAGNOSTIC_TYPES.has(event?.type)) return null
+    if (!Number.isSafeInteger(event?.capturedAt) || event.capturedAt < 0) return null
+    if (!event.metrics || Array.isArray(event.metrics) || typeof event.metrics !== 'object') return null
+
+    for (const [key, value] of Object.entries(event.metrics)) {
+      if (!VIEWPORT_METRICS.has(key)) return null
+      if (key === 'composerFocused') {
+        if (typeof value !== 'boolean') return null
+      } else if (value !== null && (!Number.isFinite(value) || Math.abs(value) > 100_000)) {
+        return null
+      }
+    }
+    events.push(event)
+  }
+
+  return {
+    threadId: body.threadId,
+    pagePath: resolvePage(body.pagePath)?.path ?? null,
+    events,
+  }
+}
+
+async function handleViewportDiagnostics(request, env) {
+  let body
+  try {
+    body = await readJsonBody(request)
+  } catch (error) {
+    return jsonResponse({ error: error instanceof RangeError ? 'That request is too large.' : 'Malformed request.' }, error instanceof RangeError ? 413 : 400)
+  }
+
+  const batch = viewportDiagnosticBatch(body)
+  if (!batch) return jsonResponse({ error: 'Malformed request.' }, 400)
+
+  const receivedAt = Date.now()
+  await env.DB.batch(batch.events.map((event) => env.DB.prepare(`
+    INSERT INTO viewport_diagnostics (
+      thread_id, event_type, page_path, captured_at, received_at, metrics
+    ) VALUES (?, ?, ?, ?, ?, ?)
+  `).bind(
+    batch.threadId,
+    event.type,
+    batch.pagePath,
+    event.capturedAt,
+    receivedAt,
+    JSON.stringify(event.metrics),
+  )))
+
+  return jsonResponse({ accepted: batch.events.length }, 202, { 'cache-control': 'no-store' })
 }
 
 // The client's own text for this turn. AG-UI sends the whole transcript it
@@ -530,12 +616,16 @@ export default {
         return await handleChat(request, env, ctx)
       }
 
+      if (url.pathname === '/api/chat/diagnostics' && request.method === 'POST') {
+        return await handleViewportDiagnostics(request, env)
+      }
+
       if (url.pathname === '/api/chat/transcript' && request.method === 'GET') {
         if (await isRateLimited(request, env, ctx)) {
           return jsonResponse({ error: 'Too many requests. Give it a minute and try again.' }, 429)
         }
         const threadId = request.headers.get('x-chat-thread-id')
-        if (!threadId || !/^[A-Za-z0-9-]{8,100}$/.test(threadId)) {
+        if (!threadId || !THREAD_ID_PATTERN.test(threadId)) {
           return jsonResponse({ error: 'Malformed request.' }, 400)
         }
         return await handleTranscript(env, threadId)

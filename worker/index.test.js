@@ -417,6 +417,54 @@ describe('Worker transcript replay', () => {
   })
 })
 
+describe('Worker viewport diagnostics', () => {
+  it('stores a geometry batch without requiring the model configuration', async () => {
+    const { d1, sqlite } = migratedSqliteD1()
+    const metrics = {
+      innerHeight: 844,
+      layoutHeight: 844,
+      viewportHeight: 497,
+      panelBottom: 497,
+      composerBottom: 485,
+      composerFocused: false,
+    }
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat/diagnostics', {
+      method: 'POST',
+      body: JSON.stringify({
+        threadId: 'thread-123',
+        pagePath: '/',
+        events: [
+          { type: 'composer_blur', capturedAt: 1_725_000_000_000, metrics },
+          { type: 'settled', capturedAt: 1_725_000_001_000, metrics },
+        ],
+      }),
+    }), { DB: d1 }, {})
+
+    expect(response.status).toBe(202)
+    expect(await response.json()).toEqual({ accepted: 2 })
+    expect(sqlite.query(`
+      SELECT thread_id, event_type, page_path, metrics
+      FROM viewport_diagnostics
+      ORDER BY id
+    `).all()).toEqual([
+      { thread_id: 'thread-123', event_type: 'composer_blur', page_path: '/', metrics: JSON.stringify(metrics) },
+      { thread_id: 'thread-123', event_type: 'settled', page_path: '/', metrics: JSON.stringify(metrics) },
+    ])
+  })
+
+  it('rejects unexpected diagnostic fields', async () => {
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat/diagnostics', {
+      method: 'POST',
+      body: JSON.stringify({
+        threadId: 'thread-123',
+        events: [{ type: 'open', capturedAt: Date.now(), metrics: { userAgent: 'not collected' } }],
+      }),
+    }), { DB: { prepare: () => { throw new Error('should not write') } } }, {})
+
+    expect(response.status).toBe(400)
+  })
+})
+
 describe('Worker conversation admission', () => {
   it('keeps long-running conversations open while preserving the pacing limit', () => {
     const longConversation = { message_count: 10_000, last_message_at: 1_000 }
