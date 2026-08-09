@@ -64,6 +64,13 @@ export function collapseMobileChatOnSiteNavigation({
   return true
 }
 
+export function shouldRestoreLauncherFocus({ isMobile, event } = {}) {
+  // Escape and keyboard-activated buttons have no pointer click detail. A
+  // touch close should reveal the page without leaving focus painted around
+  // the launcher, while keyboard users keep the return-focus affordance.
+  return !isMobile || !event || event.detail === 0
+}
+
 export function subscribeToMobileTakeover(
   onChange,
   media = window.matchMedia(MOBILE_TAKEOVER_QUERY),
@@ -246,7 +253,9 @@ export function ChatWidget() {
     if (restoreFocus) launcherRef.current?.focus()
   }, [])
 
-  const close = useCallback(() => collapse({ restoreFocus: true }), [collapse])
+  const close = useCallback((event) => collapse({
+    restoreFocus: shouldRestoreLauncherFocus({ isMobile: isMobileTakeover, event }),
+  }), [collapse, isMobileTakeover])
 
   const onSiteNavigate = useCallback((event) => {
     collapseMobileChatOnSiteNavigation({
@@ -271,7 +280,7 @@ export function ChatWidget() {
           isOpen && 'is-open',
           isOnFooter && 'is-on-footer',
         ].filter(Boolean).join(' ')}
-        onClick={() => (isOpen ? close() : open())}
+        onClick={(event) => (isOpen ? close(event) : open())}
         aria-expanded={isOpen}
         aria-label={isOpen ? 'Close chat' : 'Ask about Kwamina'}
       >
