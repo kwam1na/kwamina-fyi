@@ -383,9 +383,12 @@ export function ChatWidget() {
         aria-label={isOpen ? 'Close chat' : CHAT_LAUNCHER_ARIA_LABEL}
       >
         {/* The pill itself. A separate element because collapsing it to a disc
-            is done with transforms on two overlapping opaque pieces, which
-            have to be faded as one group — see styles.css. */}
-        <span className="site-chat-launcher-surface" aria-hidden="true" />
+            is done with transforms on overlapping opaque pieces, which have to
+            be faded as one group — see styles.css. Two of the three pieces are
+            pseudo-elements; the travelling left cap needs a real one. */}
+        <span className="site-chat-launcher-surface" aria-hidden="true">
+          <span className="site-chat-launcher-cap" />
+        </span>
         <svg className="site-chat-launcher-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M20 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3Z" />
         </svg>

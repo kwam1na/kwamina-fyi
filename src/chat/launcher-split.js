@@ -78,7 +78,7 @@ export function animateSplit({ launcher, label, isCollapsed, immediate }) {
     placeLabel()
     utils.set(launcher, {
       '--split-x': `${isCollapsed ? -travel : 0}px`,
-      '--tail-scale': isCollapsed ? 0 : 1,
+      '--pill-open': isCollapsed ? 0 : 1,
       '--icon-x': '0px',
     })
     utils.set(label, { opacity: isCollapsed ? 0 : 1 })
@@ -101,7 +101,7 @@ export function animateSplit({ launcher, label, isCollapsed, immediate }) {
     utils.set(launcher, { '--icon-x': `${-iconShift}px` })
     timeline
       .add(label, { opacity: 0, duration: 150 }, 0)
-      .add(launcher, { '--tail-scale': 0, duration: 340 }, 40)
+      .add(launcher, { '--pill-open': 0, duration: 340 }, 40)
       .add(launcher, { '--icon-x': '0px', duration: 340 }, 40)
       .add(launcher, { '--split-x': `${-travel}px`, duration: 380 }, 60)
   } else {
@@ -111,7 +111,7 @@ export function animateSplit({ launcher, label, isCollapsed, immediate }) {
     utils.set(launcher, { '--icon-x': `${iconShift}px` })
     timeline
       .add(launcher, { '--split-x': '0px', duration: 340 }, 0)
-      .add(launcher, { '--tail-scale': 1, duration: 340 }, 60)
+      .add(launcher, { '--pill-open': 1, duration: 340 }, 60)
       .add(launcher, { '--icon-x': '0px', duration: 340 }, 60)
       .add(label, { opacity: 1, duration: 220 }, 200)
   }

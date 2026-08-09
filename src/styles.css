@@ -1007,10 +1007,6 @@ body::after {
    * opacity below 1 is a backdrop root, so a blur inside the surface would
    * have nothing left to sample. */
   background: none;
-  /* Follows the button's box, which is the resting silhouette at both ends of
-   * the motion; during the 380ms between, it trails the contracting pill by a
-   * few pixels at a tenth of an alpha. */
-  box-shadow: 0 4px 16px rgba(21, 24, 33, 0.1);
   color: var(--copy);
   font-family: var(--font-sans);
   font-size: 0.85rem;
@@ -1021,7 +1017,7 @@ body::after {
   /* Declared, not just defaulted at each use: the timeline tweens both, and a
    * property with no resolved starting value has nothing to tween from. */
   --split-x: 0px;
-  --tail-scale: 1;
+  --pill-open: 1;
   --icon-x: 0px;
   /* The slide off the scroll-to-top control. On `translate` rather than
    * `transform` so the hover lift and active press below keep working — an
@@ -1065,13 +1061,27 @@ body::after {
   isolation: isolate;
   opacity: var(--launcher-surface-alpha);
   pointer-events: none;
+  /* The shadow has to be here, on the union of the pieces, rather than on the
+   * button. Over a paper page the fill is paper at 86% and reads as nothing —
+   * the shadow is the only thing that draws the control's shape. Left on the
+   * button, whose width is set once per crossing, the outline snapped to the
+   * full pill the instant the merge began while the fill was still opening,
+   * so the pill appeared to draw itself in from the left.
+   *
+   * drop-shadow rather than box-shadow because it follows the silhouette the
+   * three pieces make together; a box-shadow on each would lay a crescent of
+   * one piece's shadow across the next. Its blur is a standard deviation, so
+   * it is half the box-shadow radius it replaces, and the alpha is divided by
+   * the group's own so the two compose back to the original weight. */
+  filter: drop-shadow(0 4px 8px rgba(21, 24, 33, 0.116));
 }
 
-/* No shadow on the pieces themselves: they overlap, and the disc's shadow
- * would fall across the tail as a visible crescent. The shadow stays on the
+/* No shadow on the pieces themselves: they overlap, and one piece's shadow
+ * would fall across another as a visible crescent. The shadow stays on the
  * button, whose box is the resting silhouette at both ends of the motion. */
 .site-chat-launcher-surface::before,
-.site-chat-launcher-surface::after {
+.site-chat-launcher-surface::after,
+.site-chat-launcher-cap {
   position: absolute;
   top: 0;
   height: 100%;
@@ -1079,20 +1089,36 @@ body::after {
   content: '';
 }
 
-/* The right cap, and the whole of the collapsed control. */
+/* The right cap, which is also the whole of the collapsed control: it is the
+ * shape the pill grows out of and returns to, so it never moves or scales. */
 .site-chat-launcher-surface::after {
   right: 0;
   width: var(--launcher-size);
   border-radius: 999px;
 }
 
-/* The left cap plus the straight middle, ending at the disc's centre so the
- * scale runs the tail into the disc rather than out from under it. */
-.site-chat-launcher-surface::before {
+/* The left cap travels rather than stretching. A cap that scaled would flatten
+ * as it went, so mid-motion the pill read as a rectangular tab pushed out of
+ * the disc instead of the disc lengthening — the cap has to stay a circle for
+ * the morph to hold. At rest collapsed it sits exactly on the right cap, so
+ * the pill opens from the icon button's own bounds. */
+.site-chat-launcher-cap {
   left: 0;
-  width: calc(var(--launcher-expanded) - var(--launcher-size) / 2);
-  border-radius: calc(var(--launcher-size) / 2) 0 0 calc(var(--launcher-size) / 2);
-  transform: scaleX(var(--tail-scale, 1));
+  width: var(--launcher-size);
+  border-radius: 999px;
+  translate: calc(
+    (1 - var(--pill-open, 1)) * (var(--launcher-expanded) - var(--launcher-size))
+  ) 0;
+}
+
+/* The straight middle, spanning cap centre to cap centre. Scaling it toward
+ * the right cap's centre keeps its leading edge underneath the travelling cap
+ * at every frame, so the three pieces always union to an exact stadium: two
+ * circles of equal radius and the full-height span between their centres. */
+.site-chat-launcher-surface::before {
+  left: calc(var(--launcher-size) / 2);
+  width: calc(var(--launcher-expanded) - var(--launcher-size));
+  transform: scaleX(var(--pill-open, 1));
   transform-origin: right center;
 }
 
@@ -1178,7 +1204,8 @@ body::after {
 }
 
 .site-chat-launcher.is-on-footer .site-chat-launcher-surface::before,
-.site-chat-launcher.is-on-footer .site-chat-launcher-surface::after {
+.site-chat-launcher.is-on-footer .site-chat-launcher-surface::after,
+.site-chat-launcher.is-on-footer .site-chat-launcher-cap {
   background: var(--footer-surface);
 }
 
