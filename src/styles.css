@@ -411,11 +411,21 @@ body::after {
 
 .scroll-top-progress {
   /* pathLength="1" normalises the circle, so the offset is just 1 - progress
-   * and no circumference maths has to agree with the radius. */
+   * and no circumference maths has to agree with the radius.
+   *
+   * No transition on stroke-dashoffset: the offset updates every scrolled
+   * frame, and a transition turned each update into its own 80ms animation —
+   * profiling showed the overlap forcing full-page repaints while scrolling.
+   * At 1/200th-of-circumference steps the raw updates are already sub-pixel. */
   stroke: currentColor;
   stroke-dasharray: 1;
-  transition: stroke-dashoffset 80ms linear;
 }
+
+/* A scroll-driven animation (animation-timeline: scroll()) was tried here and
+ * measured no cheaper: stroke-dashoffset is not compositor-animatable, so the
+ * style engine invalidates on every scrolled frame exactly as an inline write
+ * does. The JS path in ScrollToTop stays the single source of truth, with its
+ * update rate quantized instead. */
 
 .scroll-top-glyph {
   position: relative;

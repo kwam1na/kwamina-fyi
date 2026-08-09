@@ -762,8 +762,15 @@ export function StaticPage({ documentHtml, pagePath, title }) {
     const indicator = nav.querySelector('.rail-indicator')
     const sections = links.map((link) => document.getElementById(link.hash.slice(1))).filter(Boolean)
     let frame
+    // The scroll handler re-derives the active link every frame, but writing
+    // aria-current and the indicator transform on frames where nothing changed
+    // invalidates style and paint for no visual difference — the same
+    // per-frame-write pattern that made the progress ring repaint the page.
+    let currentLink = null
 
     const setActiveLink = (activeLink) => {
+      if (activeLink === currentLink) return
+      currentLink = activeLink
       links.forEach((link) => {
         const active = link === activeLink
         link.toggleAttribute('aria-current', active)

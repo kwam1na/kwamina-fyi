@@ -11,6 +11,11 @@ import { useFooterOverlap } from './use-footer-overlap.js'
 // which is the part of the travel the reader is watching, then settles.
 const scrollEase = cubicBezier(0.23, 1, 0.32, 1)
 
+// The ring's sweep advances in 1/60th-of-circumference steps — 2px of arc on
+// a 19px radius. Any finer and a fast scroll writes every frame again, which
+// is the regime that repainted the page (see the write below).
+const RING_STEPS = 60
+
 /**
  * Floating control that reports reading progress in its ring and returns the
  * reader to the top of the page. Ported from Athena's docs workspace.
@@ -25,6 +30,7 @@ export function ScrollToTop() {
   const progressRef = useRef(null)
   const animationRef = useRef(null)
   const isVisibleRef = useRef(false)
+  const ringStepRef = useRef(1)
   const [isVisible, setIsVisible] = useState(false)
   const isOnFooter = useFooterOverlap(buttonRef)
 
@@ -37,8 +43,17 @@ export function ScrollToTop() {
       const scrollTop = window.scrollY
       const progress = computeScrollProgress(scrollTop, root.scrollHeight, root.clientHeight)
 
+      // Written only when the quantized step changes, never per frame. The
+      // naive every-frame write made Chromium repaint the full scrolling
+      // layer on every scrolled frame (profiled via CDP paint traces: ~220
+      // full-document paints per scroll pass, collapsing to the baseline
+      // ~65 once the writes stopped), which read as scroll jitter.
       const ring = progressRef.current
-      if (ring) ring.style.strokeDashoffset = String(1 - progress)
+      const step = Math.round((1 - progress) * RING_STEPS) / RING_STEPS
+      if (ring && step !== ringStepRef.current) {
+        ringStepRef.current = step
+        ring.style.strokeDashoffset = String(step)
+      }
 
       const nextVisible = scrollTop > SCROLL_TO_TOP_REVEAL_PX
       if (nextVisible !== isVisibleRef.current) {
