@@ -1632,6 +1632,37 @@ body::after {
   color: var(--copy);
 }
 
+/* Markdown blocks inside a message. The message element keeps `pre-wrap`, so
+ * the model's own line breaks already provide the rhythm; these rules exist so
+ * a heading or list that arrives is legible rather than jammed against the
+ * text, without turning an answer into a document. */
+.site-chat-block + .site-chat-block {
+  display: block;
+  margin-top: 0.85em;
+}
+
+.site-chat-message :is(h1, h2, h3, h4, h5, h6) {
+  margin: 0.85em 0 0.35em;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.site-chat-message :is(ul, ol) {
+  margin: 0.5em 0;
+  padding-left: 1.25em;
+}
+
+.site-chat-message li {
+  margin: 0.2em 0;
+}
+
+.site-chat-message :is(code, pre) {
+  font-family: var(--font-sans);
+  font-size: inherit;
+}
+
 .site-chat-message strong {
   color: var(--ink);
   font-weight: 650;

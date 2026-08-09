@@ -34,8 +34,13 @@ describe('assistant contract', () => {
     // backticks the interface renders as literal punctuation.
     expect(INSTRUCTIONS).toContain('Never close an answer with a pointer elsewhere')
     expect(INSTRUCTIONS).toContain('A link supplements an answer; it never replaces one')
-    expect(INSTRUCTIONS).toContain('never open paragraphs with bold labels')
-    expect(INSTRUCTIONS).toContain('literal punctuation')
+    expect(INSTRUCTIONS).toContain('walk them through the thinking, not the layout')
+    // Formatting is the renderer's job now. Successive contract rules banning
+    // headings, lists and bold labels all failed against the same phrasings,
+    // so the interface renders Markdown instead of policing it.
+    expect(INSTRUCTIONS).toContain('The interface renders Markdown')
+    expect(INSTRUCTIONS).not.toContain('literal punctuation')
+    expect(INSTRUCTIONS).not.toContain('never use headings')
   })
 
   it('teaches the model how to emit navigable internal site links', () => {

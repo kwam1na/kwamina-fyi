@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'bun:test'
-import { chatTextParts } from './chat-links.js'
+import { chatTextParts, classifyChatHref } from './chat-links.js'
+
+describe('classifyChatHref', () => {
+  it('classifies canonical routes from the shared navigable-path set', () => {
+    expect(classifyChatHref('/work/athena')).toEqual({
+      kind: 'route',
+      to: '/work/athena',
+    })
+  })
+
+  it('keeps invented routes as text', () => {
+    expect(classifyChatHref('/not-a-page')).toEqual({ kind: 'text' })
+  })
+})
 
 describe('chatTextParts', () => {
   it('renders labeled canonical site links without exposing their route paths', () => {

@@ -194,3 +194,65 @@ export function chatTextParts(text, { hideIncompleteSiteLink = false } = {}) {
   if (cursor < displayText.length) parts.push(...linkParts(displayText.slice(cursor)))
   return parts
 }
+
+// Everything above turns text into parts by hand. What follows prepares the
+// same text for a real Markdown renderer instead: the model writes ordinary
+// Markdown, react-markdown parses it, and these two helpers keep the site's
+// own link behaviour — in-app routes, the three published resources, and
+// contact labels that must never show a raw URL.
+//
+// Written as a text pass rather than a syntax tree plugin because the only
+// things needing rescue are bare routes and bare contact words, which are not
+// links yet and so are invisible to a Markdown parser.
+const markdownLinkOrCode = /(\[[^\]\n]*\]\([^)\s]*\)|`[^`\n]*`)/g
+
+function linkifyOutsideMarkdown(text) {
+  return text
+    .split(markdownLinkOrCode)
+    .map((segment, index) => {
+      // Odd segments are the captured links and code spans, already whole.
+      if (index % 2 === 1) return segment
+      return segment
+        .replace(chatRoutePattern, (_, before, route) => `${before}[${route}](${route})`)
+        .replace(
+          chatResourcePattern,
+          (_, before, href) => `${before}[${RESOURCE_DESTINATIONS[href]}](${href})`,
+        )
+        .replace(chatContactPattern, (match, before, label) => {
+          const href = CONTACT_DESTINATIONS[label.toLowerCase()]
+          if (!href) return match
+          return `${before}[${CONTACT_LABELS[label.toLowerCase()] ?? label}](${href})`
+        })
+    })
+    .join('')
+}
+
+export function prepareChatMarkdown(text, { hideIncompleteSiteLink = false } = {}) {
+  // A half-typed link is syntax the reader should never watch being assembled,
+  // so during streaming it collapses to its label until the closing paren.
+  const readable = hideIncompleteSiteLink
+    ? text
+      .replace(/\[([^\]\n]+)\]\(\s*[^)\n]*$/, '$1')
+      .replace(/\[([^\]\n]*)$/, '$1')
+    : text
+
+  const withoutContactUrls = contactLabelUrlPatterns.reduce(
+    (current, pattern) => current.replace(pattern, '$1'),
+    readable,
+  )
+
+  return linkifyOutsideMarkdown(withoutContactUrls)
+}
+
+// Where a Markdown link should point once parsed: an in-app route, a real
+// external destination, or nowhere — an invented URL keeps its label as plain
+// text rather than offering the reader a link the site cannot honour.
+export function classifyChatHref(href = '') {
+  const target = href.trim()
+  if (NAVIGABLE_PATHS.has(target)) return { kind: 'route', to: target }
+  if (target in RESOURCE_DESTINATIONS) return { kind: 'external', href: target }
+  if (target === `mailto:${EMAIL}` || target === GITHUB_URL || target === LINKEDIN_URL) {
+    return { kind: 'external', href: target }
+  }
+  return { kind: 'text' }
+}

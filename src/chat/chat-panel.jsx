@@ -3,7 +3,8 @@ import { useChat, fetchServerSentEvents } from '@tanstack/ai-react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { animate } from 'animejs'
 import { NoticeArrow } from '../notice-page.jsx'
-import { chatTextParts } from './chat-links.js'
+import Markdown from 'react-markdown'
+import { classifyChatHref, prepareChatMarkdown } from './chat-links.js'
 import { fetchStoredMessages } from './chat-transcript.js'
 import { chatPageLabelForPath, chatTitleForPath } from './chat-title.js'
 import { FlipText } from './flip-text.jsx'
@@ -46,33 +47,51 @@ export function createChatScrollFollower(getLog) {
 const GENERIC_ERROR = 'Something went wrong. Try asking again.'
 const TRANSCRIPT_TIMEOUT_MS = 8_000
 
-function ChatLink({ part, onSiteNavigate }) {
-  if (part.type === 'link') return <Link to={part.to} onClick={onSiteNavigate}>{part.text}</Link>
-  if (part.type !== 'external-link') return part.text
+// Answers are rendered as Markdown rather than pattern-matched into parts.
+// The interface used to support two forms and the contract spent rules telling
+// the model to stay inside them; the model kept reaching for headings and
+// lists anyway, and every unsupported character reached the reader as
+// punctuation. Rendering the whole language is cheaper than policing it.
+//
+// Links keep the site's own behaviour: in-app routes navigate without a
+// reload, the published resources open outward, and a destination the site
+// cannot honour keeps its label as plain text rather than becoming a dead
+// link.
+function ChatAnchor({ href, children, onSiteNavigate }) {
+  const target = classifyChatHref(href)
+  if (target.kind === 'route') {
+    return <Link to={target.to} onClick={onSiteNavigate}>{children}</Link>
+  }
+  if (target.kind === 'text') return children
 
-  const opensNewTab = part.href.startsWith('http') || part.href.endsWith('.pdf')
+  const opensNewTab = target.href.startsWith('http') || target.href.endsWith('.pdf')
   return (
     <a
-      href={part.href}
+      href={target.href}
       target={opensNewTab ? '_blank' : undefined}
       rel={opensNewTab ? 'noreferrer' : undefined}
     >
-      {part.text}
+      {children}
       <NoticeArrow className="inline-link-icon" />
     </a>
   )
 }
 
 function ChatText({ text, hideIncompleteSiteLink = false, onSiteNavigate }) {
-  return chatTextParts(text, { hideIncompleteSiteLink }).map((part, index) => {
-    if (part.bold) {
-      return <strong key={`strong-${index}`}><ChatLink part={part} onSiteNavigate={onSiteNavigate} /></strong>
-    }
+  const components = useMemo(() => ({
+    a: ({ href, children }) => (
+      <ChatAnchor href={href} onSiteNavigate={onSiteNavigate}>{children}</ChatAnchor>
+    ),
+    // A message is already inside a paragraph element, and the transcript
+    // relies on that shape for spacing and streaming.
+    p: ({ children }) => <span className="site-chat-block">{children}</span>,
+  }), [onSiteNavigate])
 
-    return part.type === 'link' || part.type === 'external-link'
-      ? <ChatLink key={`${part.to ?? part.href}-${index}`} part={part} onSiteNavigate={onSiteNavigate} />
-      : part.text
-  })
+  return (
+    <Markdown components={components}>
+      {prepareChatMarkdown(text, { hideIncompleteSiteLink })}
+    </Markdown>
+  )
 }
 
 function StreamingText({ text, isStreaming, onReveal, onSiteNavigate }) {
