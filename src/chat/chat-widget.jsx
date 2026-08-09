@@ -2,7 +2,6 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { SCROLL_TO_TOP_REVEAL_PX } from '../scroll-progress.js'
 import { useFooterOverlap } from '../use-footer-overlap.js'
 import { animateSplit } from './launcher-split.js'
-import { MOBILE_TAKEOVER_QUERY } from './mobile-viewport.js'
 
 // The panel pulls in the TanStack AI client, which is the single largest
 // dependency on the site. Loading it on first open keeps it off the critical
@@ -10,6 +9,7 @@ import { MOBILE_TAKEOVER_QUERY } from './mobile-viewport.js'
 const ChatPanel = lazy(() => import('./chat-panel.jsx'))
 
 const threadStorageKey = 'kwamina-fyi-chat-thread'
+const MOBILE_TAKEOVER_QUERY = '(max-width: 620px)'
 
 export function createThread({
   randomUUID = () => window.crypto.randomUUID(),
@@ -62,13 +62,6 @@ export function collapseMobileChatOnSiteNavigation({
   ) return false
   collapse()
   return true
-}
-
-export function shouldRestoreLauncherFocus({ isMobile, event } = {}) {
-  // Escape and keyboard-activated buttons have no pointer click detail. A
-  // touch close should reveal the page without leaving focus painted around
-  // the launcher, while keyboard users keep the return-focus affordance.
-  return !isMobile || !event || event.detail === 0
 }
 
 export function subscribeToMobileTakeover(
@@ -253,9 +246,7 @@ export function ChatWidget() {
     if (restoreFocus) launcherRef.current?.focus()
   }, [])
 
-  const close = useCallback((event) => collapse({
-    restoreFocus: shouldRestoreLauncherFocus({ isMobile: isMobileTakeover, event }),
-  }), [collapse, isMobileTakeover])
+  const close = useCallback(() => collapse({ restoreFocus: true }), [collapse])
 
   const onSiteNavigate = useCallback((event) => {
     collapseMobileChatOnSiteNavigation({
@@ -280,7 +271,7 @@ export function ChatWidget() {
           isOpen && 'is-open',
           isOnFooter && 'is-on-footer',
         ].filter(Boolean).join(' ')}
-        onClick={(event) => (isOpen ? close(event) : open())}
+        onClick={() => (isOpen ? close() : open())}
         aria-expanded={isOpen}
         aria-label={isOpen ? 'Close chat' : 'Ask about Kwamina'}
       >
@@ -297,7 +288,6 @@ export function ChatWidget() {
           <ChatPanel
             key={thread.id}
             thread={thread}
-            isMobileTakeover={isMobileTakeover}
             onClose={close}
             onNewChat={startNewChat}
             onSiteNavigate={onSiteNavigate}

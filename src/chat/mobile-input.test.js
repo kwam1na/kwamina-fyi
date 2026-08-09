@@ -2,7 +2,6 @@ import { describe, expect, it } from 'bun:test'
 import { readFileSync } from 'node:fs'
 
 const styles = readFileSync(new URL('../styles.css', import.meta.url), 'utf8')
-const panelSource = readFileSync(new URL('./chat-panel.jsx', import.meta.url), 'utf8')
 
 describe('mobile chat composer', () => {
   it('uses 16px text only at the existing mobile breakpoint', () => {
@@ -24,19 +23,12 @@ describe('mobile chat composer', () => {
     overflow: hidden;
   }`)
     expect(styles).toContain(`  .site-chat-panel {
-    top: 0;
-    right: 0;
-    bottom: auto;
-    left: 0;
+    inset: 0;
     width: 100%;
-    height: var(--mobile-chat-viewport-height, 100dvh);
+    height: 100dvh;
     border: 0;
     border-radius: 0;
     box-shadow: none;
   }`)
-  })
-
-  it('waits for an explicit tap before focusing the mobile composer', () => {
-    expect(panelSource).toContain('autoFocus={!isMobileTakeover}')
   })
 })

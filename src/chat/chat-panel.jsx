@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useChat, fetchServerSentEvents } from '@tanstack/ai-react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { animate } from 'animejs'
@@ -7,7 +7,6 @@ import { chatTextParts } from './chat-links.js'
 import { fetchStoredMessages } from './chat-transcript.js'
 import { chatPageLabelForPath, chatTitleForPath } from './chat-title.js'
 import { FlipText } from './flip-text.jsx'
-import { watchMobileChatViewport } from './mobile-viewport.js'
 import { revealDuration, revealedPrefix } from './stream-reveal.js'
 
 const STARTERS = [
@@ -146,13 +145,7 @@ async function chatFetch(input, init, messageRef) {
 // Default-exported so the launcher can reach it through React.lazy. The
 // TanStack AI client is ~150kB of the bundle; a reader who never opens the
 // chat should never download it.
-export default function ChatPanel({
-  thread,
-  isMobileTakeover,
-  onClose,
-  onNewChat,
-  onSiteNavigate,
-}) {
+export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }) {
   const [input, setInput] = useState('')
   const [replayStatus, setReplayStatus] = useState(thread.isReturning ? 'loading' : 'idle')
   const isRehydrating = replayStatus === 'loading'
@@ -219,13 +212,9 @@ export default function ChatPanel({
     }
   }, [replayStatus, thread.id, setMessages])
 
-  // A virtual keyboard can shrink the visual viewport without changing the
-  // layout viewport that 100dvh measures, so the takeover follows its height.
-  // Browser-driven viewport panning does not move the panel a second time.
-  useLayoutEffect(
-    () => watchMobileChatViewport(panelRef.current, { isMobile: isMobileTakeover }),
-    [isMobileTakeover],
-  )
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
 
   // Follow the answer as it streams, but never yank the view away from someone
   // who has scrolled up to reread something.
@@ -428,7 +417,6 @@ export default function ChatPanel({
         <textarea
           ref={inputRef}
           className="site-chat-input"
-          autoFocus={!isMobileTakeover}
           value={input}
           rows={2}
           placeholder="Ask a question&hellip;"
