@@ -59,6 +59,11 @@ export function animateSplit({ launcher, label, isCollapsed, immediate }) {
     (expandedWidth + contentWidth) / 2 - (collapsedWidth + iconWidth) / 2
   // Where the label sits while it fades, once it has left the flex row.
   const labelRight = (expandedWidth - contentWidth) / 2
+  // The shadow is a disc scaled out to the pill's current width, so collapsed
+  // is scale 1 and stays a true circle. Its scale is linear in --pill-open, so
+  // animating the two together with the same easing keeps them in step without
+  // CSS having to divide one length by another.
+  const openShadowScale = expandedWidth / collapsedWidth
 
   // The `is-split` class itself belongs to React (see ChatWidget) so a
   // re-render cannot drop it. All that is left here is the placement the flex
@@ -79,6 +84,7 @@ export function animateSplit({ launcher, label, isCollapsed, immediate }) {
     utils.set(launcher, {
       '--split-x': `${isCollapsed ? -travel : 0}px`,
       '--pill-open': isCollapsed ? 0 : 1,
+      '--pill-shadow-scale': isCollapsed ? 1 : openShadowScale,
       '--icon-x': '0px',
     })
     utils.set(label, { opacity: isCollapsed ? 0 : 1 })
@@ -102,6 +108,7 @@ export function animateSplit({ launcher, label, isCollapsed, immediate }) {
     timeline
       .add(label, { opacity: 0, duration: 150 }, 0)
       .add(launcher, { '--pill-open': 0, duration: 340 }, 40)
+      .add(launcher, { '--pill-shadow-scale': 1, duration: 340 }, 40)
       .add(launcher, { '--icon-x': '0px', duration: 340 }, 40)
       .add(launcher, { '--split-x': `${-travel}px`, duration: 380 }, 60)
   } else {
@@ -112,6 +119,7 @@ export function animateSplit({ launcher, label, isCollapsed, immediate }) {
     timeline
       .add(launcher, { '--split-x': '0px', duration: 340 }, 0)
       .add(launcher, { '--pill-open': 1, duration: 340 }, 60)
+      .add(launcher, { '--pill-shadow-scale': openShadowScale, duration: 340 }, 60)
       .add(launcher, { '--icon-x': '0px', duration: 340 }, 60)
       .add(label, { opacity: 1, duration: 220 }, 200)
   }

@@ -386,6 +386,7 @@ export function ChatWidget() {
             is done with transforms on overlapping opaque pieces, which have to
             be faded as one group — see styles.css. Two of the three pieces are
             pseudo-elements; the travelling left cap needs a real one. */}
+        <span className="site-chat-launcher-shadow" aria-hidden="true" />
         <span className="site-chat-launcher-surface" aria-hidden="true">
           <span className="site-chat-launcher-cap" />
         </span>

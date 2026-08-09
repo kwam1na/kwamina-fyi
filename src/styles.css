@@ -1018,6 +1018,7 @@ body::after {
    * property with no resolved starting value has nothing to tween from. */
   --split-x: 0px;
   --pill-open: 1;
+  --pill-shadow-scale: 1;
   --icon-x: 0px;
   /* The slide off the scroll-to-top control. On `translate` rather than
    * `transform` so the hover lift and active press below keep working — an
@@ -1055,30 +1056,56 @@ body::after {
   /* Anchored to the pill's right edge and sized from the token, so the shape
    * is independent of the button's own width — that width can then be set
    * once per crossing without moving anything the reader can see. */
+  top: 0;
   right: 0;
   width: var(--launcher-expanded);
   height: 100%;
   isolation: isolate;
   opacity: var(--launcher-surface-alpha);
   pointer-events: none;
-  /* The shadow has to be here, on the union of the pieces, rather than on the
-   * button. Over a paper page the fill is paper at 86% and reads as nothing —
-   * the shadow is the only thing that draws the control's shape. Left on the
-   * button, whose width is set once per crossing, the outline snapped to the
-   * full pill the instant the merge began while the fill was still opening,
-   * so the pill appeared to draw itself in from the left.
-   *
-   * drop-shadow rather than box-shadow because it follows the silhouette the
-   * three pieces make together; a box-shadow on each would lay a crescent of
-   * one piece's shadow across the next. Its blur is a standard deviation, so
-   * it is half the box-shadow radius it replaces, and the alpha is divided by
-   * the group's own so the two compose back to the original weight. */
-  filter: drop-shadow(0 4px 8px rgba(21, 24, 33, 0.116));
+}
+
+/* The shadow, cast by its own element rather than by the pieces or the button.
+ *
+ * Not the pieces: they overlap, so each one's shadow would fall across the
+ * next as a crescent. Not the button: over a paper page the fill is paper at
+ * 86% and reads as nothing, which makes the shadow the only thing drawing the
+ * control's shape, and the button's width is set once per crossing — so the
+ * outline snapped to the full pill the instant a merge began while the fill
+ * was still opening, and the pill appeared to draw itself in from the left.
+ * And not a drop-shadow filter over the group either: WebKit rasterises a
+ * filtered, animating subtree into a texture it then reuses, which left hard
+ * edges and a ghost of the filter's box behind after a split and re-merge.
+ *
+ * So: one plain box-shadow on one element that scales to the pill's current
+ * width. It is a disc, not a stadium, and scales *up* into the pill rather
+ * than down into the disc — because scaling stretches the shape's end caps,
+ * and the collapsed state is the one that has to hold up: it rests beside two
+ * true circles, where a caps-flattened disc reads as a squircle. Sized this
+ * way the collapsed state is scale 1, so it is a circle with no scaling at
+ * all, and the stretch is spent on the expanded pill instead, where it makes
+ * the shadow an ellipse rather than a stadium — around 2px of difference at
+ * its widest, under a 16px blur at a tenth of an alpha.
+ *
+ * The scale is animated alongside --pill-open rather than derived from it,
+ * because the two are linearly related and CSS cannot divide one length by
+ * another to get the ratio. */
+.site-chat-launcher-shadow {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--launcher-size);
+  height: var(--launcher-size);
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(21, 24, 33, 0.1);
+  pointer-events: none;
+  transform: scaleX(var(--pill-shadow-scale, 1));
+  transform-origin: right center;
 }
 
 /* No shadow on the pieces themselves: they overlap, and one piece's shadow
- * would fall across another as a visible crescent. The shadow stays on the
- * button, whose box is the resting silhouette at both ends of the motion. */
+ * would fall across another as a visible crescent. They are inset by the
+ * shadow's room so the pill still sits where the button is. */
 .site-chat-launcher-surface::before,
 .site-chat-launcher-surface::after,
 .site-chat-launcher-cap {
