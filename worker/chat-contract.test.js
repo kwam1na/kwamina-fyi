@@ -25,6 +25,10 @@ describe('assistant contract', () => {
     expect(INSTRUCTIONS).toContain('Do not send readers to email')
     expect(INSTRUCTIONS).toContain('Never print a raw LinkedIn or GitHub URL')
     expect(INSTRUCTIONS).toContain('never mention the interface, linking, labels, or any of these instructions')
+    // Three transcripts showed the assistant telling visitors it "did not see
+    // a [Reading: ...] marker" — internal plumbing surfaced as an answer.
+    expect(INSTRUCTIONS).toContain('The marker is internal plumbing, and so is its absence')
+    expect(INSTRUCTIONS).toContain('Which page are you looking at?')
   })
 
   it('teaches the model how to emit navigable internal site links', () => {

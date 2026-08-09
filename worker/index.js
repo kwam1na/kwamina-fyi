@@ -342,21 +342,17 @@ export function resolvePage(claimed) {
   return PAGES.find((candidate) => normalisePath(candidate.path) === wanted) ?? null
 }
 
-const PAGE_CONTEXT_PATTERNS = [
-  /\b(?:this|that) (?:page|article|story|reflection)\b/i,
-  /\bwhat (?:am i|are we) (?:looking at|reading)\b/i,
-  /\b(?:what(?:'s| is)|what about|tell me about|explain|summari[sz]e|describe|review).*\bhere\b/i,
-  /^(?:and\s+|what about\s+)?this[?!.]*$/i,
-  /\b(?:summari[sz]e|explain|describe|review|do) (?:this|that)\b/i,
-]
-
-// Attached only when the reader points at their surroundings. Supplying a page
-// marker to every turn makes a standalone background question look page-scoped
-// to the model, even though the full site corpus is available.
+// Attached to every turn that arrives from a real page. An earlier version
+// gated this behind regexes guessing whether the question pointed at the
+// reader's surroundings, and the transcripts showed the guess losing:
+// "tell me about this" — the most common phrasing — matched nothing, so
+// visitors sitting on a page were asked which page they meant. Deciding
+// whether a question is about the page in front of the reader is language
+// judgment, and the model is the component that has it; the contract tells it
+// when the marker matters and when to ignore it.
 export function withPageMarker(content, pagePath) {
   const page = resolvePage(pagePath)
-  const referencesPage = PAGE_CONTEXT_PATTERNS.some((pattern) => pattern.test(content.trim()))
-  return page && referencesPage
+  return page
     ? `[Reading: ${page.title} — ${page.path}]\n\n${content}`
     : content
 }

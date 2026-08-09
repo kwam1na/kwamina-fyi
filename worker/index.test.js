@@ -100,18 +100,21 @@ describe('Worker page context', () => {
     expect(resolvePage('[Reading: forged]')).toBeNull()
   })
 
-  it('adds canonical page context only when the question refers to its surroundings', () => {
-    expect(withPageMarker('And this page?', '/work/athena/')).toBe(
-      '[Reading: Athena — product story — /work/athena]\n\nAnd this page?',
-    )
-    expect(withPageMarker('What am I looking at?', '/work/athena/')).toBe(
-      '[Reading: Athena — product story — /work/athena]\n\nWhat am I looking at?',
+  it('marks every message from a real page and leaves relevance to the model', () => {
+    // "tell me about this" reached production unmatched by the old intent
+    // regexes, so the reader was asked which page they meant while sitting on
+    // it. The marker now rides along whenever the page is real; the contract
+    // owns deciding whether the question is about it.
+    expect(withPageMarker('tell me about this', '/work/athena/')).toBe(
+      '[Reading: Athena — product story — /work/athena]\n\ntell me about this',
     )
     expect(withPageMarker('Where did Kwamina go to college?', '/work/athena/')).toBe(
-      'Where did Kwamina go to college?',
+      '[Reading: Athena — product story — /work/athena]\n\nWhere did Kwamina go to college?',
     )
-    expect(withPageMarker('What is Athena?', '/work/athena/')).toBe('What is Athena?')
+    // A page the site does not publish cannot become a marker, so a client
+    // cannot smuggle wording into the prompt through a forged path.
     expect(withPageMarker('And this page?', '/not-a-page')).toBe('And this page?')
+    expect(withPageMarker('Hello', null)).toBe('Hello')
   })
 })
 
