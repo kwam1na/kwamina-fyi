@@ -1471,10 +1471,11 @@ body::after {
   outline-offset: 2px;
 }
 
-/* The first solid accent on the site: a muted amber, the warm complement of
- * the palette's blues, introduced only here — as the searchlight's color.
- * Deeper on paper so it reads as pigment; warmer on the dark theme so it
- * reads as light. */
+/* The one solid accent on the site: a muted amber, the warm complement of the
+ * palette's blues. It has two jobs, both belonging to the assistant — the
+ * searchlight's color here, and the single pass of light that prints the chat
+ * launcher onto the page on a reader's first sight of it. Deeper on paper so
+ * it reads as pigment; warmer on the dark theme so it reads as light. */
 :root {
   --chat-accent: #b06a3a;
 }
@@ -1832,6 +1833,13 @@ body::after {
   :root {
     --split-travel: 46px;
     --launcher-expanded: 74px;
+    /* The floating controls all shrink here, and this token is the launcher's
+     * height, its collapsed diameter, and the size of the element that casts
+     * its shadow. Setting the height alone left the shadow at its desktop
+     * size, hanging below the pill — and since the shadow is the only thing
+     * drawing this control against paper, that read as a bulge along the
+     * bottom edge. */
+    --launcher-size: 38px;
   }
 
   body.site-chat-open #root > :not(.site-chat-panel) {
@@ -1863,12 +1871,12 @@ body::after {
     margin-bottom: max(12px, env(safe-area-inset-bottom));
   }
 
-  /* Matches the disc size the other floating controls take on mobile, so the
-   * pair still reads as one family once the split has happened. */
+  /* The disc size the other floating controls take here comes from
+   * --launcher-size above, so the pair still reads as one family once the
+   * split has happened. Only the corner offset belongs to the launcher. */
   .site-chat-launcher {
     right: 16px;
     bottom: 16px;
-    height: 38px;
   }
 
   .site-chat-launcher.is-collapsed {
