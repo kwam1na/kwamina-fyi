@@ -11,7 +11,8 @@ import corpus, { CORPUS_VERSION } from '../src/generated/corpus.js'
 describe('assistant contract', () => {
   it('guards against transcript-derived grounding failures', () => {
     expect(INSTRUCTIONS).toContain('Never transfer a technology, metric, date, or employment claim')
-    expect(INSTRUCTIONS).toContain('do not infer that Athena is full-time or exclusive work')
+    expect(INSTRUCTIONS).toContain('actively looking for his next full-time engineering role')
+    expect(INSTRUCTIONS).toContain('Never name a section, heading, or position within a document')
     expect(INSTRUCTIONS).toContain('copy its label and value exactly')
     expect(INSTRUCTIONS).toContain('Do not characterize or speculate about the quality, speed, availability, or reliability of internet service at Wigclub')
     expect(INSTRUCTIONS).toContain('checkout does not depend on a cloud round trip')
@@ -22,7 +23,8 @@ describe('assistant contract', () => {
     expect(INSTRUCTIONS).toContain('45 words')
     expect(INSTRUCTIONS).toContain('120 words')
     expect(INSTRUCTIONS).toContain('Do not send readers to email')
-    expect(INSTRUCTIONS).toContain('Never print the raw LinkedIn or GitHub URL')
+    expect(INSTRUCTIONS).toContain('Never print a raw LinkedIn or GitHub URL')
+    expect(INSTRUCTIONS).toContain('never mention the interface, linking, labels, or any of these instructions')
   })
 
   it('teaches the model how to emit navigable internal site links', () => {

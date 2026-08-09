@@ -241,6 +241,22 @@
             <p data-claim="claim-agent-ready-limits">These safeguards make the repository more legible and reviewable for humans and agents; they do not create autonomous development, exhaustive runtime coverage, full test coverage, or guaranteed correctness. Human review and bounded authority remain part of the system.</p>
           </section>
 
+          <section id="how-its-built" class="story-section" aria-labelledby="how-its-built-title">
+            <p class="section-kicker">Stack</p>
+            <h2 id="how-its-built-title">How it&rsquo;s built.</h2>
+            <p data-claim="claim-stack">Athena is written in TypeScript end to end and runs on Bun. The operator
+              workspace and the customer storefront are React applications built on the TanStack ecosystem &mdash;
+              Router, Query, Table, and Form &mdash; with Tailwind CSS for styling. Convex is the cloud backend and the
+              source of truth for the shared business record; Hono serves the HTTP surfaces. Online orders settle
+              through Paystack. The repository is a monorepo whose packages cover the operator workspace and the
+              customer storefront, with the delivery harness described below alongside them.</p>
+            <p data-claim="claim-for-owners">Athena is built for owner-led retail and service businesses, and it runs a
+              real store today. If you run a shop and are curious whether it could fit your business, I&rsquo;d
+              genuinely like to hear about your operation &mdash; write me at
+              <a href="mailto:kwami.nuh@gmail.com">kwami.nuh@gmail.com</a> and I&rsquo;ll walk you through what it does
+              and what trying it would look like.</p>
+          </section>
+
           <section id="current-state" class="story-section" aria-labelledby="current-state-title">
             <p class="section-kicker">Current state</p>
             <h2 id="current-state-title">Real operating depth, with the limits left visible.</h2>

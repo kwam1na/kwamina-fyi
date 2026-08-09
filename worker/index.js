@@ -16,7 +16,9 @@ import corpus, { CORPUS_VERSION, PAGES } from '../src/generated/corpus.js'
 import { normalisePath } from '../src/routes.js'
 import { INSTRUCTIONS, MODEL, assistantTurnMetadata } from './chat-contract.js'
 
-const MAX_OUTPUT_TOKENS = 640
+// Sized above the contract's word budgets with headroom: two site transcripts
+// showed answers truncated mid-sentence at the old 640 cap.
+const MAX_OUTPUT_TOKENS = 900
 const MAX_MESSAGE_CHARS = 2000
 const MAX_REQUEST_BYTES = 128_000
 // Deep enough for a real follow-up thread, shallow enough that a long-lived
