@@ -18,17 +18,23 @@ describe('mobile chat composer', () => {
   }`)
   })
 
-  it('turns the panel into an edge-to-edge page takeover', () => {
-    expect(styles).toContain(`  body.site-chat-open {
-    overflow: hidden;
+  it('turns the panel into a document-flow page takeover', () => {
+    expect(styles).toContain(`  body.site-chat-open #root > :not(.site-chat-panel) {
+    display: none;
   }`)
     expect(styles).toContain(`  .site-chat-panel {
-    inset: 0;
+    position: relative;
+    inset: auto;
     width: 100%;
     height: 100dvh;
     border: 0;
     border-radius: 0;
     box-shadow: none;
   }`)
+  })
+
+  it('keeps the desktop chat panel fixed', () => {
+    expect(styles).toContain(`.site-chat-panel {
+  position: fixed;`)
   })
 })

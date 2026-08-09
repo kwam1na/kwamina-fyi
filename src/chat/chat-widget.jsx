@@ -1,8 +1,15 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import { SCROLL_TO_TOP_REVEAL_PX } from '../scroll-progress.js'
 import { useFooterOverlap } from '../use-footer-overlap.js'
 import { animateSplit } from './launcher-split.js'
-import { watchMobileViewportRecovery } from './mobile-viewport-recovery.js'
 
 // The panel pulls in the TanStack AI client, which is the single largest
 // dependency on the site. Loading it on first open keeps it off the critical
@@ -11,6 +18,36 @@ const ChatPanel = lazy(() => import('./chat-panel.jsx'))
 
 const threadStorageKey = 'kwamina-fyi-chat-thread'
 const MOBILE_TAKEOVER_QUERY = '(max-width: 620px)'
+
+export function ChatPanelFallback({ onClose }) {
+  return (
+    <section
+      className="site-chat-panel"
+      role="dialog"
+      aria-label="Ask about Kwamina"
+      aria-busy="true"
+    >
+      <header className="site-chat-header">
+        <p className="site-chat-title">Ask about Kwamina</p>
+        <button
+          type="button"
+          className="site-chat-close"
+          onClick={onClose}
+          aria-label="Close chat"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </header>
+      <div className="site-chat-surface">
+        <div className="site-chat-log">
+          <p className="site-chat-note" role="status">Opening chat…</p>
+        </div>
+      </div>
+    </section>
+  )
+}
 
 export function createThread({
   randomUUID = () => window.crypto.randomUUID(),
@@ -82,8 +119,6 @@ export function subscribeToMobileTakeover(
   return () => media.removeEventListener('change', update)
 }
 
-const lockedBodyProperties = ['position', 'top', 'left', 'right', 'width', 'overflow']
-
 export function lockMobilePageScroll({
   body = document.body,
   root = document.documentElement,
@@ -95,20 +130,11 @@ export function lockMobilePageScroll({
 
   const lockedScrollY = scrollY ?? window.scrollY
   const restoreScroll = scrollTo ?? ((...args) => window.scrollTo(...args))
-  const previousBodyStyles = Object.fromEntries(
-    lockedBodyProperties.map((property) => [property, body.style[property]]),
-  )
+  const previousBodyOverflow = body.style.overflow
   const previousRootOverflow = root.style.overflow
 
   body.classList.add('site-chat-open')
-  Object.assign(body.style, {
-    position: 'fixed',
-    top: `-${lockedScrollY}px`,
-    left: '0px',
-    right: '0px',
-    width: '100%',
-    overflow: 'hidden',
-  })
+  body.style.overflow = 'hidden'
   root.style.overflow = 'hidden'
 
   let isUnlocked = false
@@ -117,7 +143,7 @@ export function lockMobilePageScroll({
     isUnlocked = true
 
     body.classList.remove('site-chat-open')
-    Object.assign(body.style, previousBodyStyles)
+    body.style.overflow = previousBodyOverflow
     root.style.overflow = previousRootOverflow
     restoreScroll(0, lockedScrollY)
   }
@@ -195,17 +221,10 @@ export function ChatWidget() {
   // underneath an open panel is motion with nothing to say.
   const shouldCollapse = isCollapsed || isOpen
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isOpen) return undefined
     const unlock = lockMobilePageScroll({ isMobile: isMobileTakeover })
-    const stopViewportRecovery = watchMobileViewportRecovery({
-      isMobile: isMobileTakeover,
-      getScrollTarget: () => document.querySelector('.site-chat-log'),
-    })
-    const teardown = () => {
-      stopViewportRecovery()
-      unlock()
-    }
+    const teardown = () => unlock()
     teardownMobilePageRef.current = teardown
     return () => {
       if (teardownMobilePageRef.current === teardown) teardownMobilePageRef.current = null
@@ -302,7 +321,7 @@ export function ChatWidget() {
       </button>
 
       {isOpen && thread && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ChatPanelFallback onClose={close} />}>
           <ChatPanel
             key={thread.id}
             thread={thread}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import {
+  ChatPanelFallback,
   collapseMobileChatOnSiteNavigation,
   createThread,
   lockMobilePageScroll,
@@ -7,6 +8,21 @@ import {
   shouldRestoreLauncherFocus,
   subscribeToMobileTakeover,
 } from './chat-widget.jsx'
+
+describe('ChatPanelFallback', () => {
+  it('keeps a visible takeover surface mounted while the chat chunk loads', () => {
+    const onClose = () => {}
+    const fallback = ChatPanelFallback({ onClose })
+    const header = fallback.props.children[0]
+    const closeButton = header.props.children[1]
+
+    expect(fallback.props.className).toBe('site-chat-panel')
+    expect(fallback.props['aria-busy']).toBe('true')
+    expect(fallback.props['aria-label']).toBe('Ask about Kwamina')
+    expect(closeButton.props['aria-label']).toBe('Close chat')
+    expect(closeButton.props.onClick).toBe(onClose)
+  })
+})
 
 describe('createThread', () => {
   it('starts and persists a fresh conversation without transcript replay', () => {
@@ -110,7 +126,7 @@ describe('shouldRestoreLauncherFocus', () => {
 })
 
 describe('lockMobilePageScroll', () => {
-  it('freezes the mobile page and restores its exact scroll position', () => {
+  it('hides page overflow without fixing the body and restores the exact scroll position', () => {
     const classes = new Set()
     const body = {
       classList: {
@@ -139,11 +155,11 @@ describe('lockMobilePageScroll', () => {
 
     expect(classes.has('site-chat-open')).toBe(true)
     expect(body.style).toEqual({
-      position: 'fixed',
-      top: '-684px',
-      left: '0px',
-      right: '0px',
-      width: '100%',
+      position: 'relative',
+      top: '',
+      left: '',
+      right: '',
+      width: '',
       overflow: 'hidden',
     })
     expect(root.style.overflow).toBe('hidden')
