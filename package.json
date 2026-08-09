@@ -7,7 +7,7 @@
     "corpus": "node scripts/build-corpus.mjs",
     "dev": "bun run corpus && vite",
     "build": "bun run corpus && vite build",
-    "build:ci": "bun run build && bun run db:migrate:remote",
+    "build:ci": "bun run build && sh scripts/ci-migrate.sh",
     "test": "bun run corpus && bun test && python3 -m unittest discover -s docs/content/tests -t docs/content/tests",
     "preview": "bun run build && wrangler dev",
     "deploy": "bun run build && bun run db:migrate:remote && wrangler d1 migrations list kwamina-fyi-chat --remote && wrangler deploy",
