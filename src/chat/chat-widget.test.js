@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import {
   ChatPanelFallback,
+  CHAT_LAUNCHER_ARIA_LABEL,
+  CHAT_LAUNCHER_LABEL,
   collapseMobileChatOnSiteNavigation,
   createThread,
   lockMobilePageScroll,
@@ -9,6 +11,13 @@ import {
   subscribeToMobileTakeover,
   watchMobileViewportRestoration,
 } from './chat-widget.jsx'
+
+describe('chat launcher copy', () => {
+  it('presents the trigger as chat in visible and accessible text', () => {
+    expect(CHAT_LAUNCHER_LABEL).toBe('Chat')
+    expect(CHAT_LAUNCHER_ARIA_LABEL).toBe('Chat with Kwamina')
+  })
+})
 
 describe('ChatPanelFallback', () => {
   it('keeps a visible takeover surface mounted while the chat chunk loads', () => {
