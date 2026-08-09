@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { SCROLL_TO_TOP_REVEAL_PX } from '../scroll-progress.js'
 import { useFooterOverlap } from '../use-footer-overlap.js'
 import { animateSplit } from './launcher-split.js'
+import { watchMobileViewportRecovery } from './mobile-viewport-recovery.js'
 
 // The panel pulls in the TanStack AI client, which is the single largest
 // dependency on the site. Loading it on first open keeps it off the critical
@@ -184,7 +185,7 @@ export function ChatWidget() {
   const launcherRef = useRef(null)
   const labelRef = useRef(null)
   const timelineRef = useRef(null)
-  const unlockPageRef = useRef(null)
+  const teardownMobilePageRef = useRef(null)
   const hasAnimatedRef = useRef(false)
   const isCollapsed = useIsCollapsed()
   const isMobileTakeover = useMobileTakeover()
@@ -197,10 +198,15 @@ export function ChatWidget() {
   useEffect(() => {
     if (!isOpen) return undefined
     const unlock = lockMobilePageScroll({ isMobile: isMobileTakeover })
-    unlockPageRef.current = unlock
-    return () => {
-      if (unlockPageRef.current === unlock) unlockPageRef.current = null
+    const stopViewportRecovery = watchMobileViewportRecovery({ isMobile: isMobileTakeover })
+    const teardown = () => {
+      stopViewportRecovery()
       unlock()
+    }
+    teardownMobilePageRef.current = teardown
+    return () => {
+      if (teardownMobilePageRef.current === teardown) teardownMobilePageRef.current = null
+      teardown()
     }
   }, [isMobileTakeover, isOpen])
 
@@ -247,8 +253,8 @@ export function ChatWidget() {
     // Internal navigation can swap the page before React unmounts the panel.
     // Release the mobile page lock synchronously so its old scroll position
     // cannot be restored onto the destination page.
-    unlockPageRef.current?.()
-    unlockPageRef.current = null
+    teardownMobilePageRef.current?.()
+    teardownMobilePageRef.current = null
     setIsOpen(false)
     if (restoreFocus) launcherRef.current?.focus()
   }, [])
