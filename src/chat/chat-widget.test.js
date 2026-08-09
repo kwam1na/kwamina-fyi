@@ -7,6 +7,7 @@ import {
   returningThread,
   shouldRestoreLauncherFocus,
   subscribeToMobileTakeover,
+  watchMobileViewportRestoration,
 } from './chat-widget.jsx'
 
 describe('ChatPanelFallback', () => {
@@ -199,5 +200,48 @@ describe('lockMobilePageScroll', () => {
     unlock()
     expect(body.style).toEqual({})
     expect(root.style).toEqual({})
+  })
+})
+
+describe('watchMobileViewportRestoration', () => {
+  it('returns the takeover to the top after the keyboard viewport fully reopens', () => {
+    const listeners = new Map()
+    const viewport = {
+      height: 430,
+      addEventListener: (type, listener) => listeners.set(type, listener),
+      removeEventListener: (type, listener) => {
+        if (listeners.get(type) === listener) listeners.delete(type)
+      },
+    }
+    const root = { clientHeight: 844, scrollTop: 318 }
+    const body = { scrollTop: 318 }
+    let scheduledFrame = null
+    const stopWatching = watchMobileViewportRestoration({
+      isMobile: true,
+      viewport,
+      root,
+      body,
+      requestFrame: (callback) => {
+        scheduledFrame = callback
+        return 1
+      },
+      cancelFrame: () => {
+        scheduledFrame = null
+      },
+    })
+
+    listeners.get('resize')()
+    scheduledFrame()
+    expect(root.scrollTop).toBe(318)
+    expect(body.scrollTop).toBe(318)
+
+    viewport.height = 844
+    listeners.get('resize')()
+    scheduledFrame()
+    expect(root.scrollTop).toBe(0)
+    expect(body.scrollTop).toBe(0)
+
+    stopWatching()
+    expect(listeners.has('resize')).toBe(false)
   })
 })

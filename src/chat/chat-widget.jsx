@@ -18,6 +18,7 @@ const ChatPanel = lazy(() => import('./chat-panel.jsx'))
 
 const threadStorageKey = 'kwamina-fyi-chat-thread'
 const MOBILE_TAKEOVER_QUERY = '(max-width: 620px)'
+const restoredViewportTolerance = 1
 
 export function ChatPanelFallback({ onClose }) {
   return (
@@ -149,6 +150,39 @@ export function lockMobilePageScroll({
   }
 }
 
+export function watchMobileViewportRestoration({
+  body = document.body,
+  root = document.documentElement,
+  isMobile = window.matchMedia(MOBILE_TAKEOVER_QUERY).matches,
+  viewport = window.visualViewport,
+  requestFrame = (callback) => window.requestAnimationFrame(callback),
+  cancelFrame = (frame) => window.cancelAnimationFrame(frame),
+} = {}) {
+  if (!isMobile || !viewport) return () => {}
+
+  let frame = null
+  const restore = () => {
+    frame = null
+    if (Math.abs(viewport.height - root.clientHeight) > restoredViewportTolerance) return
+
+    // WebKit may leave the document at the keyboard-era offset after the
+    // visual viewport expands. The takeover is the only visible root child,
+    // so its canonical position is always the document origin while open.
+    root.scrollTop = 0
+    body.scrollTop = 0
+  }
+  const scheduleRestore = () => {
+    if (frame !== null) return
+    frame = requestFrame(restore)
+  }
+
+  viewport.addEventListener('resize', scheduleRestore)
+  return () => {
+    viewport.removeEventListener('resize', scheduleRestore)
+    if (frame !== null) cancelFrame(frame)
+  }
+}
+
 // The launcher shares its corner with the scroll-to-top control, which appears
 // at the same threshold. Rather than stack them, the pill sheds its label and
 // contracts to a disc as that control separates out from underneath it — one
@@ -224,7 +258,13 @@ export function ChatWidget() {
   useLayoutEffect(() => {
     if (!isOpen) return undefined
     const unlock = lockMobilePageScroll({ isMobile: isMobileTakeover })
-    const teardown = () => unlock()
+    const stopViewportRestoration = watchMobileViewportRestoration({
+      isMobile: isMobileTakeover,
+    })
+    const teardown = () => {
+      stopViewportRestoration()
+      unlock()
+    }
     teardownMobilePageRef.current = teardown
     return () => {
       if (teardownMobilePageRef.current === teardown) teardownMobilePageRef.current = null
