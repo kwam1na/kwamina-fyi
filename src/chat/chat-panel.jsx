@@ -8,7 +8,6 @@ import { fetchStoredMessages } from './chat-transcript.js'
 import { chatPageLabelForPath, chatTitleForPath } from './chat-title.js'
 import { FlipText } from './flip-text.jsx'
 import { revealDuration, revealedPrefix } from './stream-reveal.js'
-import { observeViewportDiagnostics } from './viewport-diagnostics.js'
 
 const STARTERS = [
   "What's Kwamina's background?",
@@ -213,14 +212,6 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
       abort.abort()
     }
   }, [replayStatus, thread.id, setMessages])
-
-  useEffect(() => observeViewportDiagnostics({
-    threadId: thread.id,
-    pagePath,
-    panel: panelRef.current,
-    composer: formRef.current,
-    input: inputRef.current,
-  }), [pagePath, thread.id])
 
   useEffect(() => {
     inputRef.current?.focus()
