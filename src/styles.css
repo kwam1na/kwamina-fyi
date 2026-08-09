@@ -1169,9 +1169,17 @@ body::after {
   outline-offset: 4px;
 }
 
+/* Over the inverted footer the pill takes the footer's own surface. The colour
+ * goes on the two pieces, not on the button: the button no longer paints a
+ * background, and the alpha is already carried once by the group they sit in,
+ * so an alpha here would be applied twice. */
 .site-chat-launcher.is-on-footer {
-  background: color-mix(in srgb, var(--footer-surface) 86%, transparent);
   color: var(--color-paper);
+}
+
+.site-chat-launcher.is-on-footer .site-chat-launcher-surface::before,
+.site-chat-launcher.is-on-footer .site-chat-launcher-surface::after {
+  background: var(--footer-surface);
 }
 
 /* The scroll-to-top control keeps the corner. Nothing here moves it — the
