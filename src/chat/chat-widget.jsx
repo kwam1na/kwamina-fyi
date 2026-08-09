@@ -106,6 +106,77 @@ export function collapseMobileChatOnSiteNavigation({
   return true
 }
 
+// The launcher earns one amber pass, the first time a reader sees it labelled,
+// and never again that session — the same bargain the introduction makes on the
+// homepage. A sweep that repeats stops being an invitation and becomes a
+// loading indicator, which is what a shimmer means everywhere else on the web.
+//
+// Timed to pick up where the page entrance leaves off — that runs 420ms on a
+// 60ms delay — because the sweep is now the launcher's own arrival: the pill
+// has no shadow, and therefore no visible shape, until the light has printed
+// it. Waiting longer leaves the corner showing a bare icon and label with no
+// control around them, which reads as something unfinished rather than as
+// something about to happen.
+let hasSweptLauncher = false
+const LAUNCHER_SWEEP_DELAY_MS = 520
+
+// Every reason the sweep stays away, in one place: there is no label to cross
+// while the launcher is a disc, it is spent once a session, and a reader who
+// asked for less motion never sees it at all.
+export function shouldSweepLauncher({
+  isLabelled,
+  hasSwept = false,
+  prefersReducedMotion = false,
+} = {}) {
+  return Boolean(isLabelled) && !hasSwept && !prefersReducedMotion
+}
+
+export function useLauncherSweep(isLabelled, {
+  hasSwept = () => hasSweptLauncher,
+  markSwept = () => { hasSweptLauncher = true },
+  prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  setTimer = (callback, delay) => window.setTimeout(callback, delay),
+  clearTimer = (timer) => window.clearTimeout(timer),
+} = {}) {
+  const gate = () => shouldSweepLauncher({
+    isLabelled,
+    hasSwept: hasSwept(),
+    prefersReducedMotion: prefersReducedMotion(),
+  })
+
+  const [isSweeping, setIsSweeping] = useState(false)
+  // Decided during the first render, not in the effect that follows it: the
+  // pending state withholds the shadow, and a frame painted before it was
+  // known would show the shadow and then take it away again.
+  const [isPending, setIsPending] = useState(gate)
+
+  useEffect(() => {
+    if (!gate()) {
+      // Whatever the reason — already spent, reduced motion, or collapsed
+      // before the sweep could run — the pill stops waiting and takes its
+      // shadow now.
+      setIsPending(false)
+      return undefined
+    }
+    setIsPending(true)
+    const timer = setTimer(() => {
+      markSwept()
+      setIsPending(false)
+      setIsSweeping(true)
+    }, LAUNCHER_SWEEP_DELAY_MS)
+    return () => clearTimer(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLabelled])
+
+  return {
+    isSweeping,
+    isPending,
+    // Retired on the animation's own end event rather than a matching timeout,
+    // so the class cannot outlive the motion it describes.
+    endSweep: useCallback(() => setIsSweeping(false), []),
+  }
+}
+
 export function shouldRestoreLauncherFocus({ isMobile, event } = {}) {
   // Escape and keyboard-activated buttons have no pointer click detail. A
   // touch close should reveal the page without leaving focus painted around
@@ -276,6 +347,11 @@ export function ChatWidget() {
   // underneath an open panel is motion with nothing to say.
   const shouldCollapse = isCollapsed || isOpen
 
+  // The sweep has a label to cross, so it waits for the pill. A reader who
+  // arrives partway down the page meets the disc first and gets the sweep when
+  // they come back up to it.
+  const { isSweeping, isPending: isSweepPending, endSweep } = useLauncherSweep(!shouldCollapse)
+
   useLayoutEffect(() => {
     if (!isOpen) return undefined
     const unlock = lockMobilePageScroll({ isMobile: isMobileTakeover })
@@ -377,6 +453,8 @@ export function ChatWidget() {
           shouldCollapse && 'is-split',
           isOpen && 'is-open',
           isOnFooter && 'is-on-footer',
+          isSweeping && 'is-sweeping',
+          isSweepPending && 'is-sweep-pending',
         ].filter(Boolean).join(' ')}
         onClick={(event) => (isOpen ? close(event) : open())}
         aria-expanded={isOpen}
@@ -387,7 +465,17 @@ export function ChatWidget() {
             be faded as one group — see styles.css. Two of the three pieces are
             pseudo-elements; the travelling left cap needs a real one. */}
         <span className="site-chat-launcher-shadow" aria-hidden="true" />
-        <span className="site-chat-launcher-surface" aria-hidden="true">
+        <span className="site-chat-launcher-pill site-chat-launcher-surface" aria-hidden="true">
+          <span className="site-chat-launcher-cap" />
+        </span>
+        {/* The amber pass, wearing the same pill so it morphs along with it.
+            Sits between the fill and the glyphs: the light crosses behind the
+            type rather than over it. */}
+        <span
+          className="site-chat-launcher-pill site-chat-launcher-sweep"
+          aria-hidden="true"
+          onAnimationEnd={endSweep}
+        >
           <span className="site-chat-launcher-cap" />
         </span>
         <svg className="site-chat-launcher-icon" viewBox="0 0 24 24" aria-hidden="true">

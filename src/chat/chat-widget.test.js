@@ -8,6 +8,7 @@ import {
   lockMobilePageScroll,
   returningThread,
   shouldRestoreLauncherFocus,
+  shouldSweepLauncher,
   subscribeToMobileTakeover,
   watchMobileViewportRestoration,
 } from './chat-widget.jsx'
@@ -132,6 +133,24 @@ describe('shouldRestoreLauncherFocus', () => {
     expect(shouldRestoreLauncherFocus({ isMobile: true })).toBe(true)
     expect(shouldRestoreLauncherFocus({ isMobile: true, event: { detail: 0 } })).toBe(true)
     expect(shouldRestoreLauncherFocus({ isMobile: false, event: { detail: 1 } })).toBe(true)
+  })
+})
+
+describe('shouldSweepLauncher', () => {
+  it('sweeps the labelled pill on a first, motion-tolerant sighting', () => {
+    expect(shouldSweepLauncher({ isLabelled: true })).toBe(true)
+  })
+
+  it('waits for the label rather than sweeping a disc that has nothing to cross', () => {
+    expect(shouldSweepLauncher({ isLabelled: false })).toBe(false)
+  })
+
+  it('spends the sweep once, so it stays an introduction', () => {
+    expect(shouldSweepLauncher({ isLabelled: true, hasSwept: true })).toBe(false)
+  })
+
+  it('never sweeps for a reader who asked for less motion', () => {
+    expect(shouldSweepLauncher({ isLabelled: true, prefersReducedMotion: true })).toBe(false)
   })
 })
 

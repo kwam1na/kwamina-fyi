@@ -1050,9 +1050,12 @@ body::after {
  * The caps are wider than the pill is long, so the pieces must overlap —
  * hence the group alpha here rather than a translucent fill on each, which
  * would double where they meet. */
-.site-chat-launcher-surface {
+/* Pill geometry, worn by two layers: the fill the reader always sees, and the
+ * amber wash that crosses it once. Sharing the shape means the sweep morphs
+ * with the pill for free — it reads the same --pill-open and needs no notion
+ * of what the launcher is currently doing. */
+.site-chat-launcher-pill {
   position: absolute;
-  top: 0;
   /* Anchored to the pill's right edge and sized from the token, so the shape
    * is independent of the button's own width — that width can then be set
    * once per crossing without moving anything the reader can see. */
@@ -1061,8 +1064,11 @@ body::after {
   width: var(--launcher-expanded);
   height: 100%;
   isolation: isolate;
-  opacity: var(--launcher-surface-alpha);
   pointer-events: none;
+}
+
+.site-chat-launcher-surface {
+  opacity: var(--launcher-surface-alpha);
 }
 
 /* The shadow, cast by its own element rather than by the pieces or the button.
@@ -1098,27 +1104,55 @@ body::after {
   height: var(--launcher-size);
   border-radius: 999px;
   box-shadow: 0 4px 16px rgba(21, 24, 33, 0.1);
+  opacity: 1;
   pointer-events: none;
   transform: scaleX(var(--pill-shadow-scale, 1));
   transform-origin: right center;
 }
 
+/* The pill arrives without its shadow and gains it behind the sweep, so the
+ * light reads as printing the control onto the page rather than lighting one
+ * already sitting there. Worth knowing what this costs: the shadow is the only
+ * thing that draws this control's shape against paper, so until the sweep has
+ * passed the reader sees the icon and label with no pill around them.
+ *
+ * Every path that will not sweep — spent already, reduced motion, collapsed
+ * before it could run — never enters this state, and keeps its shadow from the
+ * first frame. */
+.site-chat-launcher.is-sweep-pending .site-chat-launcher-shadow {
+  opacity: 0;
+}
+
+/* Trailing the band rather than chasing it: the shadow holds back while the
+ * light gets under way, then arrives with it and settles as the sweep ends.
+ * The lag is short on purpose — every millisecond of it is a millisecond the
+ * control has no shape. */
+.site-chat-launcher.is-sweeping .site-chat-launcher-shadow {
+  transition: opacity 560ms ease 180ms;
+}
+
 /* No shadow on the pieces themselves: they overlap, and one piece's shadow
  * would fall across another as a visible crescent. They are inset by the
  * shadow's room so the pill still sits where the button is. */
-.site-chat-launcher-surface::before,
-.site-chat-launcher-surface::after,
+.site-chat-launcher-pill::before,
+.site-chat-launcher-pill::after,
 .site-chat-launcher-cap {
   position: absolute;
   top: 0;
   height: 100%;
-  background: var(--paper);
   content: '';
+}
+
+/* Colour is the only thing the two layers disagree about. */
+.site-chat-launcher-surface::before,
+.site-chat-launcher-surface::after,
+.site-chat-launcher-surface .site-chat-launcher-cap {
+  background: var(--paper);
 }
 
 /* The right cap, which is also the whole of the collapsed control: it is the
  * shape the pill grows out of and returns to, so it never moves or scales. */
-.site-chat-launcher-surface::after {
+.site-chat-launcher-pill::after {
   right: 0;
   width: var(--launcher-size);
   border-radius: 999px;
@@ -1142,7 +1176,7 @@ body::after {
  * the right cap's centre keeps its leading edge underneath the travelling cap
  * at every frame, so the three pieces always union to an exact stadium: two
  * circles of equal radius and the full-height span between their centres. */
-.site-chat-launcher-surface::before {
+.site-chat-launcher-pill::before {
   left: calc(var(--launcher-size) / 2);
   width: calc(var(--launcher-expanded) - var(--launcher-size));
   transform: scaleX(var(--pill-open, 1));
@@ -1155,6 +1189,77 @@ body::after {
 .site-chat-launcher-icon,
 .site-chat-launcher-label {
   position: relative;
+}
+
+/* The amber pass. A second pill in the accent colour laid over the first,
+ * revealed only through a soft-edged band sliding across it, so what the
+ * reader sees is warm light crossing the control rather than the control
+ * changing colour. Tinting the glyphs alone was too quiet against a paper
+ * page — the pill is the surface with area enough to carry it.
+ *
+ * Under the icon and label, not over them: light passing behind the type
+ * leaves it legible, and a wash that dimmed its own label would be working
+ * against the thing it is drawing attention to.
+ *
+ * A mask position is paint, not composite — but this is one 900ms pass on a
+ * 79px box, once a session, with the reader at the top of the page rather
+ * than scrolling. */
+.site-chat-launcher-sweep {
+  opacity: 0;
+  -webkit-mask-image: linear-gradient(
+    100deg,
+    transparent 38%,
+    #000 50%,
+    transparent 62%
+  );
+  mask-image: linear-gradient(100deg, transparent 38%, #000 50%, transparent 62%);
+  -webkit-mask-size: 250% 100%;
+  mask-size: 250% 100%;
+  -webkit-mask-position: 100% 0;
+  mask-position: 100% 0;
+}
+
+.site-chat-launcher-sweep::before,
+.site-chat-launcher-sweep::after,
+.site-chat-launcher-sweep .site-chat-launcher-cap {
+  background: var(--chat-accent);
+}
+
+/* Nearly even pacing, not the site's expo-out. --ease-portfolio is for things
+ * that leave the moment they are asked to, and on a sweep it spends the whole
+ * crossing in the first fifth of the duration and then crawls — the light
+ * arrives and is gone before the eye has followed it. This is light travelling
+ * along a surface, so the rate is the point. */
+.site-chat-launcher.is-sweeping .site-chat-launcher-sweep {
+  animation: launcher-sweep 900ms cubic-bezier(0.45, 0, 0.55, 1) both;
+}
+
+/* Held at one strength across the pass: the mask's own falloff is what fades
+ * the light in and out, so animating opacity as well would double the taper
+ * and leave the middle of the crossing weaker than its edges.
+ *
+ * No fill mode carrying the end state either — the layer returns to its
+ * resting opacity when the class comes off, so a sweep can never be left
+ * half-lit. */
+@keyframes launcher-sweep {
+  from {
+    opacity: 0.42;
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+  }
+
+  to {
+    opacity: 0.42;
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+  }
+}
+
+/* A reader who has asked for less motion is simply never swept. */
+@media (prefers-reduced-motion: reduce) {
+  .site-chat-launcher.is-sweeping .site-chat-launcher-sweep {
+    animation: none;
+  }
 }
 
 .site-chat-launcher-icon {
@@ -1232,7 +1337,7 @@ body::after {
 
 .site-chat-launcher.is-on-footer .site-chat-launcher-surface::before,
 .site-chat-launcher.is-on-footer .site-chat-launcher-surface::after,
-.site-chat-launcher.is-on-footer .site-chat-launcher-cap {
+.site-chat-launcher.is-on-footer .site-chat-launcher-surface .site-chat-launcher-cap {
   background: var(--footer-surface);
 }
 
