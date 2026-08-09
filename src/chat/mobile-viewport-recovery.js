@@ -5,6 +5,7 @@ export function watchMobileViewportRecovery({
   root,
   isMobile = false,
   viewport,
+  getScrollTarget,
   requestFrame,
   cancelFrame,
 } = {}) {
@@ -28,9 +29,41 @@ export function watchMobileViewportRecovery({
     }
 
     // WebKit can visually restore a fixed takeover after keyboard dismissal
-    // while retaining the keyboard-era touch coordinates. Reasserting the
-    // root position after its viewport returns forces that hit-test refresh.
+    // while retaining the keyboard-era touch coordinates. Reassert the root
+    // position, then transact against the takeover's real scroll layer: the
+    // locked root is already at zero, so that assignment alone can be a no-op.
     resolvedRoot.scrollTop = 0
+    const scrollTarget = getScrollTarget?.()
+    if (!scrollTarget) return
+
+    let temporarySpacer = null
+    let maxScrollTop = Math.max(0, scrollTarget.scrollHeight - scrollTarget.clientHeight)
+    if (maxScrollTop === 0) {
+      temporarySpacer = scrollTarget.ownerDocument?.createElement('span')
+      if (!temporarySpacer) return
+
+      temporarySpacer.setAttribute('aria-hidden', 'true')
+      Object.assign(temporarySpacer.style, {
+        display: 'block',
+        height: `${scrollTarget.clientHeight + 1}px`,
+        pointerEvents: 'none',
+      })
+      scrollTarget.append(temporarySpacer)
+      maxScrollTop = Math.max(0, scrollTarget.scrollHeight - scrollTarget.clientHeight)
+    }
+
+    const originalScrollTop = scrollTarget.scrollTop
+    const originalScrollBehavior = scrollTarget.style.scrollBehavior
+    scrollTarget.style.scrollBehavior = 'auto'
+    try {
+      scrollTarget.scrollTop = originalScrollTop < maxScrollTop
+        ? Math.min(originalScrollTop + 1, maxScrollTop)
+        : Math.max(originalScrollTop - 1, 0)
+      scrollTarget.scrollTop = originalScrollTop
+    } finally {
+      scrollTarget.style.scrollBehavior = originalScrollBehavior
+      temporarySpacer?.remove()
+    }
   }
   const scheduleRecovery = () => {
     remainingFrames = maxRecoveryFrames

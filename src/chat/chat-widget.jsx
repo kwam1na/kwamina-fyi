@@ -198,7 +198,10 @@ export function ChatWidget() {
   useEffect(() => {
     if (!isOpen) return undefined
     const unlock = lockMobilePageScroll({ isMobile: isMobileTakeover })
-    const stopViewportRecovery = watchMobileViewportRecovery({ isMobile: isMobileTakeover })
+    const stopViewportRecovery = watchMobileViewportRecovery({
+      isMobile: isMobileTakeover,
+      getScrollTarget: () => document.querySelector('.site-chat-log'),
+    })
     const teardown = () => {
       stopViewportRecovery()
       unlock()

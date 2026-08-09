@@ -44,6 +44,60 @@ function frameFixture() {
   }
 }
 
+function scrollTargetFixture({
+  scrollTop,
+  scrollHeight = 844,
+  clientHeight = 430,
+  scrollBehavior = '',
+}) {
+  const writes = []
+  const writeBehaviors = []
+  let currentScrollTop = scrollTop
+  let hasSpacer = false
+  const style = { scrollBehavior }
+
+  const target = {
+    style,
+    clientHeight,
+    get scrollHeight() {
+      const spacerHeight = Number.parseFloat(target.spacer?.style.height) || 0
+      return hasSpacer ? scrollHeight + spacerHeight : scrollHeight
+    },
+    get scrollTop() {
+      return currentScrollTop
+    },
+    set scrollTop(value) {
+      writes.push(value)
+      writeBehaviors.push(style.scrollBehavior)
+      currentScrollTop = value
+    },
+    ownerDocument: {
+      createElement() {
+        return {
+          style: {},
+          setAttribute() {},
+          remove() {
+            hasSpacer = false
+          },
+        }
+      },
+    },
+    append(spacer) {
+      hasSpacer = true
+      target.spacer = spacer
+    },
+  }
+
+  return {
+    target,
+    writes,
+    writeBehaviors,
+    get hasSpacer() {
+      return hasSpacer
+    },
+  }
+}
+
 describe('mobile Safari viewport recovery', () => {
   it('refreshes root hit testing only after the keyboard viewport is restored', () => {
     const viewport = viewportFixture()
@@ -143,6 +197,92 @@ describe('mobile Safari viewport recovery', () => {
 
     expect(root.scrollTop).toBe(84)
     expect(frames.size).toBe(0)
+
+    stopWatching()
+  })
+
+  it('nudges and restores the transcript scroll layer at either boundary', () => {
+    for (const { startingAt, expectedWrites } of [
+      { startingAt: 0, expectedWrites: [1, 0] },
+      { startingAt: 414, expectedWrites: [413, 414] },
+    ]) {
+      const viewport = viewportFixture()
+      const frames = frameFixture()
+      const root = { scrollTop: 0, clientHeight: 844 }
+      const { target, writes } = scrollTargetFixture({ scrollTop: startingAt })
+      viewport.height = 844
+
+      const stopWatching = watchMobileViewportRecovery({
+        isMobile: true,
+        viewport,
+        root,
+        getScrollTarget: () => target,
+        requestFrame: frames.request,
+        cancelFrame: frames.cancel,
+      })
+
+      viewport.dispatch('resize')
+      frames.flush()
+
+      expect(writes).toEqual(expectedWrites)
+      expect(target.scrollTop).toBe(startingAt)
+
+      stopWatching()
+    }
+  })
+
+  it('creates a temporary scroll range for a short transcript', () => {
+    const viewport = viewportFixture()
+    const frames = frameFixture()
+    const root = { scrollTop: 0, clientHeight: 844 }
+    const fixture = scrollTargetFixture({
+      scrollTop: 0,
+      scrollHeight: 430,
+      clientHeight: 430,
+    })
+    viewport.height = 844
+
+    const stopWatching = watchMobileViewportRecovery({
+      isMobile: true,
+      viewport,
+      root,
+      getScrollTarget: () => fixture.target,
+      requestFrame: frames.request,
+      cancelFrame: frames.cancel,
+    })
+
+    viewport.dispatch('resize')
+    frames.flush()
+
+    expect(fixture.writes).toEqual([1, 0])
+    expect(fixture.target.scrollTop).toBe(0)
+    expect(fixture.target.spacer.style.height).toBe('431px')
+    expect(fixture.hasSpacer).toBe(false)
+
+    stopWatching()
+  })
+
+  it('disables smooth scrolling during the nudge and restores it afterward', () => {
+    const viewport = viewportFixture()
+    const frames = frameFixture()
+    const root = { scrollTop: 0, clientHeight: 844 }
+    const fixture = scrollTargetFixture({ scrollTop: 0, scrollBehavior: 'smooth' })
+    viewport.height = 844
+
+    const stopWatching = watchMobileViewportRecovery({
+      isMobile: true,
+      viewport,
+      root,
+      getScrollTarget: () => fixture.target,
+      requestFrame: frames.request,
+      cancelFrame: frames.cancel,
+    })
+
+    viewport.dispatch('resize')
+    frames.flush()
+
+    expect(fixture.writeBehaviors).toEqual(['auto', 'auto'])
+    expect(fixture.target.style.scrollBehavior).toBe('smooth')
 
     stopWatching()
   })
