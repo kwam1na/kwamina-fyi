@@ -22,6 +22,27 @@ function messageText(message) {
     .join('')
 }
 
+export function scrollChatToLatest(log) {
+  if (log) log.scrollTop = log.scrollHeight
+}
+
+export function createChatScrollFollower(getLog) {
+  let isFollowing = false
+
+  return {
+    start() {
+      isFollowing = true
+      scrollChatToLatest(getLog())
+    },
+    follow() {
+      if (isFollowing) scrollChatToLatest(getLog())
+    },
+    interrupt() {
+      isFollowing = false
+    },
+  }
+}
+
 const GENERIC_ERROR = 'Something went wrong. Try asking again.'
 const TRANSCRIPT_TIMEOUT_MS = 8_000
 
@@ -155,6 +176,10 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
   const inputRef = useRef(null)
   const logRef = useRef(null)
   const isSubmittingRef = useRef(false)
+  const scrollFollowerRef = useRef(null)
+  if (!scrollFollowerRef.current) {
+    scrollFollowerRef.current = createChatScrollFollower(() => logRef.current)
+  }
 
   // Written by chatFetch on the failing request, read on the render that
   // failure causes. Built once so the hook keeps one connection identity.
@@ -217,13 +242,14 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
     inputRef.current?.focus()
   }, [])
 
-  // Follow the answer as it streams, but never yank the view away from someone
-  // who has scrolled up to reread something.
+  // A new answer takes precedence over the reader's prior transcript position,
+  // but direct interaction with the transcript hands scroll control back.
   const followLatest = useCallback(() => {
-    const log = logRef.current
-    if (!log) return
-    const isNearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 120
-    if (isNearBottom) log.scrollTop = log.scrollHeight
+    scrollFollowerRef.current.follow()
+  }, [])
+
+  const interruptFollowing = useCallback(() => {
+    scrollFollowerRef.current.interrupt()
   }, [])
 
   useEffect(() => {
@@ -264,6 +290,7 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
       const question = text.trim()
       if (!question || isLoading || isRehydrating || isSubmittingRef.current) return
       isSubmittingRef.current = true
+      scrollFollowerRef.current.start()
       if (replayStatus === 'failed') setReplayStatus('continued')
       void sendMessage(question, { whenBusy: 'drop' }).finally(() => {
         isSubmittingRef.current = false
@@ -341,6 +368,9 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
         role="log"
         aria-live={isLoading ? 'off' : 'polite'}
         aria-busy={isLoading}
+        onPointerDown={interruptFollowing}
+        onTouchMove={interruptFollowing}
+        onWheel={interruptFollowing}
       >
         {isRehydrating && <p className="site-chat-note">Picking up where you left off&hellip;</p>}
 
