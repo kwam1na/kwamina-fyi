@@ -221,8 +221,9 @@ persisted as successful answers; their reservation is released. Non-OK Worker
 responses are read by the custom client fetch adapter before TanStack flattens
 them, preserving useful validation and rate-limit messages in the UI.
 
-`GET /api/chat/transcript` returns the newest bounded message window when the
-thread credential is supplied in `x-chat-thread-id`. Other API
+`GET /api/chat/transcript` returns the newest bounded message window only when
+the thread ID in `x-chat-thread-id` matches the server-issued conversation
+capability in its thread-specific `__Host-chat-capability-*` cookie. Other API
 paths return JSON 404s. An hourly scheduled handler removes expired D1
 rate-limit rows.
 
@@ -242,6 +243,17 @@ Migrations must be applied in filename order:
 The server's D1 transcript is authoritative for model context. The browser's
 copy exists for display and for submitting the newest question; it cannot
 rewrite prior turns.
+
+The first accepted turn for a new thread receives an opaque HMAC capability in
+a thread-specific `HttpOnly; Secure; SameSite=Strict` host-only cookie.
+Subsequent turns and transcript reads require that capability to verify against
+the requested thread ID. Thread-specific names preserve independent
+conversations in simultaneous tabs. The HMAC uses the dedicated
+`CHAT_CAPABILITY_KEY` Worker secret, so caller counter key rotation does not
+invalidate conversations. A leaked thread ID alone therefore cannot read or
+continue a conversation.
+Existing conversations created before this boundary fail closed when they do
+not have a matching capability; the chat recovery UI can start a new thread.
 
 Conversation length is not capped. Model and UI replay cost remain bounded by
 selecting the newest 30 messages in descending database order, then reversing
@@ -291,7 +303,10 @@ account/key should retain an external spend cap and billing alert.
 ## Failure boundaries
 
 - Missing `ANTHROPIC_API_KEY`: return 503 and log misconfiguration.
+- Missing `CHAT_CAPABILITY_KEY`: return 503 before reading conversation state.
 - Malformed body/thread/question: return a specific 4xx JSON response.
+- Missing or mismatched conversation capability: return 403 before reading or
+  continuing stored history.
 - Oversized question: return 413.
 - Pacing or caller limit: return 429 with reader-facing guidance.
 - Unknown page path: omit page context rather than passing untrusted text.
@@ -312,8 +327,9 @@ Prerequisites:
 
 - Bun and Node.js;
 - Wrangler 4.x authenticated to the Cloudflare account;
-- `.dev.vars` containing `ANTHROPIC_API_KEY` for real local model calls and a
-  random `RATE_LIMIT_KEY` when testing requests with a caller address;
+- `.dev.vars` containing `ANTHROPIC_API_KEY` for real local model calls, a
+  random `RATE_LIMIT_KEY` when testing requests with a caller address, and an
+  independent random `CHAT_CAPABILITY_KEY` for conversation cookies;
 - local D1 migrations applied.
 
 ```bash
@@ -365,8 +381,8 @@ Browser validation should exercise:
 Schema and code must ship in this order because the Worker reads and writes the
 new columns immediately:
 
-1. Confirm `ANTHROPIC_API_KEY`, `RATE_LIMIT_KEY`, D1, rate-limit, asset, and
-   cron bindings.
+1. Confirm `ANTHROPIC_API_KEY`, `RATE_LIMIT_KEY`, `CHAT_CAPABILITY_KEY`, D1,
+   rate-limit, asset, and cron bindings.
 2. Run the canonical release command:
 
    ```bash

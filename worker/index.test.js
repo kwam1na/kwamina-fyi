@@ -2,8 +2,13 @@ import { describe, expect, it } from 'bun:test'
 import { Database } from 'bun:sqlite'
 import { readFileSync, readdirSync } from 'node:fs'
 import worker, {
+  attachConversationCapability,
   callerKey,
+  conversationCapabilityCookie,
+  conversationCapabilityFor,
   finalizeAssistantStream,
+  hasConversationCapability,
+  handleChat,
   loadTranscript,
   persistTurn,
   readJsonBody,
@@ -83,6 +88,26 @@ function migratedSqliteD1() {
       },
     },
   }
+}
+
+function chatRequest(threadId, headers = {}) {
+  return new Request('https://kwamina.fyi/api/chat', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...headers },
+    body: JSON.stringify({
+      threadId,
+      runId: crypto.randomUUID(),
+      messages: [{ id: crypto.randomUUID(), role: 'user', content: 'Tell me about Athena.' }],
+      tools: [],
+      context: [],
+      state: {},
+    }),
+  })
+}
+
+async function* completedAssistantStream() {
+  yield { type: 'TEXT_MESSAGE_CONTENT', delta: 'Athena is a business operating system.' }
+  yield { type: 'RUN_FINISHED' }
 }
 
 describe('Worker page context', () => {
@@ -311,6 +336,140 @@ describe('Worker request boundaries', () => {
   })
 })
 
+describe('Worker conversation capabilities', () => {
+  it('fails before touching conversation state when the capability key is missing', async () => {
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        threadId: 'thread-123',
+        runId: 'run-123',
+        messages: [{ id: 'message-123', role: 'user', content: 'Tell me about Athena.' }],
+        tools: [],
+        context: [],
+        state: {},
+      }),
+    }), {
+      ANTHROPIC_API_KEY: 'unused',
+      DB: { prepare: () => { throw new Error('D1 should not be read') } },
+    }, {})
+
+    expect(response.status).toBe(503)
+  })
+
+  it('issues an opaque capability in a host-only hardened cookie', async () => {
+    const capability = await conversationCapabilityFor('thread-123', 'conversation-secret')
+    const cookie = conversationCapabilityCookie('thread-123', capability)
+
+    expect(capability).toMatch(/^[A-Za-z0-9_-]{43}$/)
+    expect(cookie).toBe(
+      `__Host-chat-capability-thread-123=${capability}; Path=/; HttpOnly; Secure; SameSite=Strict`,
+    )
+    expect(capability).not.toContain('thread-123')
+  })
+
+  it('accepts only the capability signed for the requested conversation', async () => {
+    const capability = await conversationCapabilityFor('thread-123', 'conversation-secret')
+    const request = new Request('https://kwamina.fyi/api/chat/transcript', {
+      headers: { cookie: `other=value; __Host-chat-capability-thread-123=${capability}` },
+    })
+
+    await expect(hasConversationCapability(request, 'thread-123', 'conversation-secret')).resolves.toBe(true)
+    await expect(hasConversationCapability(request, 'thread-456', 'conversation-secret')).resolves.toBe(false)
+    await expect(hasConversationCapability(request, 'thread-123', 'different-secret')).resolves.toBe(false)
+
+    const renamed = new Request('https://kwamina.fyi/api/chat/transcript', {
+      headers: { cookie: `__Host-chat-capability-thread-456=${capability}` },
+    })
+    await expect(hasConversationCapability(renamed, 'thread-456', 'conversation-secret')).resolves.toBe(false)
+  })
+
+  it('keeps capabilities for simultaneous conversations independent', async () => {
+    const first = await conversationCapabilityFor('thread-123', 'conversation-secret')
+    const second = await conversationCapabilityFor('thread-456', 'conversation-secret')
+    const request = new Request('https://kwamina.fyi/api/chat/transcript', {
+      headers: {
+        cookie: [
+          `__Host-chat-capability-thread-123=${first}`,
+          `__Host-chat-capability-thread-456=${second}`,
+        ].join('; '),
+      },
+    })
+
+    await expect(hasConversationCapability(request, 'thread-123', 'conversation-secret')).resolves.toBe(true)
+    await expect(hasConversationCapability(request, 'thread-456', 'conversation-secret')).resolves.toBe(true)
+  })
+
+  it('attaches the server-issued capability to a first-turn response', async () => {
+    const response = await attachConversationCapability(
+      new Response('stream'),
+      'thread-123',
+      'conversation-secret',
+    )
+
+    expect(response.headers.get('set-cookie')).toMatch(
+      /^__Host-chat-capability-thread-123=[A-Za-z0-9_-]{43}; Path=\/; HttpOnly; Secure; SameSite=Strict$/,
+    )
+  })
+
+  it('issues a capability on the first endpoint turn and accepts it on the next turn', async () => {
+    const { d1, sqlite } = migratedSqliteD1()
+    const env = {
+      ANTHROPIC_API_KEY: 'unused',
+      CHAT_CAPABILITY_KEY: 'conversation-secret',
+      DB: d1,
+    }
+    const createStream = () => completedAssistantStream()
+
+    const first = await handleChat(chatRequest('thread-123'), env, {}, createStream)
+    const cookie = first.headers.get('set-cookie')
+    expect(cookie).toMatch(/^__Host-chat-capability-thread-123=/)
+    await first.text()
+
+    sqlite.query('UPDATE conversations SET last_message_at = 0 WHERE id = ?').run('thread-123')
+    const second = await handleChat(chatRequest('thread-123', {
+      cookie: cookie.split(';', 1)[0],
+    }), env, {}, createStream)
+    expect(second.status).toBe(200)
+    expect(second.headers.get('set-cookie')).toBeNull()
+    await second.text()
+    expect(sqlite.query('SELECT count(*) AS count FROM messages WHERE conversation_id = ?').get('thread-123').count).toBe(4)
+    sqlite.close()
+  })
+
+  it('rejects a turn against an existing conversation without its capability', async () => {
+    const db = {
+      prepare() {
+        return {
+          bind() { return this },
+          async first() {
+            return { id: 'thread-123', message_count: 2, last_message_at: 0 }
+          },
+          async all() { throw new Error('History should not be read before authorization') },
+        }
+      },
+    }
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        threadId: 'thread-123',
+        runId: 'run-123',
+        messages: [{ id: 'message-123', role: 'user', content: 'Tell me about Athena.' }],
+        tools: [],
+        context: [],
+        state: {},
+      }),
+    }), {
+      ANTHROPIC_API_KEY: 'unused',
+      DB: db,
+      CHAT_CAPABILITY_KEY: 'conversation-secret',
+    }, {})
+
+    expect(response.status).toBe(403)
+  })
+})
+
 describe('Worker stream finalization', () => {
   it('persists before exposing the terminal success event', async () => {
     const order = []
@@ -397,7 +556,44 @@ describe('Worker transcript replay', () => {
     expect(prepared.binds).toEqual(['thread-123', 30])
   })
 
-  it('prevents stored conversations from being cached', async () => {
+  it('rejects transcript replay without the conversation capability', async () => {
+    const response = await worker.fetch(
+      new Request('https://kwamina.fyi/api/chat/transcript', {
+        headers: { 'x-chat-thread-id': 'thread-123' },
+      }),
+      { DB: { prepare: () => { throw new Error('D1 should not be read') } }, CHAT_CAPABILITY_KEY: 'conversation-secret' },
+      {},
+    )
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ error: 'That conversation is not available in this browser.' })
+  })
+
+  it('fails closed for missing keys and malformed transcript capabilities before reading D1', async () => {
+    const db = { prepare: () => { throw new Error('D1 should not be read') } }
+    const missingKey = await worker.fetch(
+      new Request('https://kwamina.fyi/api/chat/transcript', {
+        headers: { 'x-chat-thread-id': 'thread-123' },
+      }),
+      { DB: db },
+      {},
+    )
+    expect(missingKey.status).toBe(503)
+
+    const malformed = await worker.fetch(
+      new Request('https://kwamina.fyi/api/chat/transcript', {
+        headers: {
+          cookie: '__Host-chat-capability-thread-123=not-base64!@#',
+          'x-chat-thread-id': 'thread-123',
+        },
+      }),
+      { DB: db, CHAT_CAPABILITY_KEY: 'conversation-secret' },
+      {},
+    )
+    expect(malformed.status).toBe(403)
+  })
+
+  it('replays the matching conversation without allowing it to be cached', async () => {
     const db = {
       prepare() {
         return {
@@ -407,11 +603,16 @@ describe('Worker transcript replay', () => {
       },
     }
 
+    const capability = await conversationCapabilityFor('thread-123', 'conversation-secret')
+
     const response = await worker.fetch(
       new Request('https://kwamina.fyi/api/chat/transcript', {
-        headers: { 'x-chat-thread-id': 'thread-123' },
+        headers: {
+          cookie: `__Host-chat-capability-thread-123=${capability}`,
+          'x-chat-thread-id': 'thread-123',
+        },
       }),
-      { DB: db },
+      { DB: db, CHAT_CAPABILITY_KEY: 'conversation-secret' },
       {},
     )
 

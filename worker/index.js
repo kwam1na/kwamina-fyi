@@ -31,6 +31,8 @@ const CALLER_WINDOW_MS = 60_000
 const CALLER_WINDOW_LIMIT = 15
 const TURN_RESERVATION_STALE_MS = 120_000
 const THREAD_ID_PATTERN = /^[A-Za-z0-9-]{8,100}$/
+const CHAT_CAPABILITY_COOKIE_PREFIX = '__Host-chat-capability-'
+const CHAT_CAPABILITY_CONTEXT = 'chat-capability:v1:'
 
 const jsonResponse = (body, status = 200, headers = {}) =>
   new Response(JSON.stringify(body), {
@@ -99,14 +101,10 @@ async function loadMessageWindow(db, threadId) {
 }
 
 async function loadConversation(db, threadId) {
-  const conversation = await db
+  return db
     .prepare('SELECT id, message_count, last_message_at FROM conversations WHERE id = ?')
     .bind(threadId)
     .first()
-
-  if (!conversation) return { conversation: null, history: [] }
-
-  return { conversation, history: await loadMessageWindow(db, threadId) }
 }
 
 // Reasons to refuse a turn before spending a model call on it. Per-conversation
@@ -251,25 +249,83 @@ export function finalizeAssistantStream(source, { onFinished, onFailed }) {
 // A counter key for the caller, not a record of who they are. HMAC prevents a
 // D1 reader from enumerating IPv4 addresses, while the day rotates the key so
 // old rows stop matching new requests.
+async function hmacKey(secret, usages, bindingName) {
+  if (!secret) throw new Error(`${bindingName} is not configured`)
+  return crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    usages,
+  )
+}
+
 export async function callerKey(request, secret) {
   const address = request.headers.get('cf-connecting-ip')
   if (!address) return null
-  if (!secret) throw new Error('RATE_LIMIT_KEY is not configured')
 
   const day = Math.floor(Date.now() / 86_400_000)
   const encoder = new TextEncoder()
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  )
+  const key = await hmacKey(secret, ['sign'], 'RATE_LIMIT_KEY')
   const digest = await crypto.subtle.sign('HMAC', key, encoder.encode(`${day}:${address}`))
 
   return [...new Uint8Array(digest).slice(0, 10)]
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('')
+}
+
+export async function conversationCapabilityFor(threadId, secret) {
+  const signature = await crypto.subtle.sign(
+    'HMAC',
+    await hmacKey(secret, ['sign', 'verify'], 'CHAT_CAPABILITY_KEY'),
+    new TextEncoder().encode(`${CHAT_CAPABILITY_CONTEXT}${threadId}`),
+  )
+  const bytes = String.fromCharCode(...new Uint8Array(signature))
+  return btoa(bytes).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
+}
+
+function cookieValue(request, name) {
+  for (const entry of (request.headers.get('cookie') ?? '').split(';')) {
+    const separator = entry.indexOf('=')
+    if (separator < 0 || entry.slice(0, separator).trim() !== name) continue
+    return entry.slice(separator + 1).trim()
+  }
+  return null
+}
+
+function conversationCapabilityCookieName(threadId) {
+  return `${CHAT_CAPABILITY_COOKIE_PREFIX}${threadId}`
+}
+
+export async function hasConversationCapability(request, threadId, secret) {
+  const provided = cookieValue(request, conversationCapabilityCookieName(threadId))
+  if (!provided) return false
+
+  const encoded = provided.replaceAll('-', '+').replaceAll('_', '/')
+  const padded = encoded.padEnd(Math.ceil(encoded.length / 4) * 4, '=')
+  let signature
+  try {
+    signature = Uint8Array.from(atob(padded), (character) => character.charCodeAt(0))
+  } catch {
+    return false
+  }
+
+  return crypto.subtle.verify(
+    'HMAC',
+    await hmacKey(secret, ['sign', 'verify'], 'CHAT_CAPABILITY_KEY'),
+    signature,
+    new TextEncoder().encode(`${CHAT_CAPABILITY_CONTEXT}${threadId}`),
+  )
+}
+
+export function conversationCapabilityCookie(threadId, capability) {
+  return `${conversationCapabilityCookieName(threadId)}=${capability}; Path=/; HttpOnly; Secure; SameSite=Strict`
+}
+
+export async function attachConversationCapability(response, threadId, secret) {
+  const capability = await conversationCapabilityFor(threadId, secret)
+  response.headers.set('set-cookie', conversationCapabilityCookie(threadId, capability))
+  return response
 }
 
 // Two limits, because neither is sufficient alone.
@@ -357,7 +413,7 @@ export function withPageMarker(content, pagePath) {
     : content
 }
 
-async function handleChat(request, env, ctx) {
+export async function handleChat(request, env, ctx, createStream = (options) => chat(options)) {
   // Ahead of every other check, including configuration: a flood should be
   // turned away cheaply whatever state the Worker is in.
   if (await isRateLimited(request, env, ctx)) {
@@ -366,6 +422,10 @@ async function handleChat(request, env, ctx) {
 
   if (!env.ANTHROPIC_API_KEY) {
     console.error(JSON.stringify({ event: 'chat.misconfigured', reason: 'missing ANTHROPIC_API_KEY' }))
+    return jsonResponse({ error: 'The assistant is not configured yet.' }, 503)
+  }
+  if (!env.CHAT_CAPABILITY_KEY) {
+    console.error(JSON.stringify({ event: 'chat.misconfigured', reason: 'missing CHAT_CAPABILITY_KEY' }))
     return jsonResponse({ error: 'The assistant is not configured yet.' }, 503)
   }
 
@@ -386,7 +446,7 @@ async function handleChat(request, env, ctx) {
   // The client mints this and keeps it in localStorage; it is the conversation
   // identity for the whole feature.
   const threadId = params.threadId
-  if (typeof threadId !== 'string' || threadId.length < 8 || threadId.length > 100) {
+  if (typeof threadId !== 'string' || !THREAD_ID_PATTERN.test(threadId)) {
     return jsonResponse({ error: 'Malformed request.' }, 400)
   }
 
@@ -396,9 +456,13 @@ async function handleChat(request, env, ctx) {
     return jsonResponse({ error: `Questions are limited to ${MAX_MESSAGE_CHARS} characters.` }, 413)
   }
 
-  const { conversation, history } = await loadConversation(env.DB, threadId)
+  const conversation = await loadConversation(env.DB, threadId)
+  if (conversation && !await hasConversationCapability(request, threadId, env.CHAT_CAPABILITY_KEY)) {
+    return jsonResponse({ error: 'That conversation is not available in this browser.' }, 403)
+  }
   const rejection = rejectionFor(conversation, Date.now())
   if (rejection) return jsonResponse({ error: rejection.error }, rejection.status)
+  const history = conversation ? await loadMessageWindow(env.DB, threadId) : []
 
   const pagePath = params.forwardedProps?.pagePath
   const startedAt = Date.now()
@@ -423,7 +487,7 @@ async function handleChat(request, env, ctx) {
 
   let stream
   try {
-    stream = chat({
+    stream = createStream({
       adapter: createAnthropicChat(MODEL, env.ANTHROPIC_API_KEY),
       threadId,
     // Server-side history is authoritative: the client's copy is replayed for
@@ -486,7 +550,10 @@ async function handleChat(request, env, ctx) {
     onFailed: () => releaseTurn(env.DB, threadId, turnToken),
   })
 
-  return toServerSentEventsResponse(events)
+  const response = toServerSentEventsResponse(events)
+  return conversation
+    ? response
+    : attachConversationCapability(response, threadId, env.CHAT_CAPABILITY_KEY)
 }
 
 export async function loadTranscript(db, threadId) {
@@ -533,9 +600,16 @@ export default {
         if (await isRateLimited(request, env, ctx)) {
           return jsonResponse({ error: 'Too many requests. Give it a minute and try again.' }, 429)
         }
+        if (!env.CHAT_CAPABILITY_KEY) {
+          console.error(JSON.stringify({ event: 'chat.misconfigured', reason: 'missing CHAT_CAPABILITY_KEY' }))
+          return jsonResponse({ error: 'The assistant is not configured yet.' }, 503)
+        }
         const threadId = request.headers.get('x-chat-thread-id')
         if (!threadId || !THREAD_ID_PATTERN.test(threadId)) {
           return jsonResponse({ error: 'Malformed request.' }, 400)
+        }
+        if (!await hasConversationCapability(request, threadId, env.CHAT_CAPABILITY_KEY)) {
+          return jsonResponse({ error: 'That conversation is not available in this browser.' }, 403)
         }
         return await handleTranscript(env, threadId)
       }
