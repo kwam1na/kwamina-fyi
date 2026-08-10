@@ -1,4 +1,4 @@
-import { Component, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useChat, fetchServerSentEvents } from '@tanstack/ai-react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { animate } from 'animejs'
@@ -28,10 +28,24 @@ export function scrollChatToLatest(log) {
   if (log) log.scrollTop = log.scrollHeight
 }
 
+export function positionChatAtLatest(log) {
+  if (!log) return
+  const previousScrollBehavior = log.style.scrollBehavior
+  log.style.scrollBehavior = 'auto'
+  log.scrollTop = log.scrollHeight
+  log.style.scrollBehavior = previousScrollBehavior
+}
+
 export function createChatScrollFollower(getLog) {
   let isFollowing = false
+  let didMountConversation = false
 
   return {
+    mount(hasConversation) {
+      if (!hasConversation || didMountConversation) return
+      didMountConversation = true
+      positionChatAtLatest(getLog())
+    },
     start() {
       isFollowing = true
       scrollChatToLatest(getLog())
@@ -300,6 +314,10 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
   const interruptFollowing = useCallback(() => {
     scrollFollowerRef.current.interrupt()
   }, [])
+
+  useLayoutEffect(() => {
+    scrollFollowerRef.current.mount(thread.isReturning && messages.length > 0)
+  }, [messages, thread.isReturning])
 
   useEffect(() => {
     followLatest()

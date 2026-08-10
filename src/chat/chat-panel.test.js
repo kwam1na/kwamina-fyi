@@ -4,6 +4,7 @@ import { act, create } from 'react-test-renderer'
 import {
   ChatRenderBoundary,
   createChatScrollFollower,
+  positionChatAtLatest,
   scrollChatToLatest,
 } from './chat-panel.jsx'
 
@@ -21,7 +22,42 @@ describe('scrollChatToLatest', () => {
   })
 })
 
+describe('positionChatAtLatest', () => {
+  it('places the transcript at the bottom without smooth scrolling', () => {
+    let behaviorWhenPositioned
+    const log = {
+      scrollHeight: 1_200,
+      style: { scrollBehavior: '' },
+      set scrollTop(value) {
+        this.position = value
+        behaviorWhenPositioned = this.style.scrollBehavior
+      },
+    }
+
+    positionChatAtLatest(log)
+
+    expect(log.position).toBe(1_200)
+    expect(behaviorWhenPositioned).toBe('auto')
+    expect(log.style.scrollBehavior).toBe('')
+  })
+})
+
 describe('createChatScrollFollower', () => {
+  it('starts a returning conversation at the bottom without keeping scroll control', () => {
+    const log = { scrollHeight: 1_200, scrollTop: 100, style: { scrollBehavior: '' } }
+    const follower = createChatScrollFollower(() => log)
+
+    follower.mount(false)
+    expect(log.scrollTop).toBe(100)
+
+    follower.mount(true)
+    expect(log.scrollTop).toBe(1_200)
+
+    log.scrollHeight = 1_500
+    follower.follow()
+    expect(log.scrollTop).toBe(1_200)
+  })
+
   it('stops following streaming updates after the visitor intervenes', () => {
     const log = { scrollHeight: 1_200, scrollTop: 100 }
     const follower = createChatScrollFollower(() => log)
