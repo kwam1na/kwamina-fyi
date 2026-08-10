@@ -3,10 +3,19 @@ import { createElement } from 'react'
 import { act, create } from 'react-test-renderer'
 import {
   ChatRenderBoundary,
+  chatInputPlaceholder,
   createChatScrollFollower,
   positionChatAtLatest,
   scrollChatToLatest,
 } from './chat-panel.jsx'
+
+describe('chatInputPlaceholder', () => {
+  it('invites a follow-up after the assistant has replied', () => {
+    expect(chatInputPlaceholder([])).toBe('Ask a question…')
+    expect(chatInputPlaceholder([{ role: 'user' }])).toBe('Ask a question…')
+    expect(chatInputPlaceholder([{ role: 'user' }, { role: 'assistant' }])).toBe('Ask a follow-up…')
+  })
+})
 
 describe('scrollChatToLatest', () => {
   it('brings a new response into view even after the visitor scrolled up', () => {

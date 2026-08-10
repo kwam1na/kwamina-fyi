@@ -28,6 +28,12 @@ export function scrollChatToLatest(log) {
   if (log) log.scrollTop = log.scrollHeight
 }
 
+export function chatInputPlaceholder(messages) {
+  return messages.some((message) => message.role === 'assistant')
+    ? 'Ask a follow-up…'
+    : 'Ask a question…'
+}
+
 export function positionChatAtLatest(log) {
   if (!log) return
   const previousScrollBehavior = log.style.scrollBehavior
@@ -523,7 +529,7 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
           className="site-chat-input"
           value={input}
           rows={2}
-          placeholder="Ask a question&hellip;"
+          placeholder={chatInputPlaceholder(messages)}
           maxLength={2000}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => {
