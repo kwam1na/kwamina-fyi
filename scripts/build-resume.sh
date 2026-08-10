@@ -25,4 +25,6 @@ tell application "Pages"
 end tell
 EOF
 
+node "$root/scripts/set-pdf-title.mjs" "$output" "Resume — Kwamina Essuah Mensah"
+
 echo "build-resume: wrote $output — open it and confirm it is still one page"

@@ -36,6 +36,7 @@
     "@sentry/vite-plugin": "5.4.0",
     "@tailwindcss/vite": "4.3.2",
     "docx": "9.7.1",
+    "pdf-lib": "1.17.1",
     "react-test-renderer": "19.2.8",
     "tailwindcss": "4.3.2",
     "wrangler": "4.114.0"

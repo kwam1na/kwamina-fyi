@@ -142,6 +142,9 @@ function para(runs) {
 }
 
 const doc = new Document({
+  title: 'Resume — Kwamina Essuah Mensah',
+  creator: 'Kwamina Essuah Mensah',
+  lastModifiedBy: 'Kwamina Essuah Mensah',
   numbering: bullets,
   styles: {
     default: { document: { run: base, paragraph: { spacing: { line: 238 } } } },
