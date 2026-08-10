@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { fetchStoredMessages } from './chat-transcript.js'
+import { fetchStoredMessages, renderContextForChatMessage } from './chat-transcript.js'
 
 describe('fetchStoredMessages', () => {
   it('maps stored transcript rows into chat messages', async () => {
@@ -23,6 +23,17 @@ describe('fetchStoredMessages', () => {
       signal,
       headers: { 'x-chat-thread-id': 'thread-123' },
     }]])
+  })
+
+  it('distinguishes replayed messages from live messages without reading content', () => {
+    expect(renderContextForChatMessage({
+      id: 'stored-2',
+      parts: [{ type: 'text', content: 'private-replay-sentinel' }],
+    })).toBe('replay_render')
+    expect(renderContextForChatMessage({
+      id: 'live-2',
+      parts: [{ type: 'text', content: 'private-live-sentinel' }],
+    })).toBe('live_render')
   })
 
   it('rejects a failed transcript response so the panel can offer recovery', async () => {

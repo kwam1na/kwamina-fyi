@@ -14,6 +14,7 @@ import { ScrollToTop } from './scroll-to-top.jsx'
 import { ChatWidget } from './chat/chat-widget.jsx'
 import { NotFoundPage } from './not-found-page.jsx'
 import { ErrorPage } from './error-page.jsx'
+import { startBrowserObservability } from './observability/browser.js'
 import { LEGACY_REDIRECTS, ROUTE_PATHS } from './routes.js'
 import homepage from '../docs/content/homepage.html?raw'
 import about from '../docs/content/about.html?raw'
@@ -101,6 +102,13 @@ const router = createRouter({
   // Every route without its own error handling falls back to the site's own
   // error page rather than the router's built-in stack trace.
   defaultErrorComponent: ErrorPage,
+})
+
+startBrowserObservability({
+  environment: import.meta.env.PROD ? 'production' : 'local',
+  providerReady: __OBSERVABILITY_PROVIDER_READY__,
+  dsn: __SENTRY_BROWSER_DSN__,
+  release: __APP_RELEASE__,
 })
 
 createRoot(document.getElementById('root')).render(<RouterProvider router={router} />)

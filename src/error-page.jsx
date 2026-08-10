@@ -1,6 +1,11 @@
 import { useEffect } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
 import { NoticeArrow, NoticeLayout, NoticeReload } from './notice-page.jsx'
+import { captureBrowserRenderFailure } from './observability/browser.js'
+
+export function reportRootRenderFailure(error, capture = captureBrowserRenderFailure) {
+  capture(error, 'root_render')
+}
 
 // The page a thrown error lands on. It replaces the router's default error
 // component, which is a bare browser-grey stack trace — the one screen on the
@@ -19,6 +24,7 @@ export function ErrorPage({ error, reset }) {
   // thing so a real report is still one devtools panel away.
   useEffect(() => {
     console.error('Page error:', error)
+    reportRootRenderFailure(error)
   }, [error])
 
   const retry = () => {

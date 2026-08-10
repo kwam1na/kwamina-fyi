@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Component, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useChat, fetchServerSentEvents } from '@tanstack/ai-react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { animate } from 'animejs'
 import { NoticeArrow } from '../notice-page.jsx'
 import Markdown from 'react-markdown'
 import { classifyChatHref, prepareChatMarkdown } from './chat-links.js'
-import { fetchStoredMessages } from './chat-transcript.js'
+import { fetchStoredMessages, renderContextForChatMessage } from './chat-transcript.js'
 import { chatPageLabelForPath, chatTitleForPath } from './chat-title.js'
 import { FlipText } from './flip-text.jsx'
 import { revealDuration, revealedPrefix } from './stream-reveal.js'
+import { captureBrowserRenderFailure } from '../observability/browser.js'
 
 const STARTERS = [
   "What's Kwamina's background?",
@@ -46,6 +47,35 @@ export function createChatScrollFollower(getLog) {
 
 const GENERIC_ERROR = 'Something went wrong. Try asking again.'
 const TRANSCRIPT_TIMEOUT_MS = 8_000
+
+function expectedChatFailure(message) {
+  const error = new Error(message)
+  error.name = 'ChatExpectedFailure'
+  return error
+}
+
+export class ChatRenderBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { failed: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+
+  componentDidCatch(error) {
+    const capture = this.props.captureFailure ?? captureBrowserRenderFailure
+    capture(error, this.props.renderContext)
+  }
+
+  render() {
+    if (this.state.failed) {
+      return <p className="site-chat-error" role="alert">{GENERIC_ERROR}</p>
+    }
+    return this.props.children
+  }
+}
 
 // Answers are rendered as Markdown rather than pattern-matched into parts.
 // The interface used to support two forms and the contract spent rules telling
@@ -168,7 +198,7 @@ async function chatFetch(input, init, messageRef) {
     response = await fetch(input, init)
   } catch {
     messageRef.current = 'Could not reach the assistant. Check your connection and try again.'
-    throw new Error(messageRef.current)
+    throw expectedChatFailure(messageRef.current)
   }
 
   if (response.ok) return response
@@ -179,7 +209,7 @@ async function chatFetch(input, init, messageRef) {
     .catch(() => null)
 
   messageRef.current = message || GENERIC_ERROR
-  throw new Error(messageRef.current)
+  throw expectedChatFailure(messageRef.current)
 }
 
 // Default-exported so the launcher can reach it through React.lazy. The
@@ -430,16 +460,21 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
           .map((message) => ({ message, text: messageText(message) }))
           .filter(({ text }) => text.trim())
           .map(({ message, text }, index, renderedMessages) => (
-            <p key={message.id} className={`site-chat-message is-${message.role}`}>
-              {message.role === 'assistant' ? (
-                <StreamingText
-                  text={text}
-                  isStreaming={isLoading && index === renderedMessages.length - 1}
-                  onReveal={followLatest}
-                  onSiteNavigate={onSiteNavigate}
-                />
-              ) : text}
-            </p>
+            <ChatRenderBoundary
+              key={message.id}
+              renderContext={renderContextForChatMessage(message)}
+            >
+              <p className={`site-chat-message is-${message.role}`}>
+                {message.role === 'assistant' ? (
+                  <StreamingText
+                    text={text}
+                    isStreaming={isLoading && index === renderedMessages.length - 1}
+                    onReveal={followLatest}
+                    onSiteNavigate={onSiteNavigate}
+                  />
+                ) : text}
+              </p>
+            </ChatRenderBoundary>
           ))}
 
         {isLoading && (

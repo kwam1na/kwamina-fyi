@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'bun:test'
-import { createChatScrollFollower, scrollChatToLatest } from './chat-panel.jsx'
+import {
+  ChatRenderBoundary,
+  createChatScrollFollower,
+  scrollChatToLatest,
+} from './chat-panel.jsx'
 
 describe('scrollChatToLatest', () => {
   it('brings a new response into view even after the visitor scrolled up', () => {
@@ -31,5 +35,20 @@ describe('createChatScrollFollower', () => {
 
     follower.start()
     expect(log.scrollTop).toBe(1_500)
+  })
+})
+
+describe('ChatRenderBoundary', () => {
+  it('reports replay rendering with bounded context only', () => {
+    const calls = []
+    const error = new Error('private-replay-message')
+    const boundary = new ChatRenderBoundary({
+      renderContext: 'replay_render',
+      captureFailure: (...args) => calls.push(args),
+    })
+
+    boundary.componentDidCatch(error)
+
+    expect(calls).toEqual([[error, 'replay_render']])
   })
 })
