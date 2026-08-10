@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { animate, onScroll, remove, set, split, stagger } from 'animejs'
 import { NAVIGABLE_PATHS, normalisePath } from './routes.js'
 import { recordNavigation, returnLabels, returnStack } from './return-stack.js'
+import { bindProximityScope, bindProximityScopes } from './proximity-focus.js'
 
 function addRouteBreadcrumbs(body, pagePath) {
   const segments = normalisePath(pagePath).split('/').filter(Boolean)
@@ -420,73 +421,16 @@ export function StaticPage({ documentHtml, pagePath, title }) {
     }
   }, [documentHtml])
 
-  // How near the pointer is to the headline's operative word, published as
-  // --craft-focus for the stylesheet to dim the rest of the line against.
-  // Reaching for a word is a gradual thing, so the emphasis is gradual too:
-  // it builds as the reader closes in and relaxes as they drift off, rather
-  // than snapping on the moment the headline is touched anywhere.
-  useEffect(() => {
-    const title = containerRef.current?.querySelector('#hero-title')
-    const craft = title?.querySelector('.hook-craft')
-    if (!craft) return undefined
-    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return undefined
-
-    let frame = 0
-    let pointerX = 0
-    let pointerY = 0
-
-    const apply = () => {
-      frame = 0
-      const rect = craft.getBoundingClientRect()
-      // Distance to the nearest edge rather than to the centre, so the whole
-      // word reads as "here" instead of just the middle of it.
-      const dx = Math.max(rect.left - pointerX, 0, pointerX - rect.right)
-      const dy = Math.max(rect.top - pointerY, 0, pointerY - rect.bottom)
-      const distance = Math.hypot(dx, dy)
-      // Scaled off the word so the falloff holds at any type size, and wide
-      // enough to cover its neighbours: at twice the word's width the reach
-      // died inside the very next word, so resting on it barely dimmed it.
-      const radius = Math.max(rect.width * 3.2, 420)
-      const nearness = Math.max(0, 1 - distance / radius)
-
-      // Two responses to the same approach, shaped differently on purpose.
-      // The dimming runs on a smoothstep, which eases in at the far edge but
-      // climbs through the middle — a pointer resting on the words either
-      // side of "craft" is unmistakably in its orbit, so they should read as
-      // clearly recessed rather than faintly tinted.
-      const focus = nearness * nearness * (3 - 2 * nearness)
-      title.style.setProperty('--craft-focus', focus.toFixed(3))
-
-      // The rule holds off until the reader is clearly reaching for the word —
-      // otherwise a pointer drifting past leaves a stray nub of ink — and then
-      // draws on a smoothstep, easing in and settling out like a nib.
-      const reach = Math.max(0, (nearness - 0.18) / 0.82)
-      const rule = reach * reach * (3 - 2 * reach)
-      title.style.setProperty('--craft-rule', rule.toFixed(3))
-    }
-
-    const onPointerMove = (event) => {
-      pointerX = event.clientX
-      pointerY = event.clientY
-      if (!frame) frame = window.requestAnimationFrame(apply)
-    }
-
-    const release = () => {
-      window.cancelAnimationFrame(frame)
-      frame = 0
-      title.style.removeProperty('--craft-focus')
-      title.style.removeProperty('--craft-rule')
-    }
-
-    title.addEventListener('pointermove', onPointerMove)
-    title.addEventListener('pointerleave', release)
-
-    return () => {
-      title.removeEventListener('pointermove', onPointerMove)
-      title.removeEventListener('pointerleave', release)
-      release()
-    }
-  }, [documentHtml])
+  // How near the pointer is to the operative node of a section, published as
+  // --proximity-focus for the stylesheet to recede the rest against. Reaching
+  // for something is a gradual thing, so the emphasis is gradual too: it
+  // builds as the reader closes in and relaxes as they drift off, rather than
+  // snapping on the moment the section is touched anywhere.
+  //
+  // Declared in the markup — a [data-proximity-scope] section naming the
+  // [data-proximity-focus] node inside it — so any section can opt in without
+  // the component knowing what it is. The homepage headline is the first.
+  useEffect(() => bindProximityScopes(containerRef.current), [documentHtml])
 
   // The introduction inks itself in as the reader scrolls into it. The words
   // rest at a low ink level and come up to full strength in reading order,
@@ -500,12 +444,36 @@ export function StaticPage({ documentHtml, pagePath, title }) {
   // re-dimming an introduction on the way back up would turn it into
   // furniture — so a block retires its own scroll machinery once it lands.
   useLayoutEffect(() => {
-    const copy = containerRef.current?.querySelector('.bridge-copy')
-    if (!copy || hasRevealedIntro) return undefined
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
+    const container = containerRef.current
 
-    const blocks = [...copy.querySelectorAll('.bridge-block')]
-    if (!blocks.length) return undefined
+    // Sections that answer the pointer only once they have finished arriving.
+    // Reaching for a phrase that is still inking in would have the page
+    // pulling in two directions at once, so the proximity effect waits its
+    // turn — and waits for the whole introduction, because the scope spans
+    // both blocks: reaching for the greeting recedes the Athena line too, and
+    // a line cannot recede while it is still arriving.
+    const deferred = [...(container?.querySelectorAll('[data-proximity-when="revealed"]') ?? [])]
+    const bound = []
+    const settle = (within) => {
+      deferred
+        .filter((scope) => scope === within || within.contains(scope))
+        .forEach((scope) => bound.push(bindProximityScope(scope)))
+    }
+    const unbind = () => bound.forEach((teardown) => teardown())
+
+    // Every way the reveal declines to run leaves the words at full ink
+    // already, so there is nothing to wait for and the effect binds at once.
+    const copy = container?.querySelector('.bridge-copy')
+    const blocks = [...(copy?.querySelectorAll('.bridge-block') ?? [])]
+    const skipsReveal = !copy
+      || hasRevealedIntro
+      || !blocks.length
+      || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    if (skipsReveal) {
+      deferred.forEach((scope) => bound.push(bindProximityScope(scope)))
+      return unbind
+    }
 
     // The lines already sit at 65% ink from the stylesheet, so this
     // multiplies down against that rather than against full black: the
@@ -590,7 +558,11 @@ export function StaticPage({ documentHtml, pagePath, title }) {
         splitters.forEach((splitter) => splitter.revert())
         if (!didFill) return
         landed += 1
-        if (landed === blocks.length) hasRevealedIntro = true
+        if (landed < blocks.length) return
+        hasRevealedIntro = true
+        // After the last revert, so the introduction's own markup — and the
+        // focus nodes inside it — is back in place to be measured.
+        settle(copy)
       }
 
       onLanded = () => retire(true)
@@ -601,7 +573,10 @@ export function StaticPage({ documentHtml, pagePath, title }) {
       if (observer.completed) retire(true)
     })
 
-    return () => teardowns.forEach((retire) => retire())
+    return () => {
+      teardowns.forEach((retire) => retire())
+      unbind()
+    }
   }, [documentHtml])
 
   // Mobile-only lightbox for workspace captures, borrowed from Athena's

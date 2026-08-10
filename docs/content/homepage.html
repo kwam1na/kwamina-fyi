@@ -233,12 +233,15 @@
          layout — an underline cannot reflow what it sits beneath.
 
          Both this and the dimming below are driven by how close the pointer
-         is to the word, published by StaticPage. The rule gets its own
-         variable rather than sharing one: it holds back until the reader has
-         clearly committed, then draws quickly, where the dimming starts
-         earlier and stays gentle the whole way. */
+         is to the word. The headline declares itself a proximity scope and
+         marks "craft" as its focus; StaticPage publishes the nearness onto
+         the scope, so the same pair of variables works for any section that
+         opts in. The rule gets its own variable rather than sharing one: it
+         holds back until the reader has clearly committed, then draws
+         quickly, where the dimming starts earlier and stays gentle the whole
+         way. */
     .hook-craft {
-      background: linear-gradient(currentColor, currentColor) 0 88% / calc(var(--craft-rule, 0) * 100%) 0.045em no-repeat;
+      background: linear-gradient(currentColor, currentColor) 0 88% / calc(var(--proximity-rule, 0) * 100%) 0.045em no-repeat;
     }
 
     @media (hover: hover) and (pointer: fine) {
@@ -253,7 +256,7 @@
     }
 
     /* The rest of the line recedes as the reader closes in on the operative
-         word: --craft-focus is the pointer's nearness to "craft", set by
+         word: --proximity-focus is the pointer's nearness to "craft", set by
          StaticPage, and it drives how far the other words pull back. No
          proximity, no dimming — so the line only resolves to one word for
          someone actually reaching for it, and relaxes as they drift away.
@@ -265,7 +268,7 @@
          rule here would simply never apply. */
     .hero-word:not(.hook-craft) {
       color: color-mix(in srgb,
-          var(--ink) calc(100% - var(--craft-focus, 0) * 65%),
+          var(--ink) calc(100% - var(--proximity-focus, 0) * 65%),
           transparent);
     }
 
@@ -461,10 +464,21 @@
     }
 
     /* The bridge copy recedes so its emphasised phrases — and the Athena
-         link — carry the lines. */
+         link — carry the lines. It recedes further still as the reader closes
+         in on any of the three things it is actually introducing, the same
+         proximity move the headline makes, one level coarser: the
+         introduction's word spans are handed back to the stylesheet once it
+         has finished inking in, so what pulls back here is the line rather
+         than each word of it.
+
+         The scope is the whole introduction rather than a block, so both
+         blocks recede together around whichever phrase is being reached for —
+         one gesture across the section, not two that happen to look alike. */
     .bridge-line {
       margin: 0;
-      color: color-mix(in srgb, var(--ink) 65%, transparent);
+      color: color-mix(in srgb,
+          var(--ink) calc(65% - var(--proximity-focus, 0) * 40%),
+          transparent);
       font-size: 3.45rem;
       font-weight: 400;
       line-height: 1.1;
@@ -482,6 +496,33 @@
       font-weight: 500;
     }
 
+    /* Pinned to the line's resting ink rather than left to inherit it, so the
+         recede passes the name by and it holds while the rest pulls back. At
+         rest the two are the same colour and the line reads exactly as it did
+         before. The emphasis span is already pinned, a step brighter. */
+    /* The rule is the name's alone. "product-minded builder" is already
+         carrying serif italic at full ink; an underline on top of that is one
+         emphasis too many, where the name has nothing else marking it out. */
+    .bridge-name {
+      color: color-mix(in srgb, var(--ink) 65%, transparent);
+      background: linear-gradient(currentColor, currentColor) 0 90% / calc(var(--proximity-rule, 0) * 100%) 0.035em no-repeat;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+
+      /* Following the pointer, so the transition only smooths the gap between
+           frames — the character is in the falloff curves, not an easing. */
+      .bridge-line,
+      .bridge-name {
+        transition: background-size 160ms linear, color 160ms linear;
+      }
+    }
+
+    /* The third focus, and pinned like the other two, so the Athena line
+         holds while the rest of the introduction pulls back towards it. No
+         rule here: the link already carries its arrow, and an underline
+         arriving on approach would read as a hover state rather than as
+         marginalia. */
     .bridge-line a {
       color: var(--ink);
     }
@@ -765,9 +806,9 @@
     <section id="home" class="hero" aria-labelledby="hero-title">
       <div class="hero-inner">
         <div class="hero-copy">
-          <h1 id="hero-title">
+          <h1 id="hero-title" data-proximity-scope>
             <span class="hero-word" style="--word-index: 0">I</span>
-            <span class="hero-word hook-craft" style="--word-index: 1">craft</span>
+            <span class="hero-word hook-craft" style="--word-index: 1" data-proximity-focus>craft</span>
             <span class="hero-word" style="--word-index: 2">software</span>
             <span class="hero-word" style="--word-index: 3">with</span>
             <span class="hero-word" style="--word-index: 4">clarity</span>
@@ -780,18 +821,19 @@
 
     <section id="intro" class="bridge" aria-label="Introduction">
       <div class="section-inner bridge-layout">
-        <div class="bridge-copy">
+        <div class="bridge-copy" data-proximity-scope data-proximity-when="revealed"
+          data-proximity-radius-scale="1" data-proximity-min-radius="320">
           <div class="bridge-block">
-            <p class="bridge-line">Hi, I&rsquo;m Kwamina.</p>
+            <p class="bridge-line">Hi, I&rsquo;m <span class="bridge-name" data-proximity-focus>Kwamina</span>.</p>
             <p class="bridge-line">
               I&rsquo;m a
-              <span class="bridge-emphasis">product-minded builder</span>
+              <span class="bridge-emphasis" data-proximity-focus>product-minded builder</span>
               drawn to problems that reward curiosity, taste, and close attention to detail.
             </p>
           </div>
           <div class="bridge-block">
             <p class="bridge-line">
-              Right now, I&rsquo;m building <a href="work/athena/">Athena <svg class="inline-link-icon"
+              Right now, I&rsquo;m building <a href="work/athena/" data-proximity-focus>Athena <svg class="inline-link-icon"
                   xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                   aria-hidden="true">
