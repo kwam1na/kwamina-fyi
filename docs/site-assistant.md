@@ -296,12 +296,16 @@ account/key should retain an external spend cap and billing alert.
 - Pacing or caller limit: return 429 with reader-facing guidance.
 - Unknown page path: omit page context rather than passing untrusted text.
 - Transcript fetch failure/timeout: show explicit retry and new-chat recovery.
-- Provider stream failure: log raw server detail, show generic reader copy.
+- Provider stream failure: emit a fixed `MODEL_FAILED` outcome without the
+  provider message or request ID, and show generic reader copy.
 - Persistence failure before terminal success: retain already streamed text,
   expose the transport failure, release the reservation, and log
   `chat.persist_failed` without logging the replayable thread credential.
 - D1/rate-limit binding failure: log and fail open for availability.
 - Unknown API route: JSON 404; non-API routes remain static SPA behavior.
+
+The complete signal contract, provider readiness gates, alert ownership, and
+incident workflow live in [`docs/observability.md`](observability.md).
 
 Interrupted and failed streams never become ordinary transcript answers. This
 avoids feeding truncated output back to the model as authoritative history.
