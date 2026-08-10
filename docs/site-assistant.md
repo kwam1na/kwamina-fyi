@@ -284,6 +284,11 @@ traffic as evaluation data.
 
 ## Rate limiting and cost boundary
 
+Chat POSTs require `application/json`. Browser requests that carry an `Origin`
+must match the Worker origin. This forces cross-site browser attempts through a
+CORS preflight the Worker does not authorize and rejects foreign origins before
+body parsing, conversation access, or model work.
+
 Three controls protect the chat and transcript endpoints:
 
 1. a 1.5-second per-conversation pacing check;

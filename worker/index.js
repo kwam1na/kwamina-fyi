@@ -420,6 +420,15 @@ export async function handleChat(request, env, ctx, createStream = (options) => 
     return jsonResponse({ error: 'That is a lot of questions at once. Give it a minute and try again.' }, 429)
   }
 
+  const requestOrigin = request.headers.get('origin')
+  if (requestOrigin && requestOrigin !== new URL(request.url).origin) {
+    return jsonResponse({ error: 'Cross-origin chat requests are not allowed.' }, 403)
+  }
+  const mediaType = request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase()
+  if (mediaType !== 'application/json') {
+    return jsonResponse({ error: 'Chat requests must use JSON.' }, 415)
+  }
+
   if (!env.ANTHROPIC_API_KEY) {
     console.error(JSON.stringify({ event: 'chat.misconfigured', reason: 'missing ANTHROPIC_API_KEY' }))
     return jsonResponse({ error: 'The assistant is not configured yet.' }, 503)

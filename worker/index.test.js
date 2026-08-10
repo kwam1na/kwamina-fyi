@@ -334,6 +334,26 @@ describe('Worker request boundaries', () => {
     expect(first).toMatch(/^[a-f0-9]{20}$/)
     expect(first).not.toBe(second)
   })
+
+  it('rejects foreign browser origins and CORS-safelisted bodies before chat work', async () => {
+    const db = { prepare: () => { throw new Error('D1 should not be read') } }
+    const foreignOrigin = await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        origin: 'https://attacker.example',
+      },
+      body: '{}',
+    }), { DB: db }, {})
+    expect(foreignOrigin.status).toBe(403)
+
+    const simpleBody = await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain' },
+      body: '{}',
+    }), { DB: db }, {})
+    expect(simpleBody.status).toBe(415)
+  })
 })
 
 describe('Worker conversation capabilities', () => {
