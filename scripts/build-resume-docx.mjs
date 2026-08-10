@@ -247,7 +247,7 @@ const doc = new Document({
       heading('Skills'),
       para([
         { text: 'Application engineering: ', bold: true },
-        { text: 'TypeScript, Python, Node.js, Bun, React, Next.js · ' },
+        { text: 'TypeScript, Python, Node.js, React, Next.js, Tailwind, Tanstack · ' },
         { text: 'AI systems: ', bold: true },
         { text: 'Production LLM applications, grounding and context engineering, prompt engineering and guardrails, streaming, LLM evaluation, AI observability · ' },
         { text: 'Agent engineering: ', bold: true },
