@@ -107,3 +107,12 @@ describe('assistant contract', () => {
     expect(corpus).not.toContain('internet access in the field is not reliable enough')
   })
 })
+
+describe('Site and assistant boundary', () => {
+  // The assistant summarised the site as "a grounded assistant with no vector
+  // database", which describes itself rather than the thing it is a feature of.
+  it('separates what the site is from what the assistant is', () => {
+    expect(INSTRUCTIONS).toContain('you are one feature of it')
+    expect(INSTRUCTIONS).toContain('Never describe the site as being an assistant')
+  })
+})

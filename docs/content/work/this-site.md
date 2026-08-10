@@ -1,17 +1,20 @@
 # How this site is built
 
-This document describes kwamina.fyi itself, including the assistant answering questions on it. It exists for the assistant: there is no public page for this material, so answer from it in prose rather than pointing anywhere.
+This document describes kwamina.fyi itself, including the assistant answering questions on it. There is no public page for this material.
 
-kwamina.fyi is built with the same discipline it describes: a grounded assistant, streaming that never lies about persistence, and privacy enforced by construction. It is one of Kwamina's projects alongside Athena, and it demonstrates how he architects systems.
+kwamina.fyi is Kwamina's personal site: his writing, the Athena work, and his background. It is one of his projects alongside Athena, and the way it is built shows how he architects systems.
 
-## The system at a glance
+The assistant answering questions here is one feature of that site, not the site itself. The published pages are the site; the assistant is a layer over them that reads what they say and answers questions about them. Remove it and the pages still render, read, and deploy exactly as they do now. The engineering decisions below are decisions taken while building the site, not a description of what the site is.
+
+## The site at a glance
 
 - Frontend: React 19, TanStack Router, Vite, Tailwind CSS.
 - Backend: one Cloudflare Worker serving both the static site and the chat API, with D1 as the conversation database.
-- Assistant: Claude, grounded in the site's published pages, no vector store.
 - Toolchain: Bun, pinned, with every dependency resolved to an exact version.
 - Verification: around 200 tests on every build, plus a production canary every six hours.
-- Deploys: database migrations are gated to the main branch, so preview builds can never touch the production schema.
+- Deploys: pushing to the main branch builds and deploys, with database migrations gated to that branch so preview builds never touch the production schema.
+- Security headers: a content security policy generated at build time, so the hash covering the site's one inline script is recomputed from the built page rather than maintained by hand.
+- The assistant, one feature among these: Claude, grounded in the published pages, with no vector store.
 
 ## The assistant: grounded by construction, not by retrieval
 
@@ -21,7 +24,7 @@ Retrieval was considered and deferred. The corpus is measured against an explici
 
 The same restraint governs the answers. The assistant's instructions keep each claim inside its source boundary: a technology used at one job is never transferred onto another, and a metric is never rounded or reattributed.
 
-## Durability: the stream never signals success before the record exists
+## Durability: the chat stream never signals success before the record exists
 
 Responses stream token by token, so the reader sees words immediately. The finished signal is withheld until the turn is committed to the database: latency stays low where the reader can feel it, and the one signal that implies durability is never sent ahead of the durable write.
 
