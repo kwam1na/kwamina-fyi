@@ -51,8 +51,9 @@ const defaultObservability = createWorkerObservability({
   captureIssue: (event) => console.error(JSON.stringify(event)),
 })
 
-const operationResponse = (response, operationId) => {
+const operationResponse = (response, operationId, runKind) => {
   response.headers.set('x-operation-id', operationId)
+  if (runKind === 'synthetic') response.headers.set('x-run-kind', 'synthetic')
   return response
 }
 
@@ -739,12 +740,18 @@ export default {
     const observability = env.WORKER_OBSERVABILITY ?? defaultObservability
     const now = typeof env.WORKER_NOW === 'function' ? env.WORKER_NOW : () => Date.now()
     const operationStartedAt = operationId ? now() : null
+    const runKind = isChatRoute
+      && env.CHAT_EVALUATION_TOKEN
+      && request.headers.get('x-chat-evaluation-token') === env.CHAT_EVALUATION_TOKEN
+      ? 'synthetic'
+      : undefined
 
     try {
       if (isChatRoute && request.method === 'POST') {
         return operationResponse(
           await handleChat(request, env, ctx, operationId, observability, now, operationStartedAt),
           operationId,
+          runKind,
         )
       }
 
@@ -780,7 +787,7 @@ export default {
       }
 
       const response = jsonResponse({ error: 'Not found.' }, 404)
-      return operationId ? operationResponse(response, operationId) : response
+      return operationId ? operationResponse(response, operationId, runKind) : response
     } catch (error) {
       if (operationId) {
         observability.captureActionableIssue(requestObservation(request, env, operationId, 'assistant.issue', {
@@ -790,7 +797,7 @@ export default {
         }))
       }
       const response = jsonResponse({ error: 'Something went wrong. Please try again.' }, 500)
-      return operationId ? operationResponse(response, operationId) : response
+      return operationId ? operationResponse(response, operationId, runKind) : response
     }
   },
 }

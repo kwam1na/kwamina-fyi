@@ -451,18 +451,43 @@ describe('Worker request boundaries', () => {
     }
     const { env } = observedEnv({
       ANTHROPIC_API_KEY: 'configured',
+      CHAT_EVALUATION_TOKEN: 'server-evaluation-secret',
       DB: successfulChatDb(),
       WORKER_CHAT: () => stream(),
     })
     const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
-      method: 'POST', body: JSON.stringify(validChatBody()),
+      method: 'POST',
+      headers: { 'x-chat-evaluation-token': 'server-evaluation-secret' },
+      body: JSON.stringify(validChatBody()),
     }), env, {})
 
     expect(response.status).toBe(200)
     expect(response.headers.get('x-operation-id')).toMatch(/^op_[a-f0-9]{32}$/)
+    expect(response.headers.get('x-run-kind')).toBe('synthetic')
     const payload = await response.text()
     expect(payload).toContain('Hello')
     expect(payload).toContain('RUN_FINISHED')
+    expect(payload).not.toContain('server-evaluation-secret')
+  })
+
+  it.each([
+    ['missing', undefined],
+    ['invalid', 'forged-evaluation-token'],
+  ])('ignores public synthetic classification when the evaluation token is %s', async (_name, token) => {
+    const { env, logs, issues } = observedEnv({
+      ANTHROPIC_API_KEY: 'configured',
+      CHAT_EVALUATION_TOKEN: 'server-evaluation-secret',
+    })
+    const headers = token ? { 'x-chat-evaluation-token': token } : {}
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ source: 'evaluation', runKind: 'synthetic' }),
+    }), env, {})
+
+    expect(response.status).toBe(400)
+    expect(response.headers.get('x-run-kind')).toBeNull()
+    expect(JSON.stringify([...logs, ...issues])).not.toContain(token ?? 'server-evaluation-secret')
   })
 
   it('classifies a matching arbitrary D1 error message as persistence failure', async () => {
