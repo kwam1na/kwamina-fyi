@@ -1,8 +1,11 @@
 #!/bin/sh
-# Renders docs/resume.docx (the editable resume source) to public/docs/resume.pdf,
-# the file the site serves. Uses Pages, the renderer available on this machine —
-# its docx import drops tab stops and paragraph borders, which is why the source
-# lays out title/date rows and heading rules as tables.
+# Renders docs/resume.docx to public/docs/resume.pdf, the file the site serves.
+# Uses Pages, the renderer available on this machine; scripts/build-resume-docx.mjs
+# documents the import quirks the .docx is laid out around.
+#
+# Deliberately does not regenerate the .docx first. Chaining the two would make
+# this command silently discard any edit made in Word or Pages, so rebuilding
+# from source stays an explicit `bun run resume:docx`.
 set -eu
 
 root="$(cd "$(dirname "$0")/.." && pwd)"

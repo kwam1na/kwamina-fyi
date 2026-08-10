@@ -7,6 +7,7 @@
   "scripts": {
     "corpus": "node scripts/build-corpus.mjs",
     "resume": "sh scripts/build-resume.sh",
+    "resume:docx": "node scripts/build-resume-docx.mjs",
     "dev": "bun run corpus && vite",
     "build": "bun run corpus && vite build",
     "build:ci": "bun run build && sh scripts/ci-migrate.sh",
@@ -34,6 +35,7 @@
   "devDependencies": {
     "@sentry/vite-plugin": "5.4.0",
     "@tailwindcss/vite": "4.3.2",
+    "docx": "9.7.1",
     "react-test-renderer": "19.2.8",
     "tailwindcss": "4.3.2",
     "wrangler": "4.114.0"
