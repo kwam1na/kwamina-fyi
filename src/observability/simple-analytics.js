@@ -1,44 +1,40 @@
 import { canonicalRoute, sanitizeWebVitalMetric, UNRECOGNIZED_ROUTE } from './contract.js'
 
 const DEFAULT_MAX_QUEUE = 32
+const SIMPLE_ANALYTICS_HOSTNAME = 'kwamina.fyi'
+const SIMPLE_ANALYTICS_USER_AGENT = 'Kwam-FYI/1.0 (+https://kwamina.fyi/)'
 
-const SCRIPT_ATTRIBUTES = Object.freeze({
-  'data-auto-collect': 'false',
-  'data-ignore-metrics': 'referrer,utm,country,session,timeonpage,scrolled,useragent,screensize,viewportsize,language',
-})
+export const SIMPLE_ANALYTICS_ENDPOINT = 'https://queue.simpleanalyticscdn.com/events'
 
-export const SIMPLE_ANALYTICS_SCRIPT_CONFIG = Object.freeze({
-  src: 'https://scripts.simpleanalyticscdn.com/sri/v11.js',
-  async: true,
-  referrerPolicy: 'no-referrer',
-  integrity: 'sha256-hkUzQr3zWmSDnmhw95ZmQSZ949upqD+ML9ejiN0UIIE= sha384-rfv15RJy1bBYZ1Mf4xizO26jorXb2myipCvHXy4rkG0SuEET96S+m0sTzu5vfbSI sha512-lQzjzTbOxHLwkZGDVMf4V0sm8v2Mrqm73IvKcXBftJ/MSZKQC4/jwKFToxT+3IVAVWQzLplSNHH8gM5d7b1BSg==',
-  crossOrigin: 'anonymous',
-  attributes: SCRIPT_ATTRIBUTES,
-})
-
-export function loadSimpleAnalyticsScript(document = globalThis.document) {
-  return new Promise((resolve, reject) => {
-    const script = document?.createElement?.('script')
-    if (!script || typeof document?.head?.append !== 'function') {
-      reject(new Error('Simple Analytics script could not be appended'))
-      return
-    }
-
-    script.src = SIMPLE_ANALYTICS_SCRIPT_CONFIG.src
-    script.async = SIMPLE_ANALYTICS_SCRIPT_CONFIG.async
-    script.referrerPolicy = SIMPLE_ANALYTICS_SCRIPT_CONFIG.referrerPolicy
-    script.integrity = SIMPLE_ANALYTICS_SCRIPT_CONFIG.integrity
-    script.crossOrigin = SIMPLE_ANALYTICS_SCRIPT_CONFIG.crossOrigin
-    for (const [name, value] of Object.entries(SCRIPT_ATTRIBUTES)) script.setAttribute(name, value)
-    script.onload = resolve
-    script.onerror = () => reject(new Error('Simple Analytics script failed to load'))
-    document.head.append(script)
-  })
+function doNotTrackEnabled(target) {
+  return [target?.navigator?.doNotTrack, target?.doNotTrack, target?.navigator?.msDoNotTrack]
+    .some((value) => Number.parseInt(value, 10) === 1)
 }
 
-function safePageView(input) {
+function initialPageViewIsUnique(target) {
+  const referrer = target?.document?.referrer
+  if (!referrer) return true
+
+  try {
+    return new URL(referrer).hostname !== SIMPLE_ANALYTICS_HOSTNAME
+  } catch {
+    return false
+  }
+}
+
+function safePageView(input, unique) {
   const route = canonicalRoute(input?.route)
-  return route === UNRECOGNIZED_ROUTE ? null : { type: 'pageview', route }
+  if (route === UNRECOGNIZED_ROUTE) return null
+
+  return {
+    type: 'pageview',
+    hostname: SIMPLE_ANALYTICS_HOSTNAME,
+    event: 'pageview',
+    path: route,
+    unique,
+    https: true,
+    ua: SIMPLE_ANALYTICS_USER_AGENT,
+  }
 }
 
 function safeWebVital(input) {
@@ -48,89 +44,90 @@ function safeWebVital(input) {
   if (!metric) return null
 
   return {
-    type: 'web_vital',
-    route,
-    ...metric,
+    type: 'event',
+    hostname: SIMPLE_ANALYTICS_HOSTNAME,
+    event: 'web_vital',
+    path: route,
+    ua: SIMPLE_ANALYTICS_USER_AGENT,
+    metadata: { route, ...metric },
   }
 }
 
-function ready(target) {
-  return Boolean(target?.sa_loaded)
-    && typeof target?.sa_pageview === 'function'
-    && typeof target?.sa_event === 'function'
+export function createSimpleAnalyticsTransport({ target = globalThis } = {}) {
+  const fetcher = typeof target?.fetch === 'function' ? target.fetch.bind(target) : null
+
+  return (payload) => {
+    if (!fetcher) return Promise.reject(new Error('Simple Analytics transport unavailable'))
+
+    let request
+    try {
+      request = fetcher(SIMPLE_ANALYTICS_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        credentials: 'omit',
+        keepalive: true,
+        referrerPolicy: 'no-referrer',
+      })
+    } catch (error) {
+      return Promise.reject(error)
+    }
+
+    return Promise.resolve(request).then((response) => {
+      if (!response?.ok) throw new Error('Simple Analytics rejected telemetry')
+    })
+  }
 }
 
 export function createSimpleAnalyticsProvider({
   target = globalThis,
-  document = target?.document,
-  loadScript = loadSimpleAnalyticsScript,
+  send = createSimpleAnalyticsTransport({ target }),
   maxQueue = DEFAULT_MAX_QUEUE,
 } = {}) {
   const queueLimit = Number.isInteger(maxQueue) && maxQueue >= 0 ? maxQueue : DEFAULT_MAX_QUEUE
   const queue = []
-  let state = 'idle'
+  let state = doNotTrackEnabled(target) || typeof send !== 'function' ? 'failed' : 'ready'
   let draining = false
+  let outstanding = 0
+  let firstPageView = true
 
   const fail = () => {
     state = 'failed'
     queue.length = 0
-  }
-
-  const send = (event) => {
-    if (event.type === 'pageview') return target.sa_pageview(event.route)
-    return target.sa_event('web_vital', {
-      route: event.route,
-      name: event.name,
-      value: event.value,
-      rating: event.rating,
-    })
+    outstanding = 0
+    draining = false
   }
 
   const drain = () => {
     if (draining || state !== 'ready') return
-    const event = queue.shift()
-    if (!event) return
+    const payload = queue.shift()
+    if (!payload) return
 
     draining = true
     Promise.resolve()
-      .then(() => send(event))
+      .then(() => send(payload))
       .then(() => {
         draining = false
+        outstanding -= 1
         drain()
       })
       .catch(fail)
   }
 
-  const startLoading = () => {
-    state = 'loading'
-    let loading
-    try {
-      loading = loadScript(document)
-    } catch {
-      fail()
-      return
-    }
-    Promise.resolve(loading)
-      .then(() => {
-        if (!ready(target)) throw new Error('Simple Analytics globals unavailable')
-        state = 'ready'
-        drain()
-      })
-      .catch(fail)
-  }
-
-  const accept = (event) => {
-    if (!event || state === 'failed') return false
-    if (queue.length >= queueLimit) return false
-    queue.push(event)
-    if (state === 'idle') startLoading()
-    else if (state === 'ready') drain()
+  const accept = (payload) => {
+    if (!payload || state !== 'ready' || outstanding >= queueLimit) return false
+    queue.push(payload)
+    outstanding += 1
+    drain()
     return true
   }
 
   return Object.freeze({
     recordPageView(input) {
-      return accept(safePageView(input))
+      const payload = safePageView(input, firstPageView && initialPageViewIsUnique(target))
+      const accepted = accept(payload)
+      if (accepted) firstPageView = false
+      return accepted
     },
     recordWebVital(input) {
       return accept(safeWebVital(input))

@@ -114,12 +114,17 @@ sends one pageview for each completed canonical route change. Consecutive
 rerenders, query/hash-only changes, unknown paths, failed navigation, local
 development, and preview origins do not emit pageviews.
 
-The provider script is loaded lazily only on the exact production origin after
-the readiness flag is enabled. Automatic collection is disabled. The embed
-configuration ignores referrer, UTM, country, session, time-on-page, scroll,
-user-agent, screen, viewport, and language metrics; no fallback pixel is used.
-Calls are bounded, ordered, and fail open so analytics cannot delay rendering
-or navigation.
+Collection starts only on the exact production origin after the readiness flag
+is enabled. The client does not execute the provider script: it sends the
+documented pageview and event JSON envelopes directly to Simple Analytics. Each
+envelope is rebuilt from an allowlist containing the fixed site hostname and
+user-agent label, canonical path, HTTPS flag, and entry/non-entry bit. Web Vital
+events additionally contain only the bounded metric name, value, and rating.
+Query strings, hashes, referrers, UTM fields, session or visitor IDs, real
+user-agent and client-hint values, country, time-on-page, scroll, screen,
+viewport, language, and arbitrary metadata are never included. Requests omit
+credentials and referrer data. Calls are bounded, ordered, DNT-aware, and fail
+open so analytics cannot delay rendering or navigation.
 
 CLS, INP, and LCP are document-lifecycle measurements. One bounded set is
 attributed to the first canonical route rendered for that document; SPA route
