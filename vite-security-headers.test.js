@@ -43,7 +43,8 @@ describe('static asset security headers', () => {
   it('admits the script hash and refuses inline script by omission', () => {
     const policy = contentSecurityPolicy({ scriptHashes: ["'sha256-abc123'"] })
 
-    expect(directive(policy, 'script-src')).toBe("script-src 'self' 'sha256-abc123'")
+    expect(directive(policy, 'script-src'))
+      .toBe("script-src 'self' https://static.cloudflareinsights.com 'sha256-abc123'")
     expect(policy).not.toContain("script-src 'self' 'unsafe-inline'")
     expect(policy).toContain("object-src 'none'")
     expect(policy).toContain("frame-ancestors 'none'")
@@ -53,8 +54,12 @@ describe('static asset security headers', () => {
   it('permits exactly the origins the site loads and sends to', () => {
     const policy = contentSecurityPolicy({ browserDsn: 'https://public@o1.ingest.sentry.io/42' })
 
-    expect(directive(policy, 'connect-src'))
-      .toBe(`connect-src 'self' ${providerOrigin(SIMPLE_ANALYTICS_ENDPOINT)} https://o1.ingest.sentry.io`)
+    expect(directive(policy, 'connect-src')).toBe([
+      "connect-src 'self'",
+      providerOrigin(SIMPLE_ANALYTICS_ENDPOINT),
+      'https://cloudflareinsights.com',
+      'https://o1.ingest.sentry.io',
+    ].join(' '))
     expect(directive(policy, 'font-src')).toBe("font-src 'self' https://fonts.gstatic.com")
     expect(directive(policy, 'style-src')).toContain('https://fonts.googleapis.com')
     expect(directive(policy, 'media-src')).toBe("media-src 'self'")
@@ -63,8 +68,19 @@ describe('static asset security headers', () => {
   it('names no reporting origin when the provider is not configured', () => {
     const policy = contentSecurityPolicy({})
 
-    expect(directive(policy, 'connect-src')).toBe(`connect-src 'self' ${providerOrigin(SIMPLE_ANALYTICS_ENDPOINT)}`)
+    expect(directive(policy, 'connect-src'))
+      .toBe(`connect-src 'self' ${providerOrigin(SIMPLE_ANALYTICS_ENDPOINT)} https://cloudflareinsights.com`)
     expect(policy).not.toContain('sentry')
+  })
+
+  // The beacon is injected at the edge into browser-shaped requests only, so
+  // neither a local build nor a curl surfaces it. It reached production once
+  // already and was blocked there; these two origins are what unblock it.
+  it('admits the edge-injected analytics beacon on both of its origins', () => {
+    const policy = contentSecurityPolicy({})
+
+    expect(directive(policy, 'script-src')).toContain('https://static.cloudflareinsights.com')
+    expect(directive(policy, 'connect-src')).toContain('https://cloudflareinsights.com')
   })
 
   it('writes one Cloudflare rule covering every path', () => {

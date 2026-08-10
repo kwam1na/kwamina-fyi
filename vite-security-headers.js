@@ -18,6 +18,15 @@ import { SIMPLE_ANALYTICS_ENDPOINT } from './src/observability/simple-analytics.
 // 'self'; only inline bodies need a hash.
 const INLINE_SCRIPT = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi
 
+// Cloudflare Web Analytics. Named literally because, unlike every other origin
+// in this policy, it is injected into the HTML at the edge rather than
+// imported by the app: there is no module here to derive it from, and it
+// appears only in responses to browser-shaped requests, so neither the local
+// build nor a plain curl reveals it. The script serves from one host and posts
+// its measurements to another, hence two entries.
+const CLOUDFLARE_ANALYTICS_SCRIPT = 'https://static.cloudflareinsights.com'
+const CLOUDFLARE_ANALYTICS_BEACON = 'https://cloudflareinsights.com'
+
 export function inlineScriptHashes(html) {
   const hashes = []
   for (const [, body] of html.matchAll(INLINE_SCRIPT)) {
@@ -40,11 +49,16 @@ export function contentSecurityPolicy({ scriptHashes = [], browserDsn = '' } = {
   // Derived from the module that actually sends the telemetry rather than
   // repeated here, so a changed endpoint cannot be silently refused by a policy
   // still naming the old one.
-  const connect = ["'self'", providerOrigin(SIMPLE_ANALYTICS_ENDPOINT), providerOrigin(browserDsn)]
+  const connect = [
+    "'self'",
+    providerOrigin(SIMPLE_ANALYTICS_ENDPOINT),
+    CLOUDFLARE_ANALYTICS_BEACON,
+    providerOrigin(browserDsn),
+  ]
 
   return [
     "default-src 'self'",
-    ["script-src 'self'", ...scriptHashes].join(' '),
+    ["script-src 'self'", CLOUDFLARE_ANALYTICS_SCRIPT, ...scriptHashes].join(' '),
     // Authored pages carry style attributes and the app sets inline styles, so
     // styles cannot be hashed the way the one inline script can. Scripts keep a
     // strict policy regardless: naming a hash makes a browser ignore
