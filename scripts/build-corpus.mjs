@@ -23,6 +23,10 @@ const SOURCES = [
   { file: 'docs/content/work/athena/local-first-pos/index.html', path: ROUTE_PATHS.localFirstPos, title: 'Athena — local-first point of sale' },
   { file: 'docs/content/work/athena/agent-ready-repository/index.html', path: ROUTE_PATHS.agentReadyRepository, title: 'Athena — agent-ready repository' },
   { file: 'docs/content/work/athena/read-optimized-reporting/index.html', path: ROUTE_PATHS.readOptimizedReporting, title: 'Athena — read-optimized reporting' },
+  // Assistant-facing only: describes the site's own engineering, including the
+  // assistant itself. Deliberately unpublished — path: null keeps it out of the
+  // page allowlist, and the emitted document says it has no public page.
+  { file: 'docs/content/work/this-site.md', path: null, title: 'How this site is built' },
 ]
 
 // Past this the system prompt stops being obviously cheap to send on every
