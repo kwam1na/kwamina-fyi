@@ -13,9 +13,9 @@ const html = (body) => new Response(body, {
   headers: { 'content-type': 'text/html; charset=utf-8' },
 })
 
-const json = (body, status) => new Response(JSON.stringify(body), {
+const json = (body, status, headers = {}) => new Response(JSON.stringify(body), {
   status,
-  headers: { 'content-type': 'application/json' },
+  headers: { 'content-type': 'application/json', ...headers },
 })
 
 const workflow = readFileSync(new URL('../.github/workflows/production-observability.yml', import.meta.url), 'utf8')
@@ -90,6 +90,13 @@ describe('production contract checks', () => {
     expect(failure).toEqual(new SmokeFailure('Unknown API contract check failed.'))
     expect(String(failure)).not.toContain(privateBody)
   })
+
+  it('bounds a stalled page request with a content-free failure', async () => {
+    await expect(runContractChecks({
+      fetcher: () => new Promise(() => {}),
+      timeoutMs: 5,
+    })).rejects.toEqual(new SmokeFailure('Homepage contract check failed.'))
+  })
 })
 
 describe('assistant production canary', () => {
@@ -120,7 +127,10 @@ describe('assistant production canary', () => {
             { role: 'user', content: 'private-prompt-content' },
             { role: 'assistant', content: responseContent },
           ],
-        }, 200)
+        }, 200, {
+          'x-operation-id': 'op_0123456789abcdef0123456789abcdef',
+          'x-run-kind': 'synthetic',
+        })
       }
       throw new Error('unexpected request')
     }
@@ -142,7 +152,7 @@ describe('assistant production canary', () => {
       messages: [expect.objectContaining({ id: '12345678-1234-4123-8123-123456789abc' })],
     }))
     expect(requests[1].url).toBe(`${PRODUCTION_ORIGIN}/api/chat/transcript`)
-    expect(requests[1].init.headers['x-chat-evaluation-token']).toBeUndefined()
+    expect(requests[1].init.headers['x-chat-evaluation-token']).toBe(token)
     expect(requests[1].init.headers['x-chat-thread-id']).toBe('12345678-1234-4123-8123-123456789abc')
     const output = logs.join('\n')
     expect(output).not.toContain(token)
@@ -218,6 +228,28 @@ describe('assistant production canary', () => {
       .rejects.toEqual(new SmokeFailure('Assistant stream contract invalid.'))
     expect(calls).toBe(1)
   })
+
+  it('bounds a stalled SSE stream and skips replay', async () => {
+    let calls = 0
+    const fetcher = async () => {
+      calls += 1
+      return new Response(new ReadableStream({ start() {} }), {
+        status: 200,
+        headers: {
+          'content-type': 'text/event-stream',
+          'x-operation-id': 'op_0123456789abcdef0123456789abcdef',
+          'x-run-kind': 'synthetic',
+        },
+      })
+    }
+
+    await expect(runAssistantCanary({
+      token: 'configured',
+      fetcher,
+      timeoutMs: 5,
+    })).rejects.toEqual(new SmokeFailure('Assistant stream contract invalid.'))
+    expect(calls).toBe(1)
+  })
 })
 
 describe('production smoke orchestration', () => {
@@ -234,7 +266,10 @@ describe('production smoke orchestration', () => {
       if (url.endsWith('/api/chat/transcript') && !init.headers['x-chat-thread-id']) return json({}, 400)
       if (url.endsWith('/api/chat')) return sse([{ type: 'RUN_FINISHED' }])
       if (url.endsWith('/api/chat/transcript')) {
-        return json({ messages: [{ role: 'user' }, { role: 'assistant' }] }, 200)
+        return json({ messages: [{ role: 'user' }, { role: 'assistant' }] }, 200, {
+          'x-operation-id': 'op_0123456789abcdef0123456789abcdef',
+          'x-run-kind': 'synthetic',
+        })
       }
       if (url === heartbeatUrl) return new Response('', { status: 204 })
       throw new Error('unexpected request')

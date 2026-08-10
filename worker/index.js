@@ -38,6 +38,7 @@ const CALLER_WINDOW_MS = 60_000
 const CALLER_WINDOW_LIMIT = 15
 const TURN_RESERVATION_STALE_MS = 120_000
 const THREAD_ID_PATTERN = /^[A-Za-z0-9-]{8,100}$/
+const GENERIC_RUN_ERROR_MESSAGE = 'The assistant could not answer that just now. Please try again.'
 
 class ReservationSupersededError extends Error {
   constructor() {
@@ -78,6 +79,12 @@ const jsonResponse = (body, status = 200, headers = {}) =>
     status,
     headers: { 'content-type': 'application/json', ...headers },
   })
+
+const safeRunError = (code) => ({
+  type: 'RUN_ERROR',
+  code,
+  message: GENERIC_RUN_ERROR_MESSAGE,
+})
 
 export async function readJsonBody(request) {
   const declaredLength = Number(request.headers.get('content-length'))
@@ -251,6 +258,7 @@ export function finalizeAssistantStream(source, {
   onFailed,
   onLifecycle = () => {},
   now = () => Date.now(),
+  signal,
   startedAt = now(),
 }) {
   let text = ''
@@ -265,6 +273,12 @@ export function finalizeAssistantStream(source, {
     } catch {
       // Lifecycle observation is best-effort and cannot alter the stream.
     }
+  }
+
+  const settleCancellation = async () => {
+    settled = true
+    await onFailed('stream_cancelled')
+    record('stream', 'STREAM_CANCELLED')
   }
 
   async function* passthrough() {
@@ -287,11 +301,7 @@ export function finalizeAssistantStream(source, {
           settled = true
           await onFailed('provider_error')
           record('stream', 'MODEL_FAILED')
-          yield {
-            type: 'RUN_ERROR',
-            code: 'MODEL_FAILED',
-            message: 'The assistant could not answer that just now. Please try again.',
-          }
+          yield safeRunError('MODEL_FAILED')
           return
         }
 
@@ -300,7 +310,7 @@ export function finalizeAssistantStream(source, {
             settled = true
             await onFailed('empty_completion')
             record('stream', 'EMPTY_COMPLETION')
-            yield { type: 'RUN_ERROR', message: 'The assistant could not answer that just now. Please try again.' }
+            yield safeRunError('EMPTY_COMPLETION')
             return
           }
 
@@ -310,27 +320,42 @@ export function finalizeAssistantStream(source, {
           persisting = false
           record('persistence', 'PERSISTENCE_COMMITTED', now() - startedAt)
           settled = true
-          yield event
-          const durableDurationMs = now() - startedAt
-          record('terminal', 'TERMINAL_EMITTED', durableDurationMs)
-          record('terminal', 'SERVER_DURABLE_SUCCESS', durableDurationMs)
+          try {
+            yield event
+          } finally {
+            const durableDurationMs = now() - startedAt
+            record('terminal', 'TERMINAL_EMITTED', durableDurationMs)
+            record('terminal', 'SERVER_DURABLE_SUCCESS', durableDurationMs)
+          }
           return
         }
 
         yield event
+      }
+      if (signal?.aborted) {
+        await settleCancellation()
+        return
       }
       exhausted = true
       await onFailed('source_exhausted')
       record('stream', 'SOURCE_EXHAUSTED')
     } catch (error) {
       if (!settled) {
+        if (signal?.aborted) {
+          await settleCancellation()
+          return
+        }
         settled = true
         if (persisting) {
           await onFailed('persistence_failed')
+          record('persistence', 'PERSISTENCE_FAILED')
+          yield safeRunError('PERSISTENCE_FAILED')
         } else {
           await onFailed('source_failed')
           record('stream', 'SOURCE_FAILED')
+          yield safeRunError('SOURCE_FAILED')
         }
+        return
       }
       throw error
     } finally {
@@ -581,10 +606,12 @@ async function handleChat(request, env, ctx, operationId, observability, now, st
   })
 
   let stream
+  const abortController = new AbortController()
   try {
     const runChat = env.WORKER_CHAT ?? chat
     stream = runChat({
       adapter: createAnthropicChat(MODEL, env.ANTHROPIC_API_KEY),
+      abortController,
       threadId,
     // Server-side history is authoritative: the client's copy is replayed for
     // rendering, but what the model sees comes from D1, so a tampered or stale
@@ -662,7 +689,7 @@ async function handleChat(request, env, ctx, operationId, observability, now, st
     },
     onFailed: () => releaseTurn(env.DB, threadId, turnToken),
     onLifecycle: ({ stage, outcomeCode, durationMs }) => {
-      const actionable = ['MODEL_FAILED', 'EMPTY_COMPLETION', 'SOURCE_FAILED', 'SOURCE_EXHAUSTED', 'STREAM_CANCELLED'].includes(outcomeCode)
+      const actionable = ['MODEL_FAILED', 'EMPTY_COMPLETION', 'SOURCE_FAILED', 'SOURCE_EXHAUSTED'].includes(outcomeCode)
       observe(actionable ? 'captureActionableIssue' : 'record', actionable ? 'assistant.issue' : 'assistant.operation', {
         stage,
         outcomeCode,
@@ -671,10 +698,11 @@ async function handleChat(request, env, ctx, operationId, observability, now, st
       })
     },
     now,
+    signal: abortController.signal,
     startedAt,
   })
 
-  return toServerSentEventsResponse(events)
+  return toServerSentEventsResponse(events, { abortController })
 }
 
 export async function loadTranscript(db, threadId) {
@@ -740,7 +768,7 @@ export default {
     const observability = env.WORKER_OBSERVABILITY ?? defaultObservability
     const now = typeof env.WORKER_NOW === 'function' ? env.WORKER_NOW : () => Date.now()
     const operationStartedAt = operationId ? now() : null
-    const runKind = isChatRoute
+    const runKind = (isChatRoute || isTranscriptRoute)
       && conversationSource({
         expectedToken: env.CHAT_EVALUATION_TOKEN,
         providedToken: request.headers.get('x-chat-evaluation-token'),
@@ -766,19 +794,20 @@ export default {
           observability.recordExpectedRefusal(requestObservation(request, env, operationId, 'assistant.refused', {
             stage: 'admission', outcomeCode: 'RATE_LIMITED', statusClass: '4xx',
           }))
-          return operationResponse(jsonResponse({ error: 'Too many requests. Give it a minute and try again.' }, 429), operationId)
+          return operationResponse(jsonResponse({ error: 'Too many requests. Give it a minute and try again.' }, 429), operationId, runKind)
         }
         const threadId = request.headers.get('x-chat-thread-id')
         if (!threadId || !THREAD_ID_PATTERN.test(threadId)) {
           observability.recordExpectedRefusal(requestObservation(request, env, operationId, 'assistant.refused', {
             stage: 'admission', outcomeCode: 'ADMISSION_REJECTED', statusClass: '4xx',
           }))
-          return operationResponse(jsonResponse({ error: 'Malformed request.' }, 400), operationId)
+          return operationResponse(jsonResponse({ error: 'Malformed request.' }, 400), operationId, runKind)
         }
         try {
           return operationResponse(
             await handleTranscript(env, threadId, request, operationId, observability),
             operationId,
+            runKind,
           )
         } catch (error) {
           observability.captureActionableIssue(requestObservation(request, env, operationId, 'assistant.issue', {

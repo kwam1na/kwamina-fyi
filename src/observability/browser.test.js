@@ -187,6 +187,27 @@ describe('browser failure capture', () => {
     expect(JSON.stringify(captures)).not.toContain(SENTINEL)
   })
 
+  it('attributes delayed global failures to the route where they occurred', () => {
+    const captures = []
+    const scheduled = []
+    let route = '/about'
+    const reporter = createBrowserFailureReporter(configuredClient(captures), () => ({
+      route,
+      environment: 'production',
+      release: 'kwamina-fyi@0123456789abcdef',
+    }), {
+      schedule: (callback) => scheduled.push(callback) - 1,
+      cancel() {},
+    })
+    const error = new Error(SENTINEL)
+
+    reporter.observeGlobalFailure(error)
+    route = '/work/athena'
+    scheduled.splice(0).forEach((callback) => callback())
+
+    expect(captures[0][1].tags.route).toBe('/about')
+  })
+
   it('excludes user cancellation and expected chat API refusals', () => {
     const cancellation = new Error('cancelled by visitor')
     cancellation.name = 'AbortError'

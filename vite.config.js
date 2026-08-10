@@ -4,6 +4,7 @@ import { sentryVitePlugin } from '@sentry/vite-plugin'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { observabilityBuildSettings } from './vite-observability.js'
 
 const WORKER_PORT = 8787
 
@@ -59,63 +60,19 @@ function workerDevServer() {
   }
 }
 
-const RELEASE_PATTERN = /^kwamina-fyi@[a-f0-9]{12,64}$/
-
-export function observabilityBuildSettings(env) {
-  if (env.OBSERVABILITY_PROVIDER_READY !== 'true') {
-    return {
-      enabled: false,
-      release: 'unreleased',
-      browserDsn: '',
-      sourcemap: false,
-      plugin: null,
-    }
-  }
-
-  const required = [
-    'SENTRY_AUTH_TOKEN',
-    'SENTRY_ORG',
-    'SENTRY_PROJECT',
-    'SENTRY_RELEASE',
-    'VITE_SENTRY_DSN',
-  ]
-  const missing = required.filter((name) => !env[name])
-  if (missing.length > 0) {
-    throw new Error(`Observability release configuration is incomplete: ${missing.join(', ')}`)
-  }
-  if (!RELEASE_PATTERN.test(env.SENTRY_RELEASE)) {
-    throw new Error('SENTRY_RELEASE must be an immutable kwamina-fyi@<git-sha> value.')
-  }
-
-  return {
-    enabled: true,
-    release: env.SENTRY_RELEASE,
-    browserDsn: env.VITE_SENTRY_DSN,
-    sourcemap: 'hidden',
-    plugin: sentryVitePlugin({
-      authToken: env.SENTRY_AUTH_TOKEN,
-      org: env.SENTRY_ORG,
-      project: env.SENTRY_PROJECT,
-      release: { name: env.SENTRY_RELEASE },
-      sourcemaps: {
-        assets: './dist/assets/**',
-        filesToDeleteAfterUpload: './dist/**/*.map',
-      },
-      telemetry: false,
-    }),
-  }
-}
-
 export default defineConfig(({ mode }) => {
   const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env }
   const observability = observabilityBuildSettings(env)
+  const sentryPlugin = observability.sentryPluginOptions
+    ? sentryVitePlugin(observability.sentryPluginOptions)
+    : null
 
   return {
   plugins: [
     react(),
     tailwindcss(),
     workerDevServer(),
-    ...(observability.plugin ? [observability.plugin] : []),
+    ...(sentryPlugin ? [sentryPlugin] : []),
   ],
   define: {
     __APP_RELEASE__: JSON.stringify(observability.release),

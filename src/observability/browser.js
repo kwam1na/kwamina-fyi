@@ -167,8 +167,10 @@ export function createBrowserFailureReporter(client, baseContext = {}, schedulin
     },
     observeGlobalFailure(value, details = {}) {
       if (isExpectedBrowserFailure(value)) return
+      const observedContext = context()
       if (!hasObjectIdentity(value)) {
         schedule(() => capture(value, {
+          ...observedContext,
           stage: 'render',
           outcomeCode: 'UNHANDLED_FAILURE',
           ...details,
@@ -179,6 +181,7 @@ export function createBrowserFailureReporter(client, baseContext = {}, schedulin
       const token = schedule(() => {
         pending.delete(value)
         capture(value, {
+          ...observedContext,
           stage: 'render',
           outcomeCode: 'UNHANDLED_FAILURE',
           ...details,

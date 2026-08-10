@@ -470,6 +470,31 @@ describe('Worker request boundaries', () => {
     expect(payload).not.toContain('server-evaluation-secret')
   })
 
+  it('records visitor stream cancellation without escalating a server issue', async () => {
+    async function* stream(signal) {
+      yield { type: 'TEXT_MESSAGE_CONTENT', messageId: 'assistant-1', delta: 'Partial' }
+      await new Promise((resolve) => signal.addEventListener('abort', resolve, { once: true }))
+    }
+    const { env, logs, issues } = observedEnv({
+      ANTHROPIC_API_KEY: 'configured',
+      DB: successfulChatDb(),
+      WORKER_CHAT: ({ abortController }) => stream(abortController.signal),
+    })
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST', body: JSON.stringify(validChatBody()),
+    }), env, {})
+    const reader = response.body.getReader()
+
+    await reader.read()
+    await reader.cancel()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(logs).toContainEqual(expect.objectContaining({
+      event: 'assistant.operation', outcomeCode: 'STREAM_CANCELLED', statusClass: '2xx',
+    }))
+    expect(issues).not.toContainEqual(expect.objectContaining({ outcomeCode: 'STREAM_CANCELLED' }))
+  })
+
   it.each([
     ['missing', undefined],
     ['invalid', 'forged-evaluation-token'],
@@ -503,9 +528,31 @@ describe('Worker request boundaries', () => {
     const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
       method: 'POST', body: JSON.stringify(validChatBody()),
     }), env, {})
-    await response.text()
+    const payload = await response.text()
     expect(issues).toContainEqual(expect.objectContaining({ outcomeCode: 'PERSISTENCE_FAILED' }))
     expect(issues).not.toContainEqual(expect.objectContaining({ outcomeCode: 'RESERVATION_SUPERSEDED' }))
+    expect(payload).toContain('PERSISTENCE_FAILED')
+    expect(payload).not.toContain('reservation was superseded in a driver message')
+  })
+
+  it('replaces a thrown source error before the SSE response encodes it', async () => {
+    async function* stream() {
+      yield { type: 'TEXT_MESSAGE_CONTENT', messageId: 'assistant-1', delta: 'Partial' }
+      throw new Error('private-provider-transport-sentinel')
+    }
+    const { env, issues } = observedEnv({
+      ANTHROPIC_API_KEY: 'configured',
+      DB: successfulChatDb(),
+      WORKER_CHAT: () => stream(),
+    })
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST', body: JSON.stringify(validChatBody()),
+    }), env, {})
+    const payload = await response.text()
+
+    expect(payload).toContain('SOURCE_FAILED')
+    expect(payload).not.toContain('private-provider-transport-sentinel')
+    expect(issues).toContainEqual(expect.objectContaining({ outcomeCode: 'SOURCE_FAILED' }))
   })
 })
 
@@ -668,8 +715,7 @@ describe('Worker stream finalization', () => {
       })) {}
     }
 
-    if (reason === 'source_failed') await expect(consume()).rejects.toThrow('provider transport failed')
-    else await consume()
+    await consume()
 
     expect(releases).toEqual([reason])
     expect(lifecycle).toContainEqual({ stage: 'stream', outcomeCode })
@@ -694,14 +740,37 @@ describe('Worker stream finalization', () => {
       yield { type: 'TEXT_MESSAGE_CONTENT', delta: 'answer' }
       yield { type: 'RUN_FINISHED' }
     }
+    const events = []
     const consume = async () => {
-      for await (const _event of finalizeAssistantStream(completeSource(), {
+      for await (const event of finalizeAssistantStream(completeSource(), {
         onFinished: async () => { throw new Error('D1 failed') },
         onFailed: async (failure) => persistenceReleases.push(failure),
-      })) {}
+      })) events.push(event)
     }
-    await expect(consume()).rejects.toThrow('D1 failed')
+    await consume()
     expect(persistenceReleases).toEqual(['persistence_failed'])
+    expect(events.at(-1)).toEqual(expect.objectContaining({ type: 'RUN_ERROR', code: 'PERSISTENCE_FAILED' }))
+    expect(JSON.stringify(events)).not.toContain('D1 failed')
+  })
+
+  it('records durable success when the consumer stops after receiving the terminal event', async () => {
+    const lifecycle = []
+    async function* source() {
+      yield { type: 'TEXT_MESSAGE_CONTENT', delta: 'answer' }
+      yield { type: 'RUN_FINISHED' }
+    }
+    const events = finalizeAssistantStream(source(), {
+      onFinished: async () => {},
+      onFailed: async () => {},
+      onLifecycle: (event) => lifecycle.push(event),
+    })
+
+    await events.next()
+    expect((await events.next()).value).toEqual({ type: 'RUN_FINISHED' })
+    await events.return()
+
+    expect(lifecycle).toContainEqual(expect.objectContaining({ outcomeCode: 'TERMINAL_EMITTED' }))
+    expect(lifecycle).toContainEqual(expect.objectContaining({ outcomeCode: 'SERVER_DURABLE_SUCCESS' }))
   })
 })
 
@@ -792,6 +861,29 @@ describe('Worker transcript replay', () => {
     expect(response.status).toBe(200)
     expect(response.headers.get('x-operation-id')).toMatch(/^op_[a-f0-9]{32}$/)
     expect(logs.map(({ outcomeCode: code }) => code)).toEqual(['REPLAY_STARTED', outcomeCode])
+  })
+
+  it('acknowledges and classifies token-authorized synthetic replay', async () => {
+    const { env, logs } = observedEnv({
+      CHAT_EVALUATION_TOKEN: 'server-evaluation-secret',
+      DB: {
+        prepare() {
+          return { bind() { return this }, async all() { return { results: [] } } }
+        },
+      },
+    })
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat/transcript', {
+      headers: {
+        'x-chat-evaluation-token': 'server-evaluation-secret',
+        'x-chat-thread-id': 'thread-123',
+      },
+    }), env, {})
+
+    expect(response.headers.get('x-run-kind')).toBe('synthetic')
+    expect(logs).toEqual(expect.arrayContaining([
+      expect.objectContaining({ source: 'evaluation', runKind: 'synthetic' }),
+    ]))
+    expect(JSON.stringify(logs)).not.toContain('server-evaluation-secret')
   })
 
   it('captures D1 replay failures without leaking the thrown message', async () => {

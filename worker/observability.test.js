@@ -2,9 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import {
   createOperationId,
   createWorkerObservability,
-  sanitizeWorkerSentryIssue,
   sanitizeWorkerEvent,
-  workerSentryOptions,
 } from './observability.js'
 
 const SENTINEL = 'private-chat-text-7c3f'
@@ -134,45 +132,4 @@ describe('Worker observability contract', () => {
     }).outcomeCode).toBeUndefined()
   })
 
-  it('keeps Worker Sentry disabled until ready and rebuilds issues from fixed fields', () => {
-    expect(workerSentryOptions({
-      OBSERVABILITY_PROVIDER_READY: 'false',
-      SENTRY_DSN: 'https://public@example.invalid/1',
-      SENTRY_RELEASE: 'kwamina-fyi-worker@0123456789abcdef',
-    })).toBeNull()
-
-    const options = workerSentryOptions({
-      OBSERVABILITY_PROVIDER_READY: 'true',
-      SENTRY_DSN: 'https://public@example.invalid/1',
-      SENTRY_RELEASE: 'kwamina-fyi-worker@0123456789abcdef',
-    })
-    expect(options).toMatchObject({
-      defaultIntegrations: false,
-      enableLogs: false,
-      tracesSampleRate: 0,
-      maxBreadcrumbs: 0,
-      sendClientReports: false,
-    })
-
-    const issue = sanitizeWorkerSentryIssue({
-      release: options.release,
-      environment: options.environment,
-      message: SENTINEL,
-      request: { url: `https://kwamina.fyi/api/chat?q=${SENTINEL}`, headers: { cookie: SENTINEL } },
-      user: { id: SENTINEL, ip_address: '203.0.113.7' },
-      extra: { prompt: SENTINEL },
-      breadcrumbs: [{ message: SENTINEL }],
-      tags: {
-        event: 'assistant.issue',
-        route: '/api/chat',
-        stage: 'persistence',
-        outcomeCode: 'PERSISTENCE_FAILED',
-      },
-    })
-    expect(issue.exception.values[0]).toEqual({
-      type: 'PERSISTENCE_FAILED',
-      value: 'PERSISTENCE_FAILED',
-    })
-    expect(JSON.stringify(issue)).not.toContain(SENTINEL)
-  })
 })

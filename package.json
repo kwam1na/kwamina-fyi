@@ -16,7 +16,6 @@
     "db:migrate:remote": "wrangler d1 migrations apply kwamina-fyi-chat --remote"
   },
   "dependencies": {
-    "@sentry/cloudflare": "10.69.0",
     "@sentry/react": "10.69.0",
     "@tanstack/ai": "0.43.1",
     "@tanstack/ai-anthropic": "0.16.4",

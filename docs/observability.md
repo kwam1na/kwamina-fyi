@@ -11,7 +11,7 @@ persistence, or reservation cleanup.
 | --- | --- | --- | --- |
 | Browser render failures | Sentry browser project | Scrubbed root, live-chat, replay, global error, and rejection capture implemented | Disabled until readiness checklist passes |
 | Worker and assistant lifecycle | Cloudflare Workers Observability | Structured, allowlisted lifecycle and refusal events implemented | Application logs enabled; request traces remain disabled pending envelope proof |
-| Actionable Worker issues | Sentry Worker project | Sanitizer and disabled-by-default options implemented | Forwarding remains disabled pending request-envelope proof |
+| Actionable Worker issues | Cloudflare Workers Observability | Fixed, scrubbed issue outcomes are emitted with lifecycle logs | Sentry forwarding is not wired pending request-envelope proof |
 | Visits and Core Web Vitals | Analytics provider | Not enabled | Provider decision required; see “Visits decision” |
 | Public and deep availability | Sentry uptime plus GitHub Actions | Repository smoke client and scheduled workflow | Monitors, protected environment, and alert routes require account configuration |
 
@@ -86,7 +86,7 @@ links only—never event payloads or request details.
 Record the following in private delivery evidence before enabling collection:
 
 - Cloudflare account/zone and Workers Observability view owner;
-- Sentry organization, browser project, Worker project, uptime monitor, and
+- Sentry organization, browser project, planned Worker project, uptime monitor, and
   least-privilege members;
 - MFA posture, maximum retention, quotas, deletion/offboarding process, and
   notification destination for each provider;

@@ -5,11 +5,3 @@ ANTHROPIC_API_KEY=sk-ant-...
 # Dedicated HMAC key for privacy-preserving D1 rate-limit identifiers.
 # Generate a random value; do not reuse the Anthropic or evaluation secret.
 RATE_LIMIT_KEY=replace-with-a-random-secret
-
-# Observability stays disabled until provider retention, access, quotas,
-# ownership, alerting, and privacy-envelope checks are recorded.
-OBSERVABILITY_PROVIDER_READY=false
-
-# Configure these as Worker secrets only after the readiness gate passes.
-SENTRY_DSN=https://public-key@o0.ingest.sentry.io/0
-SENTRY_RELEASE=kwamina-fyi-worker@0123456789abcdef
