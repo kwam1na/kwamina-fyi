@@ -53,9 +53,11 @@ describe('Simple Analytics script loader', () => {
     expect(Object.isFrozen(SIMPLE_ANALYTICS_SCRIPT_CONFIG)).toBe(true)
     expect(document.appended).toHaveLength(1)
     expect(script.tagName).toBe('script')
-    expect(script.src).toBe('https://scripts.simpleanalyticscdn.com/latest.js')
+    expect(script.src).toBe('https://scripts.simpleanalyticscdn.com/sri/v11.js')
     expect(script.async).toBe(true)
     expect(script.referrerPolicy).toBe('no-referrer')
+    expect(script.integrity).toBe(SIMPLE_ANALYTICS_SCRIPT_CONFIG.integrity)
+    expect(script.crossOrigin).toBe('anonymous')
     expect(script.attributes.get('data-auto-collect')).toBe('false')
     expect(script.attributes.get('data-ignore-metrics')).toBe(
       'referrer,utm,country,session,timeonpage,scrolled,useragent,screensize,viewportsize,language',
@@ -273,5 +275,38 @@ describe('Simple Analytics provider adapter', () => {
         : ['/'])
       if (outcome === 'reject') expect(provider.recordPageView({ route: '/about' })).toBe(false)
     }
+  })
+
+  it('bounds ready-state events behind a never-settling provider call', async () => {
+    const loading = deferred()
+    const firstSend = deferred()
+    const calls = []
+    const target = {
+      sa_loaded: true,
+      sa_pageview(route) {
+        calls.push(route)
+        if (calls.length === 1) return firstSend.promise
+      },
+      sa_event() {},
+    }
+    const provider = createSimpleAnalyticsProvider({
+      target,
+      maxQueue: 2,
+      loadScript: () => loading.promise,
+    })
+
+    expect(provider.recordPageView({ route: '/' })).toBe(true)
+    loading.resolve()
+    await settle()
+
+    expect(calls).toEqual(['/'])
+    expect(provider.recordPageView({ route: '/about' })).toBe(true)
+    expect(provider.recordPageView({ route: '/work/athena' })).toBe(true)
+    expect(provider.recordPageView({ route: '/work/athena/local-first-pos' })).toBe(false)
+    expect(calls).toEqual(['/'])
+
+    firstSend.resolve()
+    await settle()
+    expect(calls).toEqual(['/', '/about', '/work/athena'])
   })
 })

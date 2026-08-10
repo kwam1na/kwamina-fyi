@@ -8,9 +8,11 @@ const SCRIPT_ATTRIBUTES = Object.freeze({
 })
 
 export const SIMPLE_ANALYTICS_SCRIPT_CONFIG = Object.freeze({
-  src: 'https://scripts.simpleanalyticscdn.com/latest.js',
+  src: 'https://scripts.simpleanalyticscdn.com/sri/v11.js',
   async: true,
   referrerPolicy: 'no-referrer',
+  integrity: 'sha256-hkUzQr3zWmSDnmhw95ZmQSZ949upqD+ML9ejiN0UIIE= sha384-rfv15RJy1bBYZ1Mf4xizO26jorXb2myipCvHXy4rkG0SuEET96S+m0sTzu5vfbSI sha512-lQzjzTbOxHLwkZGDVMf4V0sm8v2Mrqm73IvKcXBftJ/MSZKQC4/jwKFToxT+3IVAVWQzLplSNHH8gM5d7b1BSg==',
+  crossOrigin: 'anonymous',
   attributes: SCRIPT_ATTRIBUTES,
 })
 
@@ -25,6 +27,8 @@ export function loadSimpleAnalyticsScript(document = globalThis.document) {
     script.src = SIMPLE_ANALYTICS_SCRIPT_CONFIG.src
     script.async = SIMPLE_ANALYTICS_SCRIPT_CONFIG.async
     script.referrerPolicy = SIMPLE_ANALYTICS_SCRIPT_CONFIG.referrerPolicy
+    script.integrity = SIMPLE_ANALYTICS_SCRIPT_CONFIG.integrity
+    script.crossOrigin = SIMPLE_ANALYTICS_SCRIPT_CONFIG.crossOrigin
     for (const [name, value] of Object.entries(SCRIPT_ATTRIBUTES)) script.setAttribute(name, value)
     script.onload = resolve
     script.onerror = () => reject(new Error('Simple Analytics script failed to load'))
@@ -65,7 +69,7 @@ export function createSimpleAnalyticsProvider({
   const queueLimit = Number.isInteger(maxQueue) && maxQueue >= 0 ? maxQueue : DEFAULT_MAX_QUEUE
   const queue = []
   let state = 'idle'
-  let delivery = Promise.resolve()
+  let draining = false
 
   const fail = () => {
     state = 'failed'
@@ -82,11 +86,19 @@ export function createSimpleAnalyticsProvider({
     })
   }
 
-  const deliver = (event) => {
-    delivery = delivery.then(() => {
-      if (state !== 'ready') return
-      return send(event)
-    }).catch(fail)
+  const drain = () => {
+    if (draining || state !== 'ready') return
+    const event = queue.shift()
+    if (!event) return
+
+    draining = true
+    Promise.resolve()
+      .then(() => send(event))
+      .then(() => {
+        draining = false
+        drain()
+      })
+      .catch(fail)
   }
 
   const startLoading = () => {
@@ -102,20 +114,17 @@ export function createSimpleAnalyticsProvider({
       .then(() => {
         if (!ready(target)) throw new Error('Simple Analytics globals unavailable')
         state = 'ready'
-        while (queue.length > 0) deliver(queue.shift())
+        drain()
       })
       .catch(fail)
   }
 
   const accept = (event) => {
     if (!event || state === 'failed') return false
-    if (state === 'ready') {
-      deliver(event)
-      return true
-    }
     if (queue.length >= queueLimit) return false
     queue.push(event)
     if (state === 'idle') startLoading()
+    else if (state === 'ready') drain()
     return true
   }
 
