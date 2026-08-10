@@ -118,8 +118,9 @@ Collection starts only on the exact production origin after the readiness flag
 is enabled. The client does not execute the provider script: it sends the
 documented pageview and event JSON envelopes directly to Simple Analytics. Each
 envelope is rebuilt from an allowlist containing the fixed site hostname and
-user-agent label, canonical path, HTTPS flag, and entry/non-entry bit. Web Vital
-events additionally contain only the bounded metric name, value, and rating.
+user-agent label, canonical path, HTTPS flag, entry/non-entry bit, and a coarse
+mobile/desktop layout class derived from the site's responsive breakpoint. Web
+Vital events additionally contain only the bounded metric name, value, and rating.
 Query strings, hashes, referrers, UTM fields, session or visitor IDs, real
 user-agent and client-hint values, country, time-on-page, scroll, screen,
 viewport, language, and arbitrary metadata are never included. Requests omit

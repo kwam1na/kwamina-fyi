@@ -1,6 +1,7 @@
 import { canonicalRoute, sanitizeWebVitalMetric, UNRECOGNIZED_ROUTE } from './contract.js'
 
 const DEFAULT_MAX_QUEUE = 32
+const MOBILE_QUERY = '(max-width: 620px)'
 const SIMPLE_ANALYTICS_HOSTNAME = 'kwamina.fyi'
 const SIMPLE_ANALYTICS_USER_AGENT = 'Kwam-FYI/1.0 (+https://kwamina.fyi/)'
 
@@ -22,7 +23,15 @@ function initialPageViewIsUnique(target) {
   }
 }
 
-function safePageView(input, unique) {
+function isMobileLayout(target) {
+  try {
+    return target?.matchMedia?.(MOBILE_QUERY)?.matches === true
+  } catch {
+    return false
+  }
+}
+
+function safePageView(input, unique, mobile) {
   const route = canonicalRoute(input?.route)
   if (route === UNRECOGNIZED_ROUTE) return null
 
@@ -33,11 +42,12 @@ function safePageView(input, unique) {
     path: route,
     unique,
     https: true,
+    mobile,
     ua: SIMPLE_ANALYTICS_USER_AGENT,
   }
 }
 
-function safeWebVital(input) {
+function safeWebVital(input, mobile) {
   const route = canonicalRoute(input?.route)
   if (route === UNRECOGNIZED_ROUTE) return null
   const metric = sanitizeWebVitalMetric(input)
@@ -48,6 +58,7 @@ function safeWebVital(input) {
     hostname: SIMPLE_ANALYTICS_HOSTNAME,
     event: 'web_vital',
     path: route,
+    mobile,
     ua: SIMPLE_ANALYTICS_USER_AGENT,
     metadata: { route, ...metric },
   }
@@ -90,6 +101,7 @@ export function createSimpleAnalyticsProvider({
   let draining = false
   let outstanding = 0
   let firstPageView = true
+  const mobile = isMobileLayout(target)
 
   const fail = () => {
     state = 'failed'
@@ -124,13 +136,13 @@ export function createSimpleAnalyticsProvider({
 
   return Object.freeze({
     recordPageView(input) {
-      const payload = safePageView(input, firstPageView && initialPageViewIsUnique(target))
+      const payload = safePageView(input, firstPageView && initialPageViewIsUnique(target), mobile)
       const accepted = accept(payload)
       if (accepted) firstPageView = false
       return accepted
     },
     recordWebVital(input) {
-      return accept(safeWebVital(input))
+      return accept(safeWebVital(input, mobile))
     },
   })
 }

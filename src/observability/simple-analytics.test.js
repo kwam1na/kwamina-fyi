@@ -26,6 +26,7 @@ function productionTarget(overrides = {}) {
     document: { referrer: '' },
     fetch() {},
     location: { origin: 'https://kwamina.fyi' },
+    matchMedia: () => ({ matches: false }),
     navigator: {},
     ...overrides,
   }
@@ -95,6 +96,7 @@ describe('Simple Analytics provider adapter', () => {
       path: '/about',
       unique: true,
       https: true,
+      mobile: false,
       ua: 'Kwam-FYI/1.0 (+https://kwamina.fyi/)',
     }])
 
@@ -109,6 +111,7 @@ describe('Simple Analytics provider adapter', () => {
         path: '/about',
         unique: true,
         https: true,
+        mobile: false,
         ua: 'Kwam-FYI/1.0 (+https://kwamina.fyi/)',
       },
       {
@@ -116,6 +119,7 @@ describe('Simple Analytics provider adapter', () => {
         hostname: 'kwamina.fyi',
         event: 'web_vital',
         path: '/about',
+        mobile: false,
         ua: 'Kwam-FYI/1.0 (+https://kwamina.fyi/)',
         metadata: { route: '/about', name: 'CLS', value: 0.124, rating: 'good' },
       },
@@ -126,10 +130,34 @@ describe('Simple Analytics provider adapter', () => {
         path: '/work/athena/local-first-pos',
         unique: false,
         https: true,
+        mobile: false,
         ua: 'Kwam-FYI/1.0 (+https://kwamina.fyi/)',
       },
     ])
     expect(JSON.stringify(payloads)).not.toContain(SENTINEL)
+  })
+
+  it('keeps only the coarse mobile or desktop layout class', async () => {
+    for (const [matches, expected] of [[true, true], [false, false]]) {
+      const payloads = []
+      const provider = createSimpleAnalyticsProvider({
+        target: productionTarget({
+          innerWidth: matches ? 390 : 1440,
+          matchMedia(query) {
+            expect(query).toBe('(max-width: 620px)')
+            return { matches }
+          },
+        }),
+        send: (payload) => payloads.push(payload),
+      })
+
+      provider.recordPageView({ route: '/' })
+      provider.recordWebVital({ route: '/', name: 'LCP', value: 1, rating: 'good' })
+      await settle()
+
+      expect(payloads.map(({ mobile }) => mobile)).toEqual([expected, expected])
+      expect(JSON.stringify(payloads)).not.toContain(String(matches ? 390 : 1440))
+    }
   })
 
   it('marks only a direct or external document entry as unique', async () => {
