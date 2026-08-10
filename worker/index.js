@@ -14,7 +14,14 @@ import { chat, toServerSentEventsResponse, chatParamsFromRequestBody } from '@ta
 import { createAnthropicChat } from '@tanstack/ai-anthropic'
 import corpus, { CORPUS_VERSION, PAGES } from '../src/generated/corpus.js'
 import { normalisePath } from '../src/routes.js'
-import { INSTRUCTIONS, MODEL, assistantTurnMetadata } from './chat-contract.js'
+import {
+  INSTRUCTIONS,
+  MODEL,
+  assistantTurnMetadata,
+  conversationSource,
+  deploymentEnvironment,
+} from './chat-contract.js'
+import { createOperationId, createWorkerObservability } from './observability.js'
 
 // Sized above the contract's word budgets with headroom: two site transcripts
 // showed answers truncated mid-sentence at the old 640 cap.
@@ -31,6 +38,39 @@ const CALLER_WINDOW_MS = 60_000
 const CALLER_WINDOW_LIMIT = 15
 const TURN_RESERVATION_STALE_MS = 120_000
 const THREAD_ID_PATTERN = /^[A-Za-z0-9-]{8,100}$/
+
+class ReservationSupersededError extends Error {
+  constructor() {
+    super('Turn reservation was superseded before persistence.')
+    this.name = 'ReservationSupersededError'
+  }
+}
+
+const defaultObservability = createWorkerObservability({
+  log: (event) => console.log(JSON.stringify(event)),
+  captureIssue: (event) => console.error(JSON.stringify(event)),
+})
+
+const operationResponse = (response, operationId) => {
+  response.headers.set('x-operation-id', operationId)
+  return response
+}
+
+function requestObservation(request, env, operationId, event, extra = {}) {
+  const source = conversationSource({
+    expectedToken: env.CHAT_EVALUATION_TOKEN,
+    providedToken: request.headers.get('x-chat-evaluation-token'),
+  })
+  return {
+    event,
+    route: request.url,
+    environment: deploymentEnvironment(request.url),
+    source,
+    runKind: source === 'evaluation' ? 'synthetic' : 'human',
+    operationId,
+    ...extra,
+  }
+}
 
 const jsonResponse = (body, status = 200, headers = {}) =>
   new Response(JSON.stringify(body), {
@@ -205,15 +245,37 @@ export async function persistTurn(db, turn) {
 // while ensuring a close/reopen after RUN_FINISHED cannot replay stale history.
 // Failed or interrupted runs release their reservation and are never stored as
 // successful assistant messages.
-export function finalizeAssistantStream(source, { onFinished, onFailed }) {
+export function finalizeAssistantStream(source, {
+  onFinished,
+  onFailed,
+  onLifecycle = () => {},
+  now = () => Date.now(),
+  startedAt = now(),
+}) {
   let text = ''
   let settled = false
+  let exhausted = false
+  let sawContent = false
+  let persisting = false
+
+  const record = (stage, outcomeCode, durationMs) => {
+    try {
+      onLifecycle({ stage, outcomeCode, ...(durationMs === undefined ? {} : { durationMs }) })
+    } catch {
+      // Lifecycle observation is best-effort and cannot alter the stream.
+    }
+  }
 
   async function* passthrough() {
+    record('model_start', 'MODEL_STARTED')
     try {
       for await (const event of source) {
         if (event?.type === 'TEXT_MESSAGE_CONTENT' && typeof event.delta === 'string') {
           text += event.delta
+          if (!sawContent && event.delta.length > 0) {
+            sawContent = true
+            record('first_content', 'CONTENT_STARTED', now() - startedAt)
+          }
         }
 
         // A failed run arrives as an event on the stream, not a rejected
@@ -222,26 +284,60 @@ export function finalizeAssistantStream(source, { onFinished, onFailed }) {
         // one in the logs and hand the reader something they can act on.
         if (event?.type === 'RUN_ERROR') {
           settled = true
-          await onFailed()
-          console.error(JSON.stringify({
-            event: 'chat.run_error',
-            code: event.code,
-            message: event.message,
-          }))
-          yield { ...event, message: 'The assistant could not answer that just now. Please try again.', rawEvent: undefined }
+          await onFailed('provider_error')
+          record('stream', 'MODEL_FAILED')
+          yield {
+            type: 'RUN_ERROR',
+            code: 'MODEL_FAILED',
+            message: 'The assistant could not answer that just now. Please try again.',
+          }
           return
         }
 
         if (event?.type === 'RUN_FINISHED') {
+          if (!text.trim()) {
+            settled = true
+            await onFailed('empty_completion')
+            record('stream', 'EMPTY_COMPLETION')
+            yield { type: 'RUN_ERROR', message: 'The assistant could not answer that just now. Please try again.' }
+            return
+          }
+
+          record('stream', 'STREAM_COMPLETED', now() - startedAt)
+          persisting = true
+          await onFinished(text)
+          persisting = false
+          record('persistence', 'PERSISTENCE_COMMITTED', now() - startedAt)
           settled = true
-          if (text.trim()) await onFinished(text)
-          else await onFailed()
+          yield event
+          const durableDurationMs = now() - startedAt
+          record('terminal', 'TERMINAL_EMITTED', durableDurationMs)
+          record('terminal', 'SERVER_DURABLE_SUCCESS', durableDurationMs)
+          return
         }
 
         yield event
       }
+      exhausted = true
+      await onFailed('source_exhausted')
+      record('stream', 'SOURCE_EXHAUSTED')
+    } catch (error) {
+      if (!settled) {
+        settled = true
+        if (persisting) {
+          await onFailed('persistence_failed')
+        } else {
+          await onFailed('source_failed')
+          record('stream', 'SOURCE_FAILED')
+        }
+      }
+      throw error
     } finally {
-      if (!settled) await onFailed()
+      if (!settled && !exhausted) {
+        settled = true
+        await onFailed('stream_cancelled')
+        record('stream', 'STREAM_CANCELLED')
+      }
     }
   }
 
@@ -287,7 +383,15 @@ export async function callerKey(request, secret) {
 // request — the gap the per-conversation limits leave open — is bounded by
 // these and nothing else. Anyone behind a shared address shares the count,
 // which is why the ceiling sits well above a reading human's pace.
-async function isRateLimited(request, env, ctx) {
+async function isRateLimited(request, env, ctx, onIssue = () => {}) {
+  const reportIssue = (outcomeCode) => {
+    try {
+      onIssue(outcomeCode)
+    } catch {
+      // Rate-limit diagnostics never alter admission behavior.
+    }
+  }
+
   if (env.CHAT_RATE_LIMITER) {
     try {
       const address = request.headers.get('cf-connecting-ip')
@@ -296,7 +400,7 @@ async function isRateLimited(request, env, ctx) {
         if (!success) return true
       }
     } catch (error) {
-      console.error(JSON.stringify({ event: 'chat.ratelimit_binding_failed', message: String(error) }))
+      reportIssue('RATE_LIMIT_BINDING_FAILED')
     }
   }
 
@@ -323,7 +427,7 @@ async function isRateLimited(request, env, ctx) {
   } catch (error) {
     // Losing the counter must not take the assistant down with it; the binding
     // above still stands between an attacker and the model.
-    console.error(JSON.stringify({ event: 'chat.ratelimit_db_failed', message: String(error) }))
+    reportIssue('RATE_LIMIT_D1_FAILED')
     return false
   }
 }
@@ -357,15 +461,28 @@ export function withPageMarker(content, pagePath) {
     : content
 }
 
-async function handleChat(request, env, ctx) {
+async function handleChat(request, env, ctx, operationId, observability, now, startedAt) {
+  const observe = (method, event, extra) => observability[method](
+    requestObservation(request, env, operationId, event, extra),
+  )
+
   // Ahead of every other check, including configuration: a flood should be
   // turned away cheaply whatever state the Worker is in.
-  if (await isRateLimited(request, env, ctx)) {
+  if (await isRateLimited(request, env, ctx, (outcomeCode) => {
+    observe('captureActionableIssue', 'assistant.issue', {
+      stage: 'admission', outcomeCode, statusClass: '5xx',
+    })
+  })) {
+    observe('recordExpectedRefusal', 'assistant.refused', {
+      stage: 'admission', outcomeCode: 'RATE_LIMITED', statusClass: '4xx',
+    })
     return jsonResponse({ error: 'That is a lot of questions at once. Give it a minute and try again.' }, 429)
   }
 
   if (!env.ANTHROPIC_API_KEY) {
-    console.error(JSON.stringify({ event: 'chat.misconfigured', reason: 'missing ANTHROPIC_API_KEY' }))
+    observe('captureActionableIssue', 'assistant.issue', {
+      stage: 'admission', outcomeCode: 'CONFIGURATION_MISSING', statusClass: '5xx',
+    })
     return jsonResponse({ error: 'The assistant is not configured yet.' }, 503)
   }
 
@@ -374,12 +491,21 @@ async function handleChat(request, env, ctx) {
     params = await chatParamsFromRequestBody(await readJsonBody(request))
   } catch (error) {
     if (error instanceof RangeError) {
+      observe('recordExpectedRefusal', 'assistant.refused', {
+        stage: 'admission', outcomeCode: 'REQUEST_TOO_LARGE', statusClass: '4xx',
+      })
       return jsonResponse({ error: 'That request is too large.' }, 413)
     }
+    observe('recordExpectedRefusal', 'assistant.refused', {
+      stage: 'admission', outcomeCode: 'ADMISSION_REJECTED', statusClass: '4xx',
+    })
     return jsonResponse({ error: 'Malformed request.' }, 400)
   }
 
   if ((params.messages?.length ?? 0) > MAX_HISTORY_MESSAGES + 4) {
+    observe('recordExpectedRefusal', 'assistant.refused', {
+      stage: 'admission', outcomeCode: 'REQUEST_TOO_LARGE', statusClass: '4xx',
+    })
     return jsonResponse({ error: 'That request contains too many messages.' }, 413)
   }
 
@@ -387,21 +513,40 @@ async function handleChat(request, env, ctx) {
   // identity for the whole feature.
   const threadId = params.threadId
   if (typeof threadId !== 'string' || threadId.length < 8 || threadId.length > 100) {
+    observe('recordExpectedRefusal', 'assistant.refused', {
+      stage: 'admission', outcomeCode: 'ADMISSION_REJECTED', statusClass: '4xx',
+    })
     return jsonResponse({ error: 'Malformed request.' }, 400)
   }
 
   const userText = latestUserText(params.messages ?? []).trim()
-  if (!userText) return jsonResponse({ error: 'Ask a question to get started.' }, 400)
+  if (!userText) {
+    observe('recordExpectedRefusal', 'assistant.refused', {
+      stage: 'admission', outcomeCode: 'ADMISSION_REJECTED', statusClass: '4xx',
+    })
+    return jsonResponse({ error: 'Ask a question to get started.' }, 400)
+  }
   if (userText.length > MAX_MESSAGE_CHARS) {
+    observe('recordExpectedRefusal', 'assistant.refused', {
+      stage: 'admission', outcomeCode: 'REQUEST_TOO_LARGE', statusClass: '4xx',
+    })
     return jsonResponse({ error: `Questions are limited to ${MAX_MESSAGE_CHARS} characters.` }, 413)
   }
 
   const { conversation, history } = await loadConversation(env.DB, threadId)
-  const rejection = rejectionFor(conversation, Date.now())
-  if (rejection) return jsonResponse({ error: rejection.error }, rejection.status)
+  const rejection = rejectionFor(conversation, now())
+  if (rejection) {
+    observe('recordExpectedRefusal', 'assistant.refused', {
+      stage: 'admission', outcomeCode: 'RATE_LIMITED', statusClass: '4xx',
+    })
+    return jsonResponse({ error: rejection.error }, rejection.status)
+  }
+
+  observe('record', 'assistant.operation', {
+    stage: 'admission', outcomeCode: 'ADMITTED', statusClass: '2xx',
+  })
 
   const pagePath = params.forwardedProps?.pagePath
-  const startedAt = Date.now()
   const turnToken = crypto.randomUUID()
   const initialMetadata = assistantTurnMetadata({
     requestUrl: request.url,
@@ -411,6 +556,7 @@ async function handleChat(request, env, ctx) {
     startedAt,
     completedAt: startedAt,
   })
+  const reservationStartedAt = now()
   const reserved = await reserveTurn(env.DB, {
     threadId,
     startedAt,
@@ -418,12 +564,25 @@ async function handleChat(request, env, ctx) {
     ...initialMetadata.conversation,
   })
   if (!reserved) {
+    observe('recordExpectedRefusal', 'assistant.refused', {
+      stage: 'reservation',
+      outcomeCode: 'RESERVATION_CONFLICT',
+      statusClass: '4xx',
+      durationMs: now() - reservationStartedAt,
+    })
     return jsonResponse({ error: 'That conversation is already answering a question.' }, 409)
   }
+  observe('record', 'assistant.operation', {
+    stage: 'reservation',
+    outcomeCode: 'RESERVATION_ACQUIRED',
+    statusClass: '2xx',
+    durationMs: now() - reservationStartedAt,
+  })
 
   let stream
   try {
-    stream = chat({
+    const runChat = env.WORKER_CHAT ?? chat
+    stream = runChat({
       adapter: createAnthropicChat(MODEL, env.ANTHROPIC_API_KEY),
       threadId,
     // Server-side history is authoritative: the client's copy is replayed for
@@ -455,11 +614,20 @@ async function handleChat(request, env, ctx) {
     })
   } catch (error) {
     await releaseTurn(env.DB, threadId, turnToken)
+    observe('captureActionableIssue', 'assistant.issue', {
+      stage: 'model_start', outcomeCode: 'MODEL_FAILED', statusClass: '5xx',
+    })
     throw error
   }
 
   const events = finalizeAssistantStream(stream, {
     onFinished: async (assistantText) => {
+      observe('record', 'assistant.operation', {
+        stage: 'persistence',
+        outcomeCode: 'PERSISTENCE_STARTED',
+        statusClass: '2xx',
+        durationMs: now() - startedAt,
+      })
       try {
         const metadata = assistantTurnMetadata({
           requestUrl: request.url,
@@ -467,7 +635,7 @@ async function handleChat(request, env, ctx) {
           providedEvaluationToken: request.headers.get('x-chat-evaluation-token'),
           corpusVersion: CORPUS_VERSION,
           startedAt,
-          completedAt: Date.now(),
+          completedAt: now(),
         })
         const persisted = await persistTurn(env.DB, {
           threadId,
@@ -476,14 +644,33 @@ async function handleChat(request, env, ctx) {
           conversation: metadata.conversation,
           user: { content: userText, pagePath: resolvePage(pagePath)?.path },
         })
-        if (!persisted) throw new Error('Turn reservation was superseded before persistence.')
+        if (!persisted) {
+          observe('captureActionableIssue', 'assistant.issue', {
+            stage: 'persistence', outcomeCode: 'RESERVATION_SUPERSEDED', statusClass: '5xx',
+          })
+          throw new ReservationSupersededError()
+        }
       } catch (error) {
-        await releaseTurn(env.DB, threadId, turnToken)
-        console.error(JSON.stringify({ event: 'chat.persist_failed', message: String(error) }))
+        if (!(error instanceof ReservationSupersededError)) {
+          observe('captureActionableIssue', 'assistant.issue', {
+            stage: 'persistence', outcomeCode: 'PERSISTENCE_FAILED', statusClass: '5xx',
+          })
+        }
         throw error
       }
     },
     onFailed: () => releaseTurn(env.DB, threadId, turnToken),
+    onLifecycle: ({ stage, outcomeCode, durationMs }) => {
+      const actionable = ['MODEL_FAILED', 'EMPTY_COMPLETION', 'SOURCE_FAILED', 'SOURCE_EXHAUSTED', 'STREAM_CANCELLED'].includes(outcomeCode)
+      observe(actionable ? 'captureActionableIssue' : 'record', actionable ? 'assistant.issue' : 'assistant.operation', {
+        stage,
+        outcomeCode,
+        statusClass: actionable ? '5xx' : '2xx',
+        durationMs,
+      })
+    },
+    now,
+    startedAt,
   })
 
   return toServerSentEventsResponse(events)
@@ -497,9 +684,20 @@ export async function loadTranscript(db, threadId) {
   }))
 }
 
-async function handleTranscript(env, threadId) {
+async function handleTranscript(env, threadId, request, operationId, observability) {
+  const startedAt = Date.now()
+  observability.record(requestObservation(request, env, operationId, 'assistant.replay', {
+    stage: 'replay', outcomeCode: 'REPLAY_STARTED', statusClass: '2xx',
+  }))
+  const messages = await loadTranscript(env.DB, threadId)
+  observability.record(requestObservation(request, env, operationId, 'assistant.replay', {
+    stage: 'replay',
+    outcomeCode: messages.length ? 'REPLAY_NONEMPTY' : 'REPLAY_EMPTY',
+    statusClass: '2xx',
+    durationMs: Date.now() - startedAt,
+  }))
   return jsonResponse(
-    { messages: await loadTranscript(env.DB, threadId) },
+    { messages },
     200,
     { 'cache-control': 'private, no-store' },
   )
@@ -510,45 +708,89 @@ export default {
   // so nothing here needs to outlive the hour. Sweeping on a schedule keeps the
   // table from growing without bound and keeps the delete off the request path.
   async scheduled(event, env, ctx) {
+    const observability = env.WORKER_OBSERVABILITY ?? defaultObservability
     try {
       const result = await env.DB
         .prepare('DELETE FROM rate_limits WHERE window_start < ?')
         .bind(Date.now() - 3_600_000)
         .run()
-      console.log(JSON.stringify({ event: 'ratelimits.swept', rows: result.meta?.changes ?? 0 }))
+      observability.record({
+        event: 'worker.operation',
+        route: 'scheduled',
+        environment: env.ENVIRONMENT ?? 'production',
+        outcomeCode: 'RATE_LIMIT_SWEEP_COMPLETED',
+        occurrences: result.meta?.changes ?? 0,
+      })
     } catch (error) {
-      console.error(JSON.stringify({ event: 'ratelimits.sweep_failed', message: String(error) }))
+      observability.captureActionableIssue({
+        event: 'worker.issue',
+        route: 'scheduled',
+        environment: env.ENVIRONMENT ?? 'production',
+        outcomeCode: 'RATE_LIMIT_SWEEP_FAILED',
+      })
     }
   },
 
   async fetch(request, env, ctx) {
     const url = new URL(request.url)
+    const isChatRoute = url.pathname === '/api/chat'
+    const isTranscriptRoute = url.pathname === '/api/chat/transcript'
+    const operationId = isChatRoute || isTranscriptRoute ? createOperationId() : null
+    const observability = env.WORKER_OBSERVABILITY ?? defaultObservability
+    const now = typeof env.WORKER_NOW === 'function' ? env.WORKER_NOW : () => Date.now()
+    const operationStartedAt = operationId ? now() : null
 
     try {
-      if (url.pathname === '/api/chat' && request.method === 'POST') {
-        return await handleChat(request, env, ctx)
+      if (isChatRoute && request.method === 'POST') {
+        return operationResponse(
+          await handleChat(request, env, ctx, operationId, observability, now, operationStartedAt),
+          operationId,
+        )
       }
 
-      if (url.pathname === '/api/chat/transcript' && request.method === 'GET') {
-        if (await isRateLimited(request, env, ctx)) {
-          return jsonResponse({ error: 'Too many requests. Give it a minute and try again.' }, 429)
+      if (isTranscriptRoute && request.method === 'GET') {
+        if (await isRateLimited(request, env, ctx, (outcomeCode) => {
+          observability.captureActionableIssue(requestObservation(request, env, operationId, 'assistant.issue', {
+            stage: 'admission', outcomeCode, statusClass: '5xx',
+          }))
+        })) {
+          observability.recordExpectedRefusal(requestObservation(request, env, operationId, 'assistant.refused', {
+            stage: 'admission', outcomeCode: 'RATE_LIMITED', statusClass: '4xx',
+          }))
+          return operationResponse(jsonResponse({ error: 'Too many requests. Give it a minute and try again.' }, 429), operationId)
         }
         const threadId = request.headers.get('x-chat-thread-id')
         if (!threadId || !THREAD_ID_PATTERN.test(threadId)) {
-          return jsonResponse({ error: 'Malformed request.' }, 400)
+          observability.recordExpectedRefusal(requestObservation(request, env, operationId, 'assistant.refused', {
+            stage: 'admission', outcomeCode: 'ADMISSION_REJECTED', statusClass: '4xx',
+          }))
+          return operationResponse(jsonResponse({ error: 'Malformed request.' }, 400), operationId)
         }
-        return await handleTranscript(env, threadId)
+        try {
+          return operationResponse(
+            await handleTranscript(env, threadId, request, operationId, observability),
+            operationId,
+          )
+        } catch (error) {
+          observability.captureActionableIssue(requestObservation(request, env, operationId, 'assistant.issue', {
+            stage: 'replay', outcomeCode: 'REPLAY_FAILED', statusClass: '5xx',
+          }))
+          throw error
+        }
       }
 
-      return jsonResponse({ error: 'Not found.' }, 404)
+      const response = jsonResponse({ error: 'Not found.' }, 404)
+      return operationId ? operationResponse(response, operationId) : response
     } catch (error) {
-      console.error(JSON.stringify({
-        event: 'chat.unhandled_error',
-        path: url.pathname,
-        message: String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      }))
-      return jsonResponse({ error: 'Something went wrong. Please try again.' }, 500)
+      if (operationId) {
+        observability.captureActionableIssue(requestObservation(request, env, operationId, 'assistant.issue', {
+          stage: isTranscriptRoute ? 'replay' : 'stream',
+          outcomeCode: 'UNHANDLED_FAILURE',
+          statusClass: '5xx',
+        }))
+      }
+      const response = jsonResponse({ error: 'Something went wrong. Please try again.' }, 500)
+      return operationId ? operationResponse(response, operationId) : response
     }
   },
 }

@@ -114,6 +114,26 @@ describe('Worker observability contract', () => {
     expect(attempts).toBe(2)
   })
 
+  it('accepts the bounded lifecycle outcomes and rejects arbitrary labels', () => {
+    for (const outcomeCode of [
+      'ADMITTED', 'RESERVATION_ACQUIRED', 'MODEL_STARTED', 'CONTENT_STARTED',
+      'SOURCE_EXHAUSTED', 'SOURCE_FAILED', 'STREAM_CANCELLED', 'STREAM_COMPLETED',
+      'PERSISTENCE_STARTED', 'PERSISTENCE_COMMITTED', 'TERMINAL_EMITTED',
+      'SERVER_DURABLE_SUCCESS', 'REPLAY_STARTED', 'REPLAY_EMPTY', 'REPLAY_NONEMPTY',
+    ]) {
+      expect(sanitizeWorkerEvent({
+        event: 'assistant.operation',
+        route: '/api/chat',
+        outcomeCode,
+      }).outcomeCode).toBe(outcomeCode)
+    }
+    expect(sanitizeWorkerEvent({
+      event: 'assistant.operation',
+      route: '/api/chat',
+      outcomeCode: SENTINEL,
+    }).outcomeCode).toBeUndefined()
+  })
+
   it('keeps Worker Sentry disabled until ready and rebuilds issues from fixed fields', () => {
     expect(workerSentryOptions({
       OBSERVABILITY_PROVIDER_READY: 'false',

@@ -13,6 +13,53 @@ import worker, {
   resolvePage,
   withPageMarker,
 } from './index.js'
+import { createWorkerObservability } from './observability.js'
+
+const validChatBody = (overrides = {}) => ({
+  threadId: 'thread-123',
+  runId: 'client-run-id',
+  messages: [{ id: 'message-1', role: 'user', content: 'Hello' }],
+  tools: [],
+  context: [],
+  state: {},
+  ...overrides,
+})
+
+function observedEnv(bindings = {}) {
+  const logs = []
+  const issues = []
+  return {
+    env: {
+      ...bindings,
+      WORKER_OBSERVABILITY: createWorkerObservability({
+        log: (event) => logs.push(event),
+        captureIssue: (event) => issues.push(event),
+      }),
+    },
+    logs,
+    issues,
+  }
+}
+
+function successfulChatDb({ persistenceError } = {}) {
+  let batches = 0
+  return {
+    prepare() {
+      return {
+        bind() { return this },
+        async first() { return null },
+        async all() { return { results: [] } },
+        async run() { return { meta: { changes: 1 } } },
+      }
+    },
+    async batch(statements) {
+      batches += 1
+      if (batches === 1) return [{ success: true }, { results: [{ id: 'thread-123' }] }]
+      if (persistenceError) throw persistenceError
+      return statements.map((_, index) => ({ meta: { changes: index === statements.length - 1 ? 1 : 0 } }))
+    },
+  }
+}
 
 function recordingDb() {
   const statements = []
@@ -309,9 +356,215 @@ describe('Worker request boundaries', () => {
     expect(first).toMatch(/^[a-f0-9]{20}$/)
     expect(first).not.toBe(second)
   })
+
+  it('creates an authoritative operation ID before admission and returns it on refusals', async () => {
+    const clientOperationId = 'op_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    const { env, logs } = observedEnv({ ANTHROPIC_API_KEY: 'configured' })
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST',
+      headers: { 'x-operation-id': clientOperationId },
+      body: '{',
+    }), env, {})
+
+    expect(response.status).toBe(400)
+    expect(response.headers.get('x-operation-id')).toMatch(/^op_[a-f0-9]{32}$/)
+    expect(response.headers.get('x-operation-id')).not.toBe(clientOperationId)
+    expect(logs).toContainEqual(expect.objectContaining({
+      event: 'assistant.refused',
+      route: 'api_chat',
+      stage: 'admission',
+      outcomeCode: 'ADMISSION_REJECTED',
+      operationId: response.headers.get('x-operation-id'),
+    }))
+  })
+
+  it.each([
+    ['caller limit', 429, { ANTHROPIC_API_KEY: 'configured', CHAT_RATE_LIMITER: { limit: async () => ({ success: false }) } }, validChatBody(), 'RATE_LIMITED'],
+    ['oversize body', 413, { ANTHROPIC_API_KEY: 'configured' }, validChatBody(), 'REQUEST_TOO_LARGE'],
+    ['missing model configuration', 503, {}, validChatBody(), 'CONFIGURATION_MISSING'],
+  ])('classifies %s without exposing request data', async (_name, status, bindings, body, outcomeCode) => {
+    const { env, logs, issues } = observedEnv(bindings)
+    const request = new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST',
+      headers: status === 413
+        ? { 'content-length': '128001' }
+        : outcomeCode === 'RATE_LIMITED' ? { 'cf-connecting-ip': '203.0.113.10' } : {},
+      body: JSON.stringify(body),
+    })
+    const response = await worker.fetch(request, env, {})
+
+    expect(response.status).toBe(status)
+    const events = status === 503 ? issues : logs
+    expect(events).toContainEqual(expect.objectContaining({ outcomeCode }))
+    expect(JSON.stringify([...logs, ...issues])).not.toContain('Hello')
+  })
+
+  it('records pacing and reservation-conflict refusals at their route seams', async () => {
+    const pacing = observedEnv({
+      ANTHROPIC_API_KEY: 'configured',
+      WORKER_NOW: () => 10_000,
+      DB: {
+        prepare() {
+          return {
+            bind() { return this },
+            async first() { return { id: 'thread-123', message_count: 2, last_message_at: 9_500 } },
+            async all() { return { results: [] } },
+          }
+        },
+      },
+    })
+    const pacingResponse = await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST', body: JSON.stringify(validChatBody()),
+    }), pacing.env, {})
+    expect(pacingResponse.status).toBe(429)
+    expect(pacing.logs).toContainEqual(expect.objectContaining({
+      stage: 'admission', outcomeCode: 'RATE_LIMITED',
+    }))
+
+    const conflict = observedEnv({
+      ANTHROPIC_API_KEY: 'configured',
+      WORKER_NOW: () => 20_000,
+      DB: {
+        prepare() {
+          return {
+            bind() { return this },
+            async first() { return null },
+            async all() { return { results: [] } },
+          }
+        },
+        async batch() { return [{ success: true }, { results: [] }] },
+      },
+    })
+    const conflictResponse = await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST', body: JSON.stringify(validChatBody()),
+    }), conflict.env, {})
+    expect(conflictResponse.status).toBe(409)
+    expect(conflict.logs).toContainEqual(expect.objectContaining({
+      stage: 'reservation', outcomeCode: 'RESERVATION_CONFLICT', durationMs: 0,
+    }))
+  })
+
+  it('keeps the operation header on a successful streaming response', async () => {
+    async function* stream() {
+      yield { type: 'TEXT_MESSAGE_CONTENT', messageId: 'assistant-1', delta: 'Hello' }
+      yield { type: 'RUN_FINISHED', threadId: 'thread-123', runId: 'server-run' }
+    }
+    const { env } = observedEnv({
+      ANTHROPIC_API_KEY: 'configured',
+      DB: successfulChatDb(),
+      WORKER_CHAT: () => stream(),
+    })
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST', body: JSON.stringify(validChatBody()),
+    }), env, {})
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('x-operation-id')).toMatch(/^op_[a-f0-9]{32}$/)
+    const payload = await response.text()
+    expect(payload).toContain('Hello')
+    expect(payload).toContain('RUN_FINISHED')
+  })
+
+  it('classifies a matching arbitrary D1 error message as persistence failure', async () => {
+    async function* stream() {
+      yield { type: 'TEXT_MESSAGE_CONTENT', messageId: 'assistant-1', delta: 'Hello' }
+      yield { type: 'RUN_FINISHED', threadId: 'thread-123', runId: 'server-run' }
+    }
+    const { env, issues } = observedEnv({
+      ANTHROPIC_API_KEY: 'configured',
+      DB: successfulChatDb({ persistenceError: new Error('reservation was superseded in a driver message') }),
+      WORKER_CHAT: () => stream(),
+    })
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST', body: JSON.stringify(validChatBody()),
+    }), env, {})
+    await response.text()
+    expect(issues).toContainEqual(expect.objectContaining({ outcomeCode: 'PERSISTENCE_FAILED' }))
+    expect(issues).not.toContainEqual(expect.objectContaining({ outcomeCode: 'RESERVATION_SUPERSEDED' }))
+  })
 })
 
 describe('Worker stream finalization', () => {
+  it('records model pull, first content, persistence, terminal emission, and durable success in order', async () => {
+    const order = []
+    async function* source() {
+      order.push('source-pulled')
+      yield { type: 'TEXT_MESSAGE_CONTENT', delta: '' }
+      yield { type: 'TEXT_MESSAGE_CONTENT', delta: 'Complete' }
+      yield { type: 'TEXT_MESSAGE_CONTENT', delta: ' answer' }
+      yield { type: 'RUN_FINISHED' }
+    }
+    const events = finalizeAssistantStream(source(), {
+      onFinished: async (text) => order.push(`persist:${text}`),
+      onFailed: async () => order.push('release'),
+      onLifecycle: ({ stage, outcomeCode }) => order.push(`${stage}:${outcomeCode}`),
+    })
+
+    expect(order).toEqual([])
+    for await (const event of events) {
+      if (event.type === 'RUN_FINISHED') order.push('consumer-terminal')
+    }
+
+    expect(order).toEqual([
+      'model_start:MODEL_STARTED',
+      'source-pulled',
+      'first_content:CONTENT_STARTED',
+      'stream:STREAM_COMPLETED',
+      'persist:Complete answer',
+      'persistence:PERSISTENCE_COMMITTED',
+      'consumer-terminal',
+      'terminal:TERMINAL_EMITTED',
+      'terminal:SERVER_DURABLE_SUCCESS',
+    ])
+  })
+
+  it('uses one injected start point for first-content, completion, persistence, and durable durations', async () => {
+    const lifecycle = []
+    const times = [1_100, 1_200, 1_300, 1_400]
+    async function* source() {
+      yield { type: 'TEXT_MESSAGE_CONTENT', delta: 'answer' }
+      yield { type: 'RUN_FINISHED' }
+    }
+
+    for await (const _event of finalizeAssistantStream(source(), {
+      startedAt: 1_000,
+      now: () => times.shift(),
+      onFinished: async () => {},
+      onFailed: async () => {},
+      onLifecycle: (event) => lifecycle.push(event),
+    })) {}
+
+    expect(lifecycle).toContainEqual({ stage: 'first_content', outcomeCode: 'CONTENT_STARTED', durationMs: 100 })
+    expect(lifecycle).toContainEqual({ stage: 'stream', outcomeCode: 'STREAM_COMPLETED', durationMs: 200 })
+    expect(lifecycle).toContainEqual({ stage: 'persistence', outcomeCode: 'PERSISTENCE_COMMITTED', durationMs: 300 })
+    expect(lifecycle).toContainEqual({ stage: 'terminal', outcomeCode: 'SERVER_DURABLE_SUCCESS', durationMs: 400 })
+  })
+
+  it('fails open when lifecycle observation throws on success and failure', async () => {
+    const successOrder = []
+    async function* successfulSource() {
+      yield { type: 'TEXT_MESSAGE_CONTENT', delta: 'answer' }
+      yield { type: 'RUN_FINISHED' }
+    }
+    for await (const event of finalizeAssistantStream(successfulSource(), {
+      onFinished: async () => successOrder.push('persist'),
+      onFailed: async () => successOrder.push('release'),
+      onLifecycle: () => { throw new Error('observer failed') },
+    })) {
+      if (event.type === 'RUN_FINISHED') successOrder.push('terminal')
+    }
+    expect(successOrder).toEqual(['persist', 'terminal'])
+
+    const failureOrder = []
+    async function* failedSource() { yield { type: 'RUN_ERROR', message: 'provider failed' } }
+    for await (const _event of finalizeAssistantStream(failedSource(), {
+      onFinished: async () => failureOrder.push('persist'),
+      onFailed: async () => failureOrder.push('release'),
+      onLifecycle: () => { throw new Error('observer failed') },
+    })) {}
+    expect(failureOrder).toEqual(['release'])
+  })
+
   it('persists before exposing the terminal success event', async () => {
     const order = []
     async function* source() {
@@ -336,7 +589,13 @@ describe('Worker stream finalization', () => {
     const calls = []
     async function* source() {
       yield { type: 'TEXT_MESSAGE_CONTENT', delta: 'Partial answer' }
-      yield { type: 'RUN_ERROR', message: 'provider details' }
+      yield {
+        type: 'RUN_ERROR',
+        message: 'provider details private-provider-sentinel',
+        code: 'request_id_private-provider-sentinel',
+        requestId: 'private-provider-sentinel',
+        rawEvent: { headers: { authorization: 'private-provider-sentinel' } },
+      }
     }
 
     const events = []
@@ -346,7 +605,78 @@ describe('Worker stream finalization', () => {
     })) events.push(event)
 
     expect(calls).toEqual(['release'])
-    expect(events.at(-1).message).toBe('The assistant could not answer that just now. Please try again.')
+    expect(events.at(-1)).toEqual({
+      type: 'RUN_ERROR',
+      code: 'MODEL_FAILED',
+      message: 'The assistant could not answer that just now. Please try again.',
+    })
+    expect(JSON.stringify(events)).not.toContain('private-provider-sentinel')
+  })
+
+  it.each([
+    {
+      name: 'empty completion',
+      source: async function* () { yield { type: 'RUN_FINISHED' } },
+      reason: 'empty_completion',
+      outcomeCode: 'EMPTY_COMPLETION',
+    },
+    {
+      name: 'normal source exhaustion',
+      source: async function* () { yield { type: 'TEXT_MESSAGE_CONTENT', delta: 'partial' } },
+      reason: 'source_exhausted',
+      outcomeCode: 'SOURCE_EXHAUSTED',
+    },
+    {
+      name: 'source throw',
+      source: async function* () { throw new Error('provider transport failed') },
+      reason: 'source_failed',
+      outcomeCode: 'SOURCE_FAILED',
+    },
+  ])('keeps $name distinct and releases ownership', async ({ source, reason, outcomeCode }) => {
+    const releases = []
+    const lifecycle = []
+    const consume = async () => {
+      for await (const _event of finalizeAssistantStream(source(), {
+        onFinished: async () => {},
+        onFailed: async (failure) => releases.push(failure),
+        onLifecycle: (event) => lifecycle.push(event),
+      })) {}
+    }
+
+    if (reason === 'source_failed') await expect(consume()).rejects.toThrow('provider transport failed')
+    else await consume()
+
+    expect(releases).toEqual([reason])
+    expect(lifecycle).toContainEqual({ stage: 'stream', outcomeCode })
+  })
+
+  it('distinguishes cancellation and persistence failure without double release', async () => {
+    const cancellationReleases = []
+    async function* endlessSource() {
+      yield { type: 'TEXT_MESSAGE_CONTENT', delta: 'partial' }
+      await new Promise(() => {})
+    }
+    const cancelled = finalizeAssistantStream(endlessSource(), {
+      onFinished: async () => {},
+      onFailed: async (failure) => cancellationReleases.push(failure),
+    })
+    await cancelled.next()
+    await cancelled.return()
+    expect(cancellationReleases).toEqual(['stream_cancelled'])
+
+    const persistenceReleases = []
+    async function* completeSource() {
+      yield { type: 'TEXT_MESSAGE_CONTENT', delta: 'answer' }
+      yield { type: 'RUN_FINISHED' }
+    }
+    const consume = async () => {
+      for await (const _event of finalizeAssistantStream(completeSource(), {
+        onFinished: async () => { throw new Error('D1 failed') },
+        onFailed: async (failure) => persistenceReleases.push(failure),
+      })) {}
+    }
+    await expect(consume()).rejects.toThrow('D1 failed')
+    expect(persistenceReleases).toEqual(['persistence_failed'])
   })
 })
 
@@ -417,6 +747,86 @@ describe('Worker transcript replay', () => {
 
     expect(response.status).toBe(200)
     expect(response.headers.get('cache-control')).toBe('private, no-store')
+  })
+
+  it.each([
+    ['empty', [], 'REPLAY_EMPTY'],
+    ['nonempty', [{ role: 'assistant', content: 'Stored answer', created_at: 4 }], 'REPLAY_NONEMPTY'],
+  ])('records %s D1 replay and returns a distinct operation ID', async (_name, rows, outcomeCode) => {
+    const { env, logs } = observedEnv({
+      DB: {
+        prepare() {
+          return { bind() { return this }, async all() { return { results: [...rows].reverse() } } }
+        },
+      },
+    })
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat/transcript', {
+      headers: { 'x-chat-thread-id': 'thread-123' },
+    }), env, {})
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('x-operation-id')).toMatch(/^op_[a-f0-9]{32}$/)
+    expect(logs.map(({ outcomeCode: code }) => code)).toEqual(['REPLAY_STARTED', outcomeCode])
+  })
+
+  it('captures D1 replay failures without leaking the thrown message', async () => {
+    const { env, issues } = observedEnv({
+      DB: { prepare: () => { throw new Error('private transcript payload') } },
+    })
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat/transcript', {
+      headers: { 'x-chat-thread-id': 'thread-123' },
+    }), env, {})
+
+    expect(response.status).toBe(500)
+    expect(response.headers.get('x-operation-id')).toMatch(/^op_[a-f0-9]{32}$/)
+    expect(issues).toContainEqual(expect.objectContaining({ outcomeCode: 'REPLAY_FAILED' }))
+    expect(JSON.stringify(issues)).not.toContain('private transcript payload')
+  })
+})
+
+describe('Worker infrastructure failure privacy', () => {
+  const SENTINEL = 'private-infrastructure-sentinel'
+
+  it('sanitizes rate-limit binding and D1 failures through the observer', async () => {
+    const binding = observedEnv({
+      CHAT_RATE_LIMITER: { limit: async () => { throw new Error(SENTINEL) } },
+    })
+    await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST',
+      headers: { 'cf-connecting-ip': '203.0.113.10' },
+      body: JSON.stringify(validChatBody()),
+    }), binding.env, {})
+    expect(binding.issues).toContainEqual(expect.objectContaining({
+      outcomeCode: 'RATE_LIMIT_BINDING_FAILED',
+    }))
+    expect(JSON.stringify(binding.issues)).not.toContain(SENTINEL)
+
+    const d1 = observedEnv({
+      RATE_LIMIT_KEY: 'server-secret',
+      DB: { prepare: () => { throw new Error(SENTINEL) } },
+    })
+    await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST',
+      headers: { 'cf-connecting-ip': '203.0.113.10' },
+      body: JSON.stringify(validChatBody()),
+    }), d1.env, {})
+    expect(d1.issues).toContainEqual(expect.objectContaining({
+      outcomeCode: 'RATE_LIMIT_D1_FAILED',
+    }))
+    expect(JSON.stringify(d1.issues)).not.toContain(SENTINEL)
+  })
+
+  it('sanitizes scheduled sweep failures through the observer', async () => {
+    const { env, issues } = observedEnv({
+      DB: { prepare: () => { throw new Error(SENTINEL) } },
+    })
+    await worker.scheduled({}, env, {})
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      event: 'worker.issue',
+      outcomeCode: 'RATE_LIMIT_SWEEP_FAILED',
+    }))
+    expect(JSON.stringify(issues)).not.toContain(SENTINEL)
   })
 })
 
