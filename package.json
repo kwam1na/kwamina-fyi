@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "corpus": "node scripts/build-corpus.mjs",
+    "resume": "sh scripts/build-resume.sh",
     "dev": "bun run corpus && vite",
     "build": "bun run corpus && vite build",
     "build:ci": "bun run build && sh scripts/ci-migrate.sh",
