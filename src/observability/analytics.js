@@ -1,9 +1,6 @@
-import { canonicalRoute, UNRECOGNIZED_ROUTE } from './contract.js'
+import { canonicalRoute, sanitizeWebVitalMetric, UNRECOGNIZED_ROUTE } from './contract.js'
 
 const PRODUCTION_ORIGIN = 'https://kwamina.fyi'
-const WEB_VITAL_NAMES = new Set(['CLS', 'INP', 'LCP'])
-const WEB_VITAL_RATINGS = new Set(['good', 'needs-improvement', 'poor'])
-const MAX_WEB_VITAL_VALUE = 86_400_000
 
 export async function observeCoreWebVitals(
   report,
@@ -33,17 +30,6 @@ function failOpen(callback) {
   }
 }
 
-function safeMetric(metric) {
-  if (!WEB_VITAL_NAMES.has(metric?.name)) return null
-  if (!WEB_VITAL_RATINGS.has(metric?.rating)) return null
-  if (!Number.isFinite(metric?.value) || metric.value < 0) return null
-  return {
-    name: metric.name,
-    value: Math.round(Math.min(metric.value, MAX_WEB_VITAL_VALUE) * 1000) / 1000,
-    rating: metric.rating,
-  }
-}
-
 export function createManualAnalytics({ provider, observeVitals } = {}) {
   if (
     typeof provider?.recordPageView !== 'function'
@@ -59,7 +45,7 @@ export function createManualAnalytics({ provider, observeVitals } = {}) {
 
   const recordWebVital = (metric) => {
     if (cleanedUp) return
-    const safe = safeMetric(metric)
+    const safe = sanitizeWebVitalMetric(metric)
     if (!safe || recordedVitals.has(safe.name)) return
     recordedVitals.add(safe.name)
     failOpen(() => provider.recordWebVital({ route: initialRoute, ...safe }))

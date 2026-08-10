@@ -30,6 +30,9 @@ const OUTCOME_CODES = new Set([
 const OPERATION_ID_PATTERN = /^op_[a-f0-9]{32}$/
 const FINGERPRINT_PATTERN = /^stack-[a-f0-9]{8}$/
 const RELEASE_PATTERN = /^kwamina-fyi(?:-worker)?@[a-f0-9]{12,64}$/
+const WEB_VITAL_NAMES = new Set(['CLS', 'INP', 'LCP'])
+const WEB_VITAL_RATINGS = new Set(['good', 'needs-improvement', 'poor'])
+const MAX_WEB_VITAL_VALUE = 86_400_000
 
 export function pathnameFrom(value) {
   if (typeof value !== 'string' || value.length > 2048) return null
@@ -46,6 +49,17 @@ export function canonicalRoute(value) {
   const normalized = normalisePath(pathname)
   const canonical = LEGACY_REDIRECTS[normalized] ?? normalized
   return NAVIGABLE_PATHS.has(canonical) ? canonical : UNRECOGNIZED_ROUTE
+}
+
+export function sanitizeWebVitalMetric(metric) {
+  if (!WEB_VITAL_NAMES.has(metric?.name)) return null
+  if (!WEB_VITAL_RATINGS.has(metric?.rating)) return null
+  if (!Number.isFinite(metric?.value) || metric.value < 0) return null
+  return {
+    name: metric.name,
+    value: Math.round(Math.min(metric.value, MAX_WEB_VITAL_VALUE) * 1000) / 1000,
+    rating: metric.rating,
+  }
 }
 
 function keepString(value, allowed) {

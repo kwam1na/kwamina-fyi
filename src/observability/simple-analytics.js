@@ -1,8 +1,5 @@
-import { canonicalRoute, UNRECOGNIZED_ROUTE } from './contract.js'
+import { canonicalRoute, sanitizeWebVitalMetric, UNRECOGNIZED_ROUTE } from './contract.js'
 
-const WEB_VITAL_NAMES = new Set(['CLS', 'INP', 'LCP'])
-const WEB_VITAL_RATINGS = new Set(['good', 'needs-improvement', 'poor'])
-const MAX_WEB_VITAL_VALUE = 86_400_000
 const DEFAULT_MAX_QUEUE = 32
 
 const SCRIPT_ATTRIBUTES = Object.freeze({
@@ -43,15 +40,13 @@ function safePageView(input) {
 function safeWebVital(input) {
   const route = canonicalRoute(input?.route)
   if (route === UNRECOGNIZED_ROUTE) return null
-  if (!WEB_VITAL_NAMES.has(input?.name) || !WEB_VITAL_RATINGS.has(input?.rating)) return null
-  if (!Number.isFinite(input?.value) || input.value < 0) return null
+  const metric = sanitizeWebVitalMetric(input)
+  if (!metric) return null
 
   return {
     type: 'web_vital',
     route,
-    name: input.name,
-    value: Math.round(Math.min(input.value, MAX_WEB_VITAL_VALUE) * 1000) / 1000,
-    rating: input.rating,
+    ...metric,
   }
 }
 
