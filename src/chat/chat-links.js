@@ -21,7 +21,7 @@ const EMAIL = 'kwami.nuh@gmail.com'
 const GITHUB_URL = 'https://github.com/kwam1na'
 const LINKEDIN_URL = 'https://linkedin.com/in/ernestmens'
 const RESUME_PATH = '/docs/resume.pdf'
-const ATHENA_PRODUCT_URL = 'https://athena.wigclub.store/landing'
+const ATHENA_PRODUCT_URL = 'https://athena-os.app/landing'
 const ATHENA_REPOSITORY_URL = `${GITHUB_URL}/athena`
 
 const RESOURCE_DESTINATIONS = {

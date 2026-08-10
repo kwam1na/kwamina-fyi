@@ -33,7 +33,7 @@ describe('chatTextParts', () => {
 
   it('renders the resume and Athena product overview as first-class resource links', () => {
     expect(chatTextParts(
-      'View his [resume](/docs/resume.pdf) or [view the product](https://athena.wigclub.store/landing).',
+      'View his [resume](/docs/resume.pdf) or [view the product](https://athena-os.app/landing).',
     )).toEqual([
       { type: 'text', text: 'View his ' },
       { type: 'external-link', text: 'resume', href: '/docs/resume.pdf' },
@@ -41,7 +41,7 @@ describe('chatTextParts', () => {
       {
         type: 'external-link',
         text: 'view the product',
-        href: 'https://athena.wigclub.store/landing',
+        href: 'https://athena-os.app/landing',
       },
       { type: 'text', text: '.' },
     ])
@@ -73,7 +73,7 @@ describe('chatTextParts', () => {
 
   it('uses concise labels when resource destinations are returned without Markdown', () => {
     expect(chatTextParts(
-      'Open /docs/resume.pdf or https://athena.wigclub.store/landing.',
+      'Open /docs/resume.pdf or https://athena-os.app/landing.',
     )).toEqual([
       { type: 'text', text: 'Open ' },
       { type: 'external-link', text: 'Resume', href: '/docs/resume.pdf' },
@@ -81,7 +81,7 @@ describe('chatTextParts', () => {
       {
         type: 'external-link',
         text: 'Athena product overview',
-        href: 'https://athena.wigclub.store/landing',
+        href: 'https://athena-os.app/landing',
       },
       { type: 'text', text: '.' },
     ])

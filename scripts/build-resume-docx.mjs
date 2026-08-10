@@ -207,7 +207,7 @@ const doc = new Document({
 
       heading('Experience'),
 
-      role('Sole Product Engineer — Athena', 'Mar 2026 – Present', 'https://athena.wigclub.store/landing'),
+      role('Sole Product Engineer — Athena', 'Mar 2026 – Present', 'https://athena-os.app/landing'),
       note('Business operating system for retail and service businesses, in production for Wigclub (Ghana)'),
       bullet('Built and operate the full TypeScript system across point-of-sale, online storefront, inventory, payments, and service operations; production now manages 1,800+ SKUs and has processed 1,100+ completed POS transactions.'),
       bullet('Architected the POS local-first: the register reads and writes to on-device storage so checkout never blocks on the network, with a sync layer that reconciles sales to the backend and preserves ordering across concurrent registers.'),

@@ -51,7 +51,7 @@ describe('assistant contract', () => {
 
   it('teaches the model the allowlisted resource destinations', () => {
     expect(INSTRUCTIONS).toContain('[Resume](/docs/resume.pdf)')
-    expect(INSTRUCTIONS).toContain('[Athena product overview](https://athena.wigclub.store/landing)')
+    expect(INSTRUCTIONS).toContain('[Athena product overview](https://athena-os.app/landing)')
     expect(INSTRUCTIONS).toContain('[Athena repository](https://github.com/kwam1na/athena)')
   })
 
