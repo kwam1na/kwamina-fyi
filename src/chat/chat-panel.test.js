@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'bun:test'
+import { createElement } from 'react'
+import { act, create } from 'react-test-renderer'
 import {
   ChatRenderBoundary,
   createChatScrollFollower,
@@ -50,5 +52,40 @@ describe('ChatRenderBoundary', () => {
     boundary.componentDidCatch(error)
 
     expect(calls).toEqual([[error, 'replay_render']])
+  })
+
+  it('catches a throwing message and renders the existing generic recovery alert', async () => {
+    const captures = []
+    const error = new Error('message render failed')
+    const ThrowingMessage = () => { throw error }
+    const previousActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT
+    const previousConsoleError = console.error
+    globalThis.IS_REACT_ACT_ENVIRONMENT = true
+    console.error = () => {}
+
+    let renderer
+    try {
+      await act(async () => {
+        renderer = create(createElement(
+          ChatRenderBoundary,
+          {
+            renderContext: 'live_render',
+            captureFailure: (...args) => captures.push(args),
+          },
+          createElement(ThrowingMessage),
+        ))
+      })
+
+      expect(renderer.toJSON()).toMatchObject({
+        type: 'p',
+        props: { className: 'site-chat-error', role: 'alert' },
+        children: ['Something went wrong. Try asking again.'],
+      })
+      expect(captures).toEqual([[error, 'live_render']])
+    } finally {
+      await act(async () => renderer?.unmount())
+      console.error = previousConsoleError
+      globalThis.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment
+    }
   })
 })

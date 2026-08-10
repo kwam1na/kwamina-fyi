@@ -13,7 +13,7 @@ export function reportRootRenderFailure(error, capture = captureBrowserRenderFai
 //
 // Unlike the 404, this state is recoverable: the first exit re-runs the route
 // that failed rather than sending the reader away from it.
-export function ErrorPage({ error, reset }) {
+export function ErrorPage({ error, reset, captureFailure = captureBrowserRenderFailure }) {
   const router = useRouter()
 
   useEffect(() => {
@@ -24,8 +24,8 @@ export function ErrorPage({ error, reset }) {
   // thing so a real report is still one devtools panel away.
   useEffect(() => {
     console.error('Page error:', error)
-    reportRootRenderFailure(error)
-  }, [error])
+    reportRootRenderFailure(error, captureFailure)
+  }, [captureFailure, error])
 
   const retry = () => {
     reset?.()
