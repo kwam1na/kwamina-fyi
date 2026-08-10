@@ -178,6 +178,12 @@ const doc = new Document({
               new Paragraph({
                 style: "Centered",
                 alignment: AlignmentType.CENTER,
+                spacing: { after: 20 },
+                children: [new TextRun({ ...base, text: 'Senior Product Engineer | Production AI & Agent Systems', bold: true, size: 19 })],
+              }),
+              new Paragraph({
+                style: "Centered",
+                alignment: AlignmentType.CENTER,
                 spacing: { after: 40 },
                 children: [
                   new TextRun({ ...base, color: MUTED, size: 17, text: 'Laurel, MD · (443) 805-3963 · ' }),
@@ -194,24 +200,24 @@ const doc = new Document({
       }),
 
       heading('Summary'),
-      para([{ text: 'Product engineer who ships complete systems end-to-end, and builds the AI-agent infrastructure that lets AI-assisted teams ship safely: production LLM assistants, agentic development workflows, and review harnesses.' }]),
+      para([{ text: 'Senior product engineer who builds and ships reliable systems end to end, with particular depth in production LLM applications and the agent-ready infrastructure that makes AI-assisted development safe, observable, and verifiable.' }]),
 
       heading('Experience'),
 
-      role('Athena, Sole Engineer', 'Mar 2026 – Present', 'https://athena.wigclub.store/landing'),
+      role('Sole Product Engineer — Athena', 'Mar 2026 – Present', 'https://athena.wigclub.store/landing'),
       note('Business operating system for retail and service businesses, in production for Wigclub (Ghana)'),
-      bullet('Built the full system as a TypeScript monorepo spanning point-of-sale, online storefront, inventory, payments, and service operations.'),
+      bullet('Built and operate the full TypeScript system across point-of-sale, online storefront, inventory, payments, and service operations; production now manages 1,800+ SKUs and has processed 1,100+ completed POS transactions.'),
       bullet('Architected the POS local-first: the register reads and writes to on-device storage so checkout never blocks on the network, with a sync layer that reconciles sales to the backend and preserves ordering across concurrent registers.'),
-      bullet('Built an agent-ready delivery harness (generated repo maps, deterministic and LLM-based review lanes, runtime behavior scenarios recording structured evidence, and drift sensors) so AI agents ship changes with the same safety rails as a human team.'),
+      bullet('Built an agent-ready delivery harness spanning 35 validation surfaces across three apps, combining generated repo maps, deterministic and LLM-based reviews, runtime evidence, and drift sensors; a recorded five-phase merge-grade run completed in under 10 minutes with zero duplicate commands.'),
       bullet('Built the deployment pipeline: one-command deploys to a VPS behind Cloudflare Tunnel, automatic QA deploys on every merge, and instant rollback to any previous release.'),
 
-      role('kwamina.fyi, personal site with a grounded AI assistant', '2026', 'https://kwamina.fyi'),
+      role('Product & AI Engineer — kwamina.fyi (Independent Project)', '2026', 'https://kwamina.fyi'),
       note('React 19, Cloudflare Workers, D1, Claude'),
       bullet('Built a site assistant grounded by construction: published pages compile into a versioned, prompt-cached corpus, so it can never claim anything a visitor can’t read; vector retrieval deliberately deferred behind a measured token budget.'),
       bullet('Engineered honest streaming: tokens render immediately, but the success signal waits for the database commit; history is server-authoritative so a tampered client can’t rewrite what the model sees.'),
       bullet('Privacy-first observability (one sanitization contract across browser, worker, and analytics; allowlisted telemetry) held by ~200 tests, including a Python suite validating the content itself, and a scheduled production canary.'),
 
-      role('Eventbrite, Senior Software Engineer', 'Mar 2022 – 2026 · Remote'),
+      role('Senior Software Engineer — Eventbrite', 'Mar 2022 – 2026 · Remote'),
       note('Promoted SWE I → SWE II (2023) → Senior (2025)'),
       bullet('Technical lead and main implementer of Dashy, Eventbrite’s AI-powered Event Dashboard Assistant (Amazon Bedrock). Owned it end-to-end: hardened chat BFF routes (auth, validation, rate limiting, streaming), lifecycle-grounded prompts and guardrails, and CSAT collection.'),
       bullet('Pioneered an agentic AI development workflow that scaffolded requirements, tickets, and code, cutting feature delivery from weeks to days; taught it at internal engineering forums.'),
@@ -221,7 +227,6 @@ const doc = new Document({
       bullet('Built core Stripe billing services and infrastructure (Terraform-provisioned API Gateway with WAF, Lambda, DynamoDB, webhook processing, refund and proration endpoints), raising payment-service test coverage from 58% to 90%+.'),
       bullet('Shipped a logged-out event-creation flow that removed account signup as a prerequisite to building an event, lifting event creation +26.6%, event publishing +5.4%, and transactions +2.2%.'),
 
-      heading('Earlier Experience'),
       para([
         { text: 'Apple, Software Engineering Intern', bold: true },
         { text: ' (Jun – Nov 2021): migrated Java API test suites to Karate, cutting build and test times by 20%; expanded coverage of OS-services APIs by 40%+.' },
@@ -232,18 +237,20 @@ const doc = new Document({
       ]),
 
       heading('Education'),
-      role('B.Sc. Computer Science, University of Maryland, College Park', 'May 2021'),
+      role('Bachelor of Science in Computer Science, University of Maryland, College Park', 'May 2021'),
 
       heading('Skills'),
       para([
-        { text: 'Languages & frameworks: ', bold: true },
-        { text: 'TypeScript, Python, React, Next.js, Node/Bun · ' },
-        { text: 'Cloud & infra: ', bold: true },
-        { text: 'AWS (Lambda, API Gateway, DynamoDB, CloudWatch), Terraform, Convex, PostgreSQL, Valkey/Redis, Cloudflare, CI/CD · ' },
-        { text: 'Payments: ', bold: true },
+        { text: 'Application engineering: ', bold: true },
+        { text: 'TypeScript, Python, Node.js, Bun, React, Next.js · ' },
+        { text: 'AI systems: ', bold: true },
+        { text: 'Production LLM applications, grounding and context engineering, prompt engineering and guardrails, streaming, LLM evaluation, AI observability · ' },
+        { text: 'Agent engineering: ', bold: true },
+        { text: 'Agent-ready repositories, multi-agent orchestration, tool and skill design, deterministic and LLM-based review harnesses · ' },
+        { text: 'Payments & risk: ', bold: true },
         { text: 'Stripe, Radar, 3D Secure/SCA · ' },
-        { text: 'AI: ', bold: true },
-        { text: 'LLM assistants (Amazon Bedrock, Claude), agentic dev workflows, eval & review harnesses' },
+        { text: 'Cloud, data & delivery: ', bold: true },
+        { text: 'AWS, Cloudflare Workers/D1, Convex, PostgreSQL, Valkey/Redis, Terraform, CI/CD' },
       ]),
     ],
   }],
