@@ -255,7 +255,7 @@ const doc = new Document({
         { text: 'Payments & risk: ', bold: true },
         { text: 'Stripe, Radar, 3D Secure/SCA · ' },
         { text: 'Cloud, data & delivery: ', bold: true },
-        { text: 'AWS, Cloudflare Workers/D1, Convex, PostgreSQL, Valkey/Redis, Terraform, CI/CD' },
+        { text: 'AWS, Cloudflare, Convex, PostgreSQL, Valkey/Redis, Terraform, CI/CD' },
       ]),
     ],
   }],
