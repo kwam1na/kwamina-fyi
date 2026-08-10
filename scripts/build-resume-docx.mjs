@@ -194,6 +194,8 @@ const doc = new Document({
                   new TextRun({ ...base, color: MUTED, size: 17, text: ' · ' }),
                   link('https://kwamina.fyi', { text: 'kwamina.fyi', color: MUTED, size: 17 }),
                   new TextRun({ ...base, color: MUTED, size: 17, text: ' · ' }),
+                  link('https://linkedin.com/in/kwamina-em', { text: 'linkedin.com/in/kwamina-em', color: MUTED, size: 17 }),
+                  new TextRun({ ...base, color: MUTED, size: 17, text: ' · ' }),
                   link('https://github.com/kwam1na', { text: 'github.com/kwam1na', color: MUTED, size: 17 }),
                 ],
               }),
