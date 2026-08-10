@@ -74,11 +74,27 @@ function requestObservation(request, env, operationId, event, extra = {}) {
   }
 }
 
+// Cloudflare applies dist/_headers to asset responses only, so API responses
+// carry their own. An API response is never a document: it renders nothing,
+// embeds nothing, and frames nothing, which is what 'none' says here.
+const API_SECURITY_HEADERS = {
+  'content-security-policy': "default-src 'none'; frame-ancestors 'none'",
+  'referrer-policy': 'no-referrer',
+  'x-content-type-options': 'nosniff',
+}
+
+export const secured = (response) => {
+  for (const [header, value] of Object.entries(API_SECURITY_HEADERS)) {
+    response.headers.set(header, value)
+  }
+  return response
+}
+
 const jsonResponse = (body, status = 200, headers = {}) =>
-  new Response(JSON.stringify(body), {
+  secured(new Response(JSON.stringify(body), {
     status,
     headers: { 'content-type': 'application/json', ...headers },
-  })
+  }))
 
 const safeRunError = (code) => ({
   type: 'RUN_ERROR',
@@ -702,7 +718,7 @@ async function handleChat(request, env, ctx, operationId, observability, now, st
     startedAt,
   })
 
-  return toServerSentEventsResponse(events, { abortController })
+  return secured(toServerSentEventsResponse(events, { abortController }))
 }
 
 export async function loadTranscript(db, threadId) {

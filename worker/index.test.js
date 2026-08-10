@@ -11,6 +11,7 @@ import worker, {
   rejectionFor,
   reserveTurn,
   resolvePage,
+  secured,
   withPageMarker,
 } from './index.js'
 import { createWorkerObservability } from './observability.js'
@@ -969,5 +970,30 @@ describe('Worker conversation admission', () => {
       status: 429,
       error: 'One moment — that was a little fast. Try again in a second.',
     })
+  })
+})
+
+describe('Worker response headers', () => {
+  // dist/_headers covers asset responses only, so anything the Worker returns
+  // has to carry these itself.
+  it('hardens every response the Worker builds, including error paths', async () => {
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/nothing'), {}, {})
+
+    expect(response.status).toBe(404)
+    expect(response.headers.get('content-security-policy')).toBe("default-src 'none'; frame-ancestors 'none'")
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff')
+    expect(response.headers.get('referrer-policy')).toBe('no-referrer')
+  })
+
+  it('adds the headers without disturbing the response it is given', () => {
+    const response = secured(new Response('body', {
+      status: 418,
+      headers: { 'content-type': 'text/plain', 'cache-control': 'private, no-store' },
+    }))
+
+    expect(response.status).toBe(418)
+    expect(response.headers.get('content-type')).toBe('text/plain')
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff')
   })
 })

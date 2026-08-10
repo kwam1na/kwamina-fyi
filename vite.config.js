@@ -5,6 +5,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { observabilityBuildSettings } from './vite-observability.js'
+import { securityHeaders } from './vite-security-headers.js'
 
 const WORKER_PORT = 8787
 
@@ -72,6 +73,7 @@ export default defineConfig(({ mode }) => {
     react(),
     tailwindcss(),
     workerDevServer(),
+    securityHeaders({ browserDsn: observability.browserDsn }),
     ...(sentryPlugin ? [sentryPlugin] : []),
   ],
   define: {
