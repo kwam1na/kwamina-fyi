@@ -8,6 +8,7 @@ import {
   sanitizeBrowserEvent,
   sanitizeSentryIssue,
   stableStackFingerprint,
+  pathnameFrom,
 } from './contract.js'
 
 const disabledBrowserObservability = Object.freeze({
@@ -30,15 +31,6 @@ function ready(config) {
     && typeof config.dsn === 'string'
     && config.dsn.length > 0
     && /^kwamina-fyi@[a-f0-9]{12,64}$/.test(config.release ?? '')
-}
-
-function pathnameFrom(value) {
-  if (typeof value !== 'string' || value.length > 2048) return null
-  try {
-    return new URL(value, 'https://telemetry.invalid').pathname
-  } catch {
-    return null
-  }
 }
 
 function safeAssetPath(value) {

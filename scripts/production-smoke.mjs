@@ -1,12 +1,13 @@
 import { randomUUID as nodeRandomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
+import { ROUTE_PATHS } from '../src/routes.js'
 
 export const PRODUCTION_ORIGIN = 'https://kwamina.fyi'
 
 const PAGE_CHECKS = [
-  { path: '/', marker: '<title>Kwamina Essuah Mensah</title>', label: 'Homepage' },
+  { path: ROUTE_PATHS.home, marker: '<title>Kwamina Essuah Mensah</title>', label: 'Homepage' },
   {
-    path: '/work/athena/agent-ready-repository',
+    path: ROUTE_PATHS.agentReadyRepository,
     marker: '<div id="root"></div>',
     label: 'Nested page',
   },

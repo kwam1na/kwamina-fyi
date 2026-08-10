@@ -741,8 +741,10 @@ export default {
     const now = typeof env.WORKER_NOW === 'function' ? env.WORKER_NOW : () => Date.now()
     const operationStartedAt = operationId ? now() : null
     const runKind = isChatRoute
-      && env.CHAT_EVALUATION_TOKEN
-      && request.headers.get('x-chat-evaluation-token') === env.CHAT_EVALUATION_TOKEN
+      && conversationSource({
+        expectedToken: env.CHAT_EVALUATION_TOKEN,
+        providedToken: request.headers.get('x-chat-evaluation-token'),
+      }) === 'evaluation'
       ? 'synthetic'
       : undefined
 

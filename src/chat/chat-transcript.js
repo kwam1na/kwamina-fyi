@@ -1,5 +1,7 @@
+const STORED_MESSAGE_ID_PREFIX = 'stored-'
+
 export function renderContextForChatMessage(message) {
-  return typeof message?.id === 'string' && message.id.startsWith('stored-')
+  return typeof message?.id === 'string' && message.id.startsWith(STORED_MESSAGE_ID_PREFIX)
     ? 'replay_render'
     : 'live_render'
 }
@@ -13,7 +15,7 @@ export async function fetchStoredMessages(threadId, { signal, fetcher = fetch } 
 
   const data = await response.json()
   return (data.messages ?? []).map((message, index) => ({
-    id: `stored-${index}`,
+    id: `${STORED_MESSAGE_ID_PREFIX}${index}`,
     role: message.role,
     parts: [{ type: 'text', content: message.content }],
   }))

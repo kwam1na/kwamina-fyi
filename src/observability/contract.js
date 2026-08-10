@@ -31,7 +31,7 @@ const OPERATION_ID_PATTERN = /^op_[a-f0-9]{32}$/
 const FINGERPRINT_PATTERN = /^stack-[a-f0-9]{8}$/
 const RELEASE_PATTERN = /^kwamina-fyi(?:-worker)?@[a-f0-9]{12,64}$/
 
-function pathnameFrom(value) {
+export function pathnameFrom(value) {
   if (typeof value !== 'string' || value.length > 2048) return null
   try {
     return new URL(value, 'https://telemetry.invalid').pathname
