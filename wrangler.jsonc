@@ -3,7 +3,18 @@
   "name": "kwamina-fyi",
   "compatibility_date": "2026-07-25",
   "observability": {
-    "enabled": true
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": false
+    },
+    // Automatic traces currently include request metadata. Keep them off until
+    // exported credential-bearing envelopes pass the privacy gate.
+    "traces": {
+      "enabled": false,
+      "head_sampling_rate": 0
+    }
   },
   "main": "./worker/index.js",
   "assets": {
