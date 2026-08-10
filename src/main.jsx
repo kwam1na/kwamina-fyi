@@ -15,6 +15,8 @@ import { ChatWidget } from './chat/chat-widget.jsx'
 import { NotFoundPage } from './not-found-page.jsx'
 import { ErrorPage } from './error-page.jsx'
 import { startBrowserObservability } from './observability/browser.js'
+import { observeCoreWebVitals, startManualAnalytics } from './observability/analytics.js'
+import { createSimpleAnalyticsProvider } from './observability/simple-analytics.js'
 import { LEGACY_REDIRECTS, ROUTE_PATHS } from './routes.js'
 import homepage from '../docs/content/homepage.html?raw'
 import about from '../docs/content/about.html?raw'
@@ -109,6 +111,15 @@ startBrowserObservability({
   providerReady: __OBSERVABILITY_PROVIDER_READY__,
   dsn: __SENTRY_BROWSER_DSN__,
   release: __APP_RELEASE__,
+})
+
+startManualAnalytics({
+  router,
+  provider: createSimpleAnalyticsProvider({ target: window }),
+  providerReady: import.meta.env.VITE_SIMPLE_ANALYTICS_READY === 'true',
+  environment: import.meta.env.PROD ? 'production' : 'local',
+  target: window,
+  observeVitals: observeCoreWebVitals,
 })
 
 createRoot(document.getElementById('root')).render(<RouterProvider router={router} />)

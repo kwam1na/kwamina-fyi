@@ -26,7 +26,8 @@
     "react": "latest",
     "react-dom": "latest",
     "react-markdown": "^10.1.0",
-    "vite": "latest"
+    "vite": "latest",
+    "web-vitals": "6.1.0"
   },
   "devDependencies": {
     "@sentry/vite-plugin": "5.4.0",

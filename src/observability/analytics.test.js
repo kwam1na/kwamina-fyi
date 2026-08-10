@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { createManualAnalytics, startManualAnalytics } from './analytics.js'
+import { readFileSync } from 'node:fs'
+import { createManualAnalytics, observeCoreWebVitals, startManualAnalytics } from './analytics.js'
 
 function fakeRouter() {
   let rendered
@@ -36,6 +37,34 @@ function readyTarget() {
 }
 
 describe('manual analytics controller', () => {
+  it('registers the approved core web vitals through the injected importer', async () => {
+    const registrations = []
+    const report = () => {}
+
+    await observeCoreWebVitals(report, async () => ({
+      onCLS: (callback) => registrations.push(['CLS', callback]),
+      onINP: (callback) => registrations.push(['INP', callback]),
+      onLCP: (callback) => registrations.push(['LCP', callback]),
+    }))
+
+    expect(registrations).toEqual([
+      ['CLS', report],
+      ['INP', report],
+      ['LCP', report],
+    ])
+  })
+
+  it('starts site analytics after router creation and before React rendering', () => {
+    const source = readFileSync(new URL('../main.jsx', import.meta.url), 'utf8')
+    const routerCreation = source.indexOf('const router = createRouter(')
+    const analyticsStart = source.indexOf('startManualAnalytics({')
+    const reactRendering = source.indexOf("createRoot(document.getElementById('root'))")
+
+    expect(routerCreation).toBeGreaterThan(-1)
+    expect(analyticsStart).toBeGreaterThan(routerCreation)
+    expect(reactRendering).toBeGreaterThan(analyticsStart)
+  })
+
   it('records canonical rendered routes once per consecutive route', () => {
     const views = []
     const router = fakeRouter()

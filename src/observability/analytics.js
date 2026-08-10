@@ -5,6 +5,16 @@ const WEB_VITAL_NAMES = new Set(['CLS', 'INP', 'LCP'])
 const WEB_VITAL_RATINGS = new Set(['good', 'needs-improvement', 'poor'])
 const MAX_WEB_VITAL_VALUE = 86_400_000
 
+export async function observeCoreWebVitals(
+  report,
+  importVitals = () => import('web-vitals'),
+) {
+  const { onCLS, onINP, onLCP } = await importVitals()
+  onCLS(report)
+  onINP(report)
+  onLCP(report)
+}
+
 const disabledAnalytics = Object.freeze({
   enabled: false,
   recordPageView() {
