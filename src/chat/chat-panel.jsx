@@ -617,7 +617,10 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
         )}
       </div>
 
-      <ChatLatestButton isVisible={showLatestButton} onClick={scrollToLatest} />
+      <ChatLatestButton
+        isVisible={showLatestButton && !isLoading}
+        onClick={scrollToLatest}
+      />
       </div>
 
       <form
