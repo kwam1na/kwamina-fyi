@@ -17,10 +17,21 @@ export const ROUTE_PATHS = {
   readOptimizedReporting: '/work/athena/read-optimized-reporting',
 }
 
-// Development tools are intentionally excluded from the public route and
-// in-app navigation registries. The router adds them only in local builds.
-export const LOCAL_ROUTE_PATHS = {
+// Private tools are intentionally excluded from the public route and in-app
+// navigation registries. The router adds them only in local development or on
+// the exact production hostname configured for the private archive.
+export const PRIVATE_ROUTE_PATHS = {
   conversations: '/conversations',
+}
+
+export function isConversationArchiveRouteEnabled({
+  isDevelopment,
+  enabled,
+  hostname,
+  archiveHostname,
+}) {
+  if (isDevelopment) return true
+  return Boolean(enabled && archiveHostname && hostname === archiveHostname)
 }
 
 // Superseded paths kept resolvable so older links and bookmarks still land.

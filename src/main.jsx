@@ -17,7 +17,12 @@ import { ErrorPage } from './error-page.jsx'
 import { startBrowserObservability } from './observability/browser.js'
 import { observeCoreWebVitals, startManualAnalytics } from './observability/analytics.js'
 import { createSimpleAnalyticsProvider } from './observability/simple-analytics.js'
-import { LEGACY_REDIRECTS, LOCAL_ROUTE_PATHS, ROUTE_PATHS } from './routes.js'
+import {
+  LEGACY_REDIRECTS,
+  PRIVATE_ROUTE_PATHS,
+  ROUTE_PATHS,
+  isConversationArchiveRouteEnabled,
+} from './routes.js'
 import homepage from '../docs/content/homepage.html?raw'
 import about from '../docs/content/about.html?raw'
 import athena from '../docs/content/work/athena/index.html?raw'
@@ -79,13 +84,20 @@ const readOptimizedReportingRoute = createRoute({
   component: () => <StaticPage documentHtml={readOptimizedReporting} pagePath="/work/athena/read-optimized-reporting/" title="Read-optimized reporting — Athena" />,
 })
 
-const ConversationsPage = import.meta.env.DEV
+const conversationArchiveRouteEnabled = isConversationArchiveRouteEnabled({
+  isDevelopment: import.meta.env.DEV,
+  enabled: import.meta.env.VITE_CONVERSATION_ARCHIVE_ENABLED === 'true',
+  hostname: window.location.hostname,
+  archiveHostname: import.meta.env.VITE_CONVERSATION_ARCHIVE_HOSTNAME,
+})
+
+const ConversationsPage = conversationArchiveRouteEnabled
   ? lazy(() => import('./conversations-page.jsx'))
   : null
 
 const conversationsRoute = ConversationsPage && createRoute({
   getParentRoute: () => rootRoute,
-  path: LOCAL_ROUTE_PATHS.conversations,
+  path: PRIVATE_ROUTE_PATHS.conversations,
   component: ConversationsPage,
 })
 

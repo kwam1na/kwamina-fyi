@@ -5,7 +5,7 @@
 //
 //   POST /api/chat              stream an answer, then persist the turn
 //   GET  /api/chat/transcript   replay a stored transcript (thread id header)
-//   GET  /api/conversations/*   local-development transcript inspector
+//   GET  /api/conversations/*   private transcript inspector
 //
 // The whole site corpus rides in the system prompt rather than a retrieval
 // index. Prompt caching means we pay for it once per five minutes rather than
@@ -23,6 +23,12 @@ import {
   deploymentEnvironment,
 } from './chat-contract.js'
 import { createOperationId, createWorkerObservability } from './observability.js'
+import {
+  conversationInspectorAccess,
+  listConversationInspector,
+  loadConversationInspector,
+  verifyConversationAccessToken,
+} from './conversation-inspector.js'
 
 // Sized above the contract's word budgets with headroom: two site transcripts
 // showed answers truncated mid-sentence at the old 640 cap.
@@ -32,8 +38,6 @@ const MAX_REQUEST_BYTES = 128_000
 // Deep enough for a real follow-up thread, shallow enough that a long-lived
 // conversation cannot grow the per-request cost without bound.
 const MAX_HISTORY_MESSAGES = 30
-const MAX_INSPECTOR_CONVERSATIONS = 100
-const MAX_INSPECTOR_MESSAGES = 100
 const MIN_MS_BETWEEN_MESSAGES = 1500
 // Per-caller ceiling. Well above anyone reading and asking follow-ups, low
 // enough that a script cannot run up a bill unattended.
@@ -732,57 +736,6 @@ export async function loadTranscript(db, threadId) {
   }))
 }
 
-export function isLocalConversationInspector(requestUrl) {
-  const hostname = new URL(requestUrl).hostname
-  return hostname === 'localhost' || hostname === '127.0.0.1'
-}
-
-export async function listConversationInspector(db) {
-  const { results } = await db.prepare(`
-    SELECT
-      conversations.id,
-      conversations.created_at,
-      conversations.last_message_at,
-      conversations.message_count,
-      conversations.source,
-      conversations.environment,
-      (
-        SELECT content
-        FROM messages
-        WHERE messages.conversation_id = conversations.id
-          AND messages.role = 'user'
-        ORDER BY messages.created_at ASC, messages.id ASC
-        LIMIT 1
-      ) AS first_question
-    FROM conversations
-    ORDER BY conversations.last_message_at DESC, conversations.id DESC
-    LIMIT ?
-  `).bind(MAX_INSPECTOR_CONVERSATIONS).all()
-
-  return results
-}
-
-export async function loadConversationInspector(db, threadId) {
-  const conversation = await db.prepare(`
-    SELECT id, created_at, last_message_at, message_count, source, environment
-    FROM conversations
-    WHERE id = ?
-  `).bind(threadId).first()
-  if (!conversation) return null
-
-  const { results } = await db.prepare(`
-    SELECT
-      id, role, content, created_at, page_path,
-      assistant_version, corpus_version, model, latency_ms
-    FROM messages
-    WHERE conversation_id = ?
-    ORDER BY created_at DESC, id DESC
-    LIMIT ?
-  `).bind(threadId, MAX_INSPECTOR_MESSAGES).all()
-
-  return { conversation, messages: results.reverse() }
-}
-
 async function handleTranscript(env, threadId, request, operationId, observability) {
   const startedAt = Date.now()
   observability.record(requestObservation(request, env, operationId, 'assistant.replay', {
@@ -802,40 +755,43 @@ async function handleTranscript(env, threadId, request, operationId, observabili
   )
 }
 
-export default {
-  // Rate-limit keys rotate daily and are dead the moment their window closes,
-  // so nothing here needs to outlive the hour. Sweeping on a schedule keeps the
-  // table from growing without bound and keeps the delete off the request path.
-  async scheduled(event, env, ctx) {
-    const observability = env.WORKER_OBSERVABILITY ?? defaultObservability
-    try {
-      const result = await env.DB
-        .prepare('DELETE FROM rate_limits WHERE window_start < ?')
-        .bind(Date.now() - 3_600_000)
-        .run()
-      observability.record({
-        event: 'worker.operation',
-        route: 'scheduled',
-        environment: env.ENVIRONMENT ?? 'production',
-        outcomeCode: 'RATE_LIMIT_SWEEP_COMPLETED',
-        occurrences: result.meta?.changes ?? 0,
-      })
-    } catch (error) {
-      observability.captureActionableIssue({
-        event: 'worker.issue',
-        route: 'scheduled',
-        environment: env.ENVIRONMENT ?? 'production',
-        outcomeCode: 'RATE_LIMIT_SWEEP_FAILED',
-      })
-    }
-  },
+export function createWorker({ verifyAccessToken = verifyConversationAccessToken } = {}) {
+  return {
+    // Rate-limit keys rotate daily and are dead the moment their window closes,
+    // so nothing here needs to outlive the hour. Sweeping on a schedule keeps the
+    // table from growing without bound and keeps the delete off the request path.
+    async scheduled(event, env, ctx) {
+      const observability = env.WORKER_OBSERVABILITY ?? defaultObservability
+      try {
+        const result = await env.DB
+          .prepare('DELETE FROM rate_limits WHERE window_start < ?')
+          .bind(Date.now() - 3_600_000)
+          .run()
+        observability.record({
+          event: 'worker.operation',
+          route: 'scheduled',
+          environment: env.ENVIRONMENT ?? 'production',
+          outcomeCode: 'RATE_LIMIT_SWEEP_COMPLETED',
+          occurrences: result.meta?.changes ?? 0,
+        })
+      } catch (error) {
+        observability.captureActionableIssue({
+          event: 'worker.issue',
+          route: 'scheduled',
+          environment: env.ENVIRONMENT ?? 'production',
+          outcomeCode: 'RATE_LIMIT_SWEEP_FAILED',
+        })
+      }
+    },
 
-  async fetch(request, env, ctx) {
+    async fetch(request, env, ctx) {
     const url = new URL(request.url)
     const isChatRoute = url.pathname === '/api/chat'
     const isTranscriptRoute = url.pathname === '/api/chat/transcript'
     const isConversationListRoute = url.pathname === '/api/conversations'
     const conversationDetailMatch = url.pathname.match(/^\/api\/conversations\/([^/]+)$/)
+    const isConversationPageRoute = url.pathname === '/conversations'
+      || url.pathname.startsWith('/conversations/')
     const operationId = isChatRoute || isTranscriptRoute ? createOperationId() : null
     const observability = env.WORKER_OBSERVABILITY ?? defaultObservability
     const now = typeof env.WORKER_NOW === 'function' ? env.WORKER_NOW : () => Date.now()
@@ -890,13 +846,18 @@ export default {
       }
 
       if ((isConversationListRoute || conversationDetailMatch) && request.method === 'GET') {
-        if (!isLocalConversationInspector(request.url)) {
+        const access = await conversationInspectorAccess(request, env, verifyAccessToken)
+        if (!access.allowed) {
           return jsonResponse({ error: 'Not found.' }, 404)
         }
 
         if (isConversationListRoute) {
           return jsonResponse(
-            { conversations: await listConversationInspector(env.DB) },
+            {
+              conversations: await listConversationInspector(env.DB, {
+                productionOnly: access.productionOnly,
+              }),
+            },
             200,
             { 'cache-control': 'private, no-store' },
           )
@@ -909,10 +870,18 @@ export default {
           return jsonResponse({ error: 'Malformed request.' }, 400)
         }
         if (!THREAD_ID_PATTERN.test(threadId)) return jsonResponse({ error: 'Malformed request.' }, 400)
-        const conversation = await loadConversationInspector(env.DB, threadId)
+        const conversation = await loadConversationInspector(env.DB, threadId, {
+          productionOnly: access.productionOnly,
+        })
         return conversation
           ? jsonResponse(conversation, 200, { 'cache-control': 'private, no-store' })
           : jsonResponse({ error: 'Not found.' }, 404)
+      }
+
+      if (isConversationPageRoute && request.method === 'GET') {
+        const access = await conversationInspectorAccess(request, env, verifyAccessToken)
+        if (!access.allowed || !env.ASSETS) return jsonResponse({ error: 'Not found.' }, 404)
+        return env.ASSETS.fetch(request)
       }
 
       const response = jsonResponse({ error: 'Not found.' }, 404)
@@ -928,5 +897,8 @@ export default {
       const response = jsonResponse({ error: 'Something went wrong. Please try again.' }, 500)
       return operationId ? operationResponse(response, operationId, runKind) : response
     }
-  },
+    },
+  }
 }
+
+export default createWorker()

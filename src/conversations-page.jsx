@@ -199,7 +199,7 @@ export default function ConversationsPage() {
 
       <main id="conversation-main" className="conversations-main">
         <header className="conversations-intro">
-          <p className="conversation-kicker">Local archive</p>
+          <p className="conversation-kicker">Private archive</p>
           <h1>Conversations</h1>
           <p>Read the questions people ask and the answers the site gives back.</p>
         </header>

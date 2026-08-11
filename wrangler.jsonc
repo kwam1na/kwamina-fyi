@@ -17,15 +17,26 @@
     }
   },
   "main": "./worker/index.js",
+  // Keep the Worker unavailable on its public workers.dev hostname. The
+  // public site and private archive are served only through explicit custom
+  // domains, so Access cannot be bypassed through an alternate hostname.
+  "workers_dev": false,
+  "preview_urls": false,
+  "vars": {
+    "CONVERSATION_ARCHIVE_HOSTNAME": "admin.kwamina.fyi"
+  },
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     // Without this the SPA fallback answers /api/* with index.html: the asset
     // worker runs first and treats an unmatched path as a client route. Naming
     // the API prefix here is what lets the Worker script see those requests at
     // all; everything else still goes straight to assets.
     "run_worker_first": [
-      "/api/*"
+      "/api/*",
+      "/conversations",
+      "/conversations/*"
     ]
   },
   // Per-IP burst ceiling on the chat endpoint. Like the D1 backstop, this is

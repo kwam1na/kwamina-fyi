@@ -2055,6 +2055,13 @@ body.conversation-archive-open {
   max-width: 32ch;
 }
 
+.site-chat-intro .site-chat-disclosure {
+  margin-top: -8px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
 .site-chat-starters {
   display: flex;
   flex-direction: column;

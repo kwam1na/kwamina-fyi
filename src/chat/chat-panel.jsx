@@ -28,6 +28,8 @@ const STARTERS = [
   'How does he work with AI agents?',
 ]
 
+const CHAT_STORAGE_DISCLOSURE = 'Questions and answers may be stored and privately reviewed.'
+
 function messageText(message) {
   return (message.parts ?? [])
     .filter((part) => part.type === 'text')
@@ -529,6 +531,7 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
             <p>
               Answers are grounded in this site, so you can always check the source.
             </p>
+            <p className="site-chat-disclosure">{CHAT_STORAGE_DISCLOSURE}</p>
             <ul className="site-chat-starters">
               {STARTERS.map((starter) => (
                 <li key={starter}>
