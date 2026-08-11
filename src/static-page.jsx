@@ -535,9 +535,17 @@ export function StaticPage({ documentHtml, pagePath, title, conversationArchiveE
         enter: 'bottom top',
         leave: 'center center',
         // Under 1 follows the scroll with a little lag, which keeps the
-        // ramp from stepping on a trackpad's coarser scroll deltas.
-        sync: 0.6,
+        // ramp from stepping on a trackpad's coarser scroll deltas. Held
+        // high: at 0.6 the ink trailed far enough behind a brisk scroll
+        // that the section arrived unpainted and then rushed to catch up.
+        sync: 0.85,
         onSyncComplete: () => onLanded(),
+        // Crossing the leave line forward means the block has been read;
+        // retire it on that raw crossing rather than waiting for the
+        // smoothed fill to land. Completion is the only thing keeping a
+        // filled block filled, and a quick reversal used to outrun it —
+        // leaving the animation live to run the introduction backwards.
+        onLeaveForward: () => onLanded(),
       })
 
       animate(tokens, {
