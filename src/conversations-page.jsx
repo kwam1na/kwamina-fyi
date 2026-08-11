@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import Markdown from 'react-markdown'
 
@@ -30,6 +30,28 @@ async function fetchJson(path, signal) {
   const response = await fetch(path, { signal, headers: { accept: 'application/json' } })
   if (!response.ok) throw new Error(`Request failed with status ${response.status}`)
   return response.json()
+}
+
+export function createLatestRequestGate() {
+  let current = null
+
+  return {
+    start() {
+      current?.abort()
+      current = new AbortController()
+      return current
+    },
+    isCurrent(request) {
+      return current === request
+    },
+    clear(request) {
+      if (current === request) current = null
+    },
+    cancel() {
+      current?.abort()
+      current = null
+    },
+  }
 }
 
 function ConversationList({ conversations, selectedId, onSelect }) {
@@ -121,6 +143,8 @@ export default function ConversationsPage() {
   const [query, setQuery] = useState('')
   const [listState, setListState] = useState('loading')
   const [detailState, setDetailState] = useState('idle')
+  const listRequests = useRef(null)
+  if (!listRequests.current) listRequests.current = createLatestRequestGate()
 
   useEffect(() => {
     document.title = 'Conversations — Kwamina Essuah Mensah'
@@ -139,10 +163,12 @@ export default function ConversationsPage() {
   }, [])
 
   const loadList = useCallback(() => {
-    const abort = new AbortController()
+    const requests = listRequests.current
+    const request = requests.start()
     setListState('loading')
-    fetchJson('/api/conversations', abort.signal)
+    fetchJson('/api/conversations', request.signal)
       .then(({ conversations: next }) => {
+        if (!requests.isCurrent(request)) return
         setConversations(next)
         setSelectedId((current) => current && next.some(({ id }) => id === current)
           ? current
@@ -150,12 +176,15 @@ export default function ConversationsPage() {
         setListState('ready')
       })
       .catch((error) => {
-        if (error.name !== 'AbortError') setListState('error')
+        if (requests.isCurrent(request) && error.name !== 'AbortError') setListState('error')
       })
-    return () => abort.abort()
+      .finally(() => requests.clear(request))
   }, [])
 
-  useEffect(() => loadList(), [loadList])
+  useEffect(() => {
+    loadList()
+    return () => listRequests.current.cancel()
+  }, [loadList])
 
   useEffect(() => {
     if (!selectedId) {

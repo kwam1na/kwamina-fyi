@@ -34,6 +34,12 @@ export function isConversationArchiveRouteEnabled({
   return Boolean(enabled && archiveHostname && hostname === archiveHostname)
 }
 
+export function shouldRenderSiteChrome(pathname, archiveEnabled) {
+  if (!archiveEnabled) return true
+  return pathname !== PRIVATE_ROUTE_PATHS.conversations
+    && !pathname.startsWith(`${PRIVATE_ROUTE_PATHS.conversations}/`)
+}
+
 // Superseded paths kept resolvable so older links and bookmarks still land.
 export const LEGACY_REDIRECTS = {
   '/work/local-first-pos': ROUTE_PATHS.localFirstPos,

@@ -7,6 +7,7 @@ import {
   Outlet,
   redirect,
   RouterProvider,
+  useRouterState,
 } from '@tanstack/react-router'
 import { StaticPage } from './static-page.jsx'
 import { ThemeToggle } from './theme-toggle.jsx'
@@ -22,6 +23,7 @@ import {
   PRIVATE_ROUTE_PATHS,
   ROUTE_PATHS,
   isConversationArchiveRouteEnabled,
+  shouldRenderSiteChrome,
 } from './routes.js'
 import homepage from '../docs/content/homepage.html?raw'
 import about from '../docs/content/about.html?raw'
@@ -32,12 +34,19 @@ import readOptimizedReporting from '../docs/content/work/athena/read-optimized-r
 import './styles.css'
 
 function RootLayout() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const showSiteChrome = shouldRenderSiteChrome(pathname, conversationArchiveRouteEnabled)
+
   return (
     <>
       <Outlet />
-      <ThemeToggle />
-      <ScrollToTop />
-      <ChatWidget />
+      {showSiteChrome && (
+        <>
+          <ThemeToggle />
+          <ScrollToTop />
+          <ChatWidget />
+        </>
+      )}
     </>
   )
 }
