@@ -776,7 +776,7 @@ body::after {
   padding: 0;
   border: 0;
   border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--paper) 92%, var(--ink));
+  background: transparent;
   color: var(--muted);
   font-family: inherit;
   font-size: 0.82rem;
