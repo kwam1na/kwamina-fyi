@@ -1,9 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { animate, onScroll, remove, set, split, stagger } from 'animejs'
-import { NAVIGABLE_PATHS, normalisePath } from './routes.js'
+import { NAVIGABLE_PATHS, PRIVATE_ROUTE_PATHS, normalisePath } from './routes.js'
 import { recordNavigation, returnLabels, returnStack } from './return-stack.js'
 import { bindProximityScope, bindProximityScopes } from './proximity-focus.js'
+import { addConversationArchiveEntry } from './admin-navigation.js'
 
 function addRouteBreadcrumbs(body, pagePath) {
   const segments = normalisePath(pagePath).split('/').filter(Boolean)
@@ -170,7 +171,7 @@ function attachZoomGestures(layer, image) {
   }
 }
 
-function extractPage(documentHtml, pagePath) {
+function extractPage(documentHtml, pagePath, conversationArchiveEntry) {
   const styles = [...documentHtml.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)]
     .map((match) => match[1])
     .join('\n')
@@ -179,7 +180,10 @@ function extractPage(documentHtml, pagePath) {
   return {
     styles,
     body: wrapFooterReveal(
-      addRouteBreadcrumbs(body.replace(/<script\b[\s\S]*?<\/script>/gi, ''), pagePath),
+      addConversationArchiveEntry(
+        addRouteBreadcrumbs(body.replace(/<script\b[\s\S]*?<\/script>/gi, ''), pagePath),
+        conversationArchiveEntry,
+      ),
     ),
   }
 }
@@ -194,10 +198,13 @@ function wrapFooterReveal(body) {
   )
 }
 
-export function StaticPage({ documentHtml, pagePath, title }) {
+export function StaticPage({ documentHtml, pagePath, title, conversationArchiveEntry = false }) {
   const containerRef = useRef(null)
   const navigate = useNavigate()
-  const page = useMemo(() => extractPage(documentHtml, pagePath), [documentHtml, pagePath])
+  const page = useMemo(
+    () => extractPage(documentHtml, pagePath, conversationArchiveEntry),
+    [conversationArchiveEntry, documentHtml, pagePath],
+  )
   const shouldPlayHomeNavEntry = pagePath === '/' && !hasPlayedHomeNavEntry
 
   // The page reserves exactly the footer's height below it, so the pinned
@@ -702,7 +709,10 @@ export function StaticPage({ documentHtml, pagePath, title }) {
 
       const target = new URL(href, new URL(pagePath, window.location.origin))
       const path = normalisePath(target.pathname)
-      if (target.origin !== window.location.origin || !NAVIGABLE_PATHS.has(path)) return
+      const isConversationArchivePath = conversationArchiveEntry
+        && path === PRIVATE_ROUTE_PATHS.conversations
+      if (target.origin !== window.location.origin
+        || (!NAVIGABLE_PATHS.has(path) && !isConversationArchivePath)) return
 
       const destinationHash = target.hash
 
@@ -727,7 +737,7 @@ export function StaticPage({ documentHtml, pagePath, title }) {
 
     container.addEventListener('click', onClick)
     return () => container.removeEventListener('click', onClick)
-  }, [navigate, pagePath])
+  }, [conversationArchiveEntry, navigate, pagePath])
 
   useEffect(() => {
     const nav = containerRef.current?.querySelector('.rail-nav[aria-label="On this page"]')

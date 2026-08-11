@@ -258,6 +258,17 @@ body::after {
   background: var(--paper);
 }
 
+.routed-page .site-nav :is(.brand, .brand-group) + .nav-link {
+  margin-left: auto;
+}
+
+.admin-nav-entry {
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .routed-page.has-revealed-footer main {
   background: var(--paper);
 }

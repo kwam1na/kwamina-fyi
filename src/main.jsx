@@ -57,47 +57,51 @@ const rootRoute = createRootRoute({
   errorComponent: ErrorPage,
 })
 
-const homeRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: ROUTE_PATHS.home,
-  component: () => <StaticPage documentHtml={homepage} pagePath="/" title="Kwamina Essuah Mensah" />,
-})
-
-const aboutRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: ROUTE_PATHS.about,
-  component: () => <StaticPage documentHtml={about} pagePath="/about" title="About — Kwamina Essuah Mensah" />,
-})
-
-const athenaRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: ROUTE_PATHS.athena,
-  component: () => <StaticPage documentHtml={athena} pagePath="/work/athena/" title="Athena — Kwamina Essuah Mensah" />,
-})
-
-const localFirstPosRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: ROUTE_PATHS.localFirstPos,
-  component: () => <StaticPage documentHtml={localFirstPos} pagePath="/work/athena/local-first-pos/" title="Local-first point of sale — Athena" />,
-})
-
-const agentReadyRepositoryRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: ROUTE_PATHS.agentReadyRepository,
-  component: () => <StaticPage documentHtml={agentReadyRepository} pagePath="/work/athena/agent-ready-repository/" title="Agent-ready repository — Athena" />,
-})
-
-const readOptimizedReportingRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: ROUTE_PATHS.readOptimizedReporting,
-  component: () => <StaticPage documentHtml={readOptimizedReporting} pagePath="/work/athena/read-optimized-reporting/" title="Read-optimized reporting — Athena" />,
-})
-
 const conversationArchiveRouteEnabled = isConversationArchiveRouteEnabled({
   isDevelopment: import.meta.env.DEV,
   enabled: import.meta.env.VITE_CONVERSATION_ARCHIVE_ENABLED === 'true',
   hostname: window.location.hostname,
   archiveHostname: import.meta.env.VITE_CONVERSATION_ARCHIVE_HOSTNAME,
+})
+
+function SitePage(props) {
+  return <StaticPage {...props} conversationArchiveEntry={conversationArchiveRouteEnabled} />
+}
+
+const homeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTE_PATHS.home,
+  component: () => <SitePage documentHtml={homepage} pagePath="/" title="Kwamina Essuah Mensah" />,
+})
+
+const aboutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTE_PATHS.about,
+  component: () => <SitePage documentHtml={about} pagePath="/about" title="About — Kwamina Essuah Mensah" />,
+})
+
+const athenaRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTE_PATHS.athena,
+  component: () => <SitePage documentHtml={athena} pagePath="/work/athena/" title="Athena — Kwamina Essuah Mensah" />,
+})
+
+const localFirstPosRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTE_PATHS.localFirstPos,
+  component: () => <SitePage documentHtml={localFirstPos} pagePath="/work/athena/local-first-pos/" title="Local-first point of sale — Athena" />,
+})
+
+const agentReadyRepositoryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTE_PATHS.agentReadyRepository,
+  component: () => <SitePage documentHtml={agentReadyRepository} pagePath="/work/athena/agent-ready-repository/" title="Agent-ready repository — Athena" />,
+})
+
+const readOptimizedReportingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTE_PATHS.readOptimizedReporting,
+  component: () => <SitePage documentHtml={readOptimizedReporting} pagePath="/work/athena/read-optimized-reporting/" title="Read-optimized reporting — Athena" />,
 })
 
 const ConversationsPage = conversationArchiveRouteEnabled
