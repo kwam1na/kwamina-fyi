@@ -4,6 +4,9 @@ import { readFileSync, readdirSync } from 'node:fs'
 import worker, {
   callerKey,
   finalizeAssistantStream,
+  isLocalConversationInspector,
+  listConversationInspector,
+  loadConversationInspector,
   loadTranscript,
   persistTurn,
   readJsonBody,
@@ -899,6 +902,84 @@ describe('Worker transcript replay', () => {
     expect(response.headers.get('x-operation-id')).toMatch(/^op_[a-f0-9]{32}$/)
     expect(issues).toContainEqual(expect.objectContaining({ outcomeCode: 'REPLAY_FAILED' }))
     expect(JSON.stringify(issues)).not.toContain('private transcript payload')
+  })
+})
+
+describe('Local conversation inspector', () => {
+  it('is available only on local hostnames', () => {
+    expect(isLocalConversationInspector('http://localhost:8787/api/conversations')).toBe(true)
+    expect(isLocalConversationInspector('http://127.0.0.1:8787/api/conversations')).toBe(true)
+    expect(isLocalConversationInspector('https://kwamina.fyi/api/conversations')).toBe(false)
+  })
+
+  it('lists recent conversations and returns bounded transcript metadata', async () => {
+    const { sqlite, d1 } = migratedSqliteD1()
+    sqlite.query(`
+      INSERT INTO conversations (
+        id, created_at, last_message_at, message_count, source, environment
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `).run('thread-local-123', 100, 200, 2, 'site', 'local')
+    sqlite.query(`
+      INSERT INTO messages (conversation_id, role, content, created_at, page_path)
+      VALUES (?, 'user', ?, ?, ?)
+    `).run('thread-local-123', 'How does this work?', 100, '/work/athena')
+    sqlite.query(`
+      INSERT INTO messages (
+        conversation_id, role, content, created_at,
+        assistant_version, corpus_version, model, latency_ms
+      ) VALUES (?, 'assistant', ?, ?, ?, ?, ?, ?)
+    `).run('thread-local-123', 'Like this.', 101, '2026-08-11.2', 'abc123def456', 'model-1', 240)
+
+    await expect(listConversationInspector(d1)).resolves.toEqual([
+      expect.objectContaining({
+        id: 'thread-local-123',
+        first_question: 'How does this work?',
+        message_count: 2,
+      }),
+    ])
+    await expect(loadConversationInspector(d1, 'thread-local-123')).resolves.toEqual({
+      conversation: expect.objectContaining({ id: 'thread-local-123', environment: 'local' }),
+      messages: [
+        expect.objectContaining({ role: 'user', page_path: '/work/athena' }),
+        expect.objectContaining({
+          role: 'assistant',
+          assistant_version: '2026-08-11.2',
+          corpus_version: 'abc123def456',
+          latency_ms: 240,
+        }),
+      ],
+    })
+  })
+
+  it('returns 404 before touching D1 outside local development', async () => {
+    const response = await worker.fetch(
+      new Request('https://kwamina.fyi/api/conversations'),
+      { DB: { prepare: () => { throw new Error('D1 should not be read') } } },
+      {},
+    )
+
+    expect(response.status).toBe(404)
+  })
+
+  it('serves the local list without caching it', async () => {
+    const response = await worker.fetch(
+      new Request('http://localhost:8787/api/conversations'),
+      {
+        DB: {
+          prepare() {
+            return {
+              bind() { return this },
+              async all() { return { results: [] } },
+            }
+          },
+        },
+      },
+      {},
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
+    await expect(response.json()).resolves.toEqual({ conversations: [] })
   })
 })
 

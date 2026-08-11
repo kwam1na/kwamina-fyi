@@ -17,6 +17,12 @@ export const ROUTE_PATHS = {
   readOptimizedReporting: '/work/athena/read-optimized-reporting',
 }
 
+// Development tools are intentionally excluded from the public route and
+// in-app navigation registries. The router adds them only in local builds.
+export const LOCAL_ROUTE_PATHS = {
+  conversations: '/conversations',
+}
+
 // Superseded paths kept resolvable so older links and bookmarks still land.
 export const LEGACY_REDIRECTS = {
   '/work/local-first-pos': ROUTE_PATHS.localFirstPos,

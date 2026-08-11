@@ -183,6 +183,9 @@ The contract enforces these boundaries:
   life, or undocumented opinions;
 - answer direct questions concisely and avoid repeating the complete Athena
   positioning unnecessarily;
+- answer broad questions about how the site was built with only the stack and
+  grounding approach, reserving operational and verification detail for
+  explicit follow-ups;
 - produce canonical labeled site links when directing readers elsewhere;
 - mention contact destinations only when contact, opportunities, or a personal
   perspective are actually requested;
@@ -225,6 +228,14 @@ them, preserving useful validation and rate-limit messages in the UI.
 thread credential is supplied in `x-chat-thread-id`. Other API
 paths return JSON 404s. An hourly scheduled handler removes expired D1
 rate-limit rows.
+
+Local development also exposes a read-only conversation archive at
+`/conversations`. Its `/api/conversations` list and detail endpoints read at
+most 100 conversations and 100 messages, return `private, no-store`, and are
+guarded by the localhost request boundary. The page is omitted from production
+route registration, and both API endpoints return 404 before reading D1 on a
+non-local hostname. This is the inspection surface for access-control work;
+it must not be made deployable by weakening that boundary.
 
 ## Conversation history and D1
 

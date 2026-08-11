@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { lazy, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   createRootRoute,
@@ -17,7 +17,7 @@ import { ErrorPage } from './error-page.jsx'
 import { startBrowserObservability } from './observability/browser.js'
 import { observeCoreWebVitals, startManualAnalytics } from './observability/analytics.js'
 import { createSimpleAnalyticsProvider } from './observability/simple-analytics.js'
-import { LEGACY_REDIRECTS, ROUTE_PATHS } from './routes.js'
+import { LEGACY_REDIRECTS, LOCAL_ROUTE_PATHS, ROUTE_PATHS } from './routes.js'
 import homepage from '../docs/content/homepage.html?raw'
 import about from '../docs/content/about.html?raw'
 import athena from '../docs/content/work/athena/index.html?raw'
@@ -79,6 +79,16 @@ const readOptimizedReportingRoute = createRoute({
   component: () => <StaticPage documentHtml={readOptimizedReporting} pagePath="/work/athena/read-optimized-reporting/" title="Read-optimized reporting — Athena" />,
 })
 
+const ConversationsPage = import.meta.env.DEV
+  ? lazy(() => import('./conversations-page.jsx'))
+  : null
+
+const conversationsRoute = ConversationsPage && createRoute({
+  getParentRoute: () => rootRoute,
+  path: LOCAL_ROUTE_PATHS.conversations,
+  component: ConversationsPage,
+})
+
 const legacyRedirectRoutes = Object.entries(LEGACY_REDIRECTS).map(([from, to]) =>
   createRoute({
     getParentRoute: () => rootRoute,
@@ -96,6 +106,7 @@ const routeTree = rootRoute.addChildren([
   localFirstPosRoute,
   agentReadyRepositoryRoute,
   readOptimizedReportingRoute,
+  ...(conversationsRoute ? [conversationsRoute] : []),
   ...legacyRedirectRoutes,
 ])
 

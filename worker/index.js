@@ -1,10 +1,11 @@
 // Backend for the site assistant.
 //
-// Two endpoints behind /api, everything else falls through to the static
+// Chat endpoints behind /api, everything else falls through to the static
 // assets (see `run_worker_first` in wrangler.jsonc):
 //
 //   POST /api/chat              stream an answer, then persist the turn
 //   GET  /api/chat/transcript   replay a stored transcript (thread id header)
+//   GET  /api/conversations/*   local-development transcript inspector
 //
 // The whole site corpus rides in the system prompt rather than a retrieval
 // index. Prompt caching means we pay for it once per five minutes rather than
@@ -31,6 +32,8 @@ const MAX_REQUEST_BYTES = 128_000
 // Deep enough for a real follow-up thread, shallow enough that a long-lived
 // conversation cannot grow the per-request cost without bound.
 const MAX_HISTORY_MESSAGES = 30
+const MAX_INSPECTOR_CONVERSATIONS = 100
+const MAX_INSPECTOR_MESSAGES = 100
 const MIN_MS_BETWEEN_MESSAGES = 1500
 // Per-caller ceiling. Well above anyone reading and asking follow-ups, low
 // enough that a script cannot run up a bill unattended.
@@ -729,6 +732,57 @@ export async function loadTranscript(db, threadId) {
   }))
 }
 
+export function isLocalConversationInspector(requestUrl) {
+  const hostname = new URL(requestUrl).hostname
+  return hostname === 'localhost' || hostname === '127.0.0.1'
+}
+
+export async function listConversationInspector(db) {
+  const { results } = await db.prepare(`
+    SELECT
+      conversations.id,
+      conversations.created_at,
+      conversations.last_message_at,
+      conversations.message_count,
+      conversations.source,
+      conversations.environment,
+      (
+        SELECT content
+        FROM messages
+        WHERE messages.conversation_id = conversations.id
+          AND messages.role = 'user'
+        ORDER BY messages.created_at ASC, messages.id ASC
+        LIMIT 1
+      ) AS first_question
+    FROM conversations
+    ORDER BY conversations.last_message_at DESC, conversations.id DESC
+    LIMIT ?
+  `).bind(MAX_INSPECTOR_CONVERSATIONS).all()
+
+  return results
+}
+
+export async function loadConversationInspector(db, threadId) {
+  const conversation = await db.prepare(`
+    SELECT id, created_at, last_message_at, message_count, source, environment
+    FROM conversations
+    WHERE id = ?
+  `).bind(threadId).first()
+  if (!conversation) return null
+
+  const { results } = await db.prepare(`
+    SELECT
+      id, role, content, created_at, page_path,
+      assistant_version, corpus_version, model, latency_ms
+    FROM messages
+    WHERE conversation_id = ?
+    ORDER BY created_at DESC, id DESC
+    LIMIT ?
+  `).bind(threadId, MAX_INSPECTOR_MESSAGES).all()
+
+  return { conversation, messages: results.reverse() }
+}
+
 async function handleTranscript(env, threadId, request, operationId, observability) {
   const startedAt = Date.now()
   observability.record(requestObservation(request, env, operationId, 'assistant.replay', {
@@ -780,6 +834,8 @@ export default {
     const url = new URL(request.url)
     const isChatRoute = url.pathname === '/api/chat'
     const isTranscriptRoute = url.pathname === '/api/chat/transcript'
+    const isConversationListRoute = url.pathname === '/api/conversations'
+    const conversationDetailMatch = url.pathname.match(/^\/api\/conversations\/([^/]+)$/)
     const operationId = isChatRoute || isTranscriptRoute ? createOperationId() : null
     const observability = env.WORKER_OBSERVABILITY ?? defaultObservability
     const now = typeof env.WORKER_NOW === 'function' ? env.WORKER_NOW : () => Date.now()
@@ -831,6 +887,32 @@ export default {
           }))
           throw error
         }
+      }
+
+      if ((isConversationListRoute || conversationDetailMatch) && request.method === 'GET') {
+        if (!isLocalConversationInspector(request.url)) {
+          return jsonResponse({ error: 'Not found.' }, 404)
+        }
+
+        if (isConversationListRoute) {
+          return jsonResponse(
+            { conversations: await listConversationInspector(env.DB) },
+            200,
+            { 'cache-control': 'private, no-store' },
+          )
+        }
+
+        let threadId
+        try {
+          threadId = decodeURIComponent(conversationDetailMatch[1])
+        } catch {
+          return jsonResponse({ error: 'Malformed request.' }, 400)
+        }
+        if (!THREAD_ID_PATTERN.test(threadId)) return jsonResponse({ error: 'Malformed request.' }, 400)
+        const conversation = await loadConversationInspector(env.DB, threadId)
+        return conversation
+          ? jsonResponse(conversation, 200, { 'cache-control': 'private, no-store' })
+          : jsonResponse({ error: 'Not found.' }, 404)
       }
 
       const response = jsonResponse({ error: 'Not found.' }, 404)
