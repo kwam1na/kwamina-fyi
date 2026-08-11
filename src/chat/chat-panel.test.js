@@ -3,6 +3,9 @@ import { createElement } from 'react'
 import { act, create } from 'react-test-renderer'
 import {
   ChatRenderBoundary,
+  ChatLatestButton,
+  StreamingText,
+  chatIsAwayFromLatest,
   chatInputPlaceholder,
   createChatScrollFollower,
   positionChatAtLatest,
@@ -10,6 +13,100 @@ import {
   shouldShowThinking,
   triggerCompletionHaptic,
 } from './chat-panel.jsx'
+
+function renderedText(node) {
+  if (typeof node === 'string') return node
+  if (!node) return ''
+  return (node.children ?? []).map(renderedText).join('')
+}
+
+describe('chatIsAwayFromLatest', () => {
+  it('shows the latest-message affordance only beyond the bottom tolerance', () => {
+    const log = { scrollHeight: 1_000, clientHeight: 300, scrollTop: 660 }
+
+    expect(chatIsAwayFromLatest(log)).toBe(true)
+
+    log.scrollTop = 676
+    expect(chatIsAwayFromLatest(log)).toBe(false)
+
+    log.scrollHeight = 1_100
+    expect(chatIsAwayFromLatest(log)).toBe(true)
+    expect(chatIsAwayFromLatest(null)).toBe(false)
+  })
+})
+
+describe('StreamingText', () => {
+  it('notifies scroll followers after revealed text reaches the rendered tree', async () => {
+    const previousWindow = globalThis.window
+    const previousActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT
+    globalThis.window = { matchMedia: () => ({ matches: true }) }
+    globalThis.IS_REACT_ACT_ENVIRONMENT = true
+    const revealedTrees = []
+    let renderer
+
+    try {
+      await act(async () => {
+        renderer = create(createElement(StreamingText, {
+          text: 'First',
+          isStreaming: false,
+          onReveal: () => revealedTrees.push(renderedText(renderer?.toJSON())),
+        }))
+      })
+      revealedTrees.length = 0
+
+      await act(async () => {
+        renderer.update(createElement(StreamingText, {
+          text: 'First and second',
+          isStreaming: true,
+          onReveal: () => revealedTrees.push(renderedText(renderer.toJSON())),
+        }))
+      })
+
+      expect(revealedTrees.at(-1)).toBe('First and second')
+    } finally {
+      await act(async () => renderer?.unmount())
+      globalThis.window = previousWindow
+      globalThis.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment
+    }
+  })
+})
+
+describe('ChatLatestButton', () => {
+  it('enters the focus order only while visible and invokes its scroll action', async () => {
+    const calls = []
+    let renderer
+
+    await act(async () => {
+      renderer = create(createElement(ChatLatestButton, {
+        isVisible: false,
+        onClick: () => calls.push('latest'),
+      }))
+    })
+
+    expect(renderer.root.findByType('button').props).toMatchObject({
+      'aria-hidden': true,
+      tabIndex: -1,
+    })
+
+    await act(async () => {
+      renderer.update(createElement(ChatLatestButton, {
+        isVisible: true,
+        onClick: () => calls.push('latest'),
+      }))
+    })
+
+    const button = renderer.root.findByType('button')
+    expect(button.props).toMatchObject({
+      'aria-label': 'Scroll to latest message',
+      'aria-hidden': false,
+      tabIndex: 0,
+    })
+    button.props.onClick()
+    expect(calls).toEqual(['latest'])
+
+    await act(async () => renderer.unmount())
+  })
+})
 
 describe('chatInputPlaceholder', () => {
   it('invites a follow-up after the assistant has replied', () => {

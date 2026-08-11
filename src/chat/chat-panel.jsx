@@ -40,6 +40,11 @@ export function scrollChatToLatest(log) {
   if (log) log.scrollTop = log.scrollHeight
 }
 
+export function chatIsAwayFromLatest(log, tolerance = 24) {
+  if (!log) return false
+  return log.scrollHeight - log.clientHeight - log.scrollTop > tolerance
+}
+
 export function chatInputPlaceholder(messages) {
   return messages.some((message) => message.role === 'assistant')
     ? 'Ask a follow-up…'
@@ -107,6 +112,23 @@ function expectedChatFailure(message) {
   const error = new Error(message)
   error.name = 'ChatExpectedFailure'
   return error
+}
+
+export function ChatLatestButton({ isVisible, onClick }) {
+  return (
+    <button
+      type="button"
+      className={`site-chat-latest${isVisible ? ' is-visible' : ''}`}
+      onClick={onClick}
+      aria-label="Scroll to latest message"
+      aria-hidden={!isVisible}
+      tabIndex={isVisible ? 0 : -1}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 5v14m6.5-6.5L12 19l-6.5-6.5" />
+      </svg>
+    </button>
+  )
 }
 
 export class ChatRenderBoundary extends Component {
@@ -196,10 +218,14 @@ function ChatText({ text, hideIncompleteSiteLink = false, onSiteNavigate, wipe =
   )
 }
 
-function StreamingText({ text, isStreaming, onReveal, onSiteNavigate }) {
+export function StreamingText({ text, isStreaming, onReveal, onSiteNavigate }) {
   const [visibleText, setVisibleText] = useState(() => (isStreaming ? '' : text))
   const visibleRef = useRef(visibleText)
   const animationRef = useRef(null)
+
+  useLayoutEffect(() => {
+    onReveal()
+  }, [onReveal, visibleText])
 
   useEffect(() => {
     const revealImmediately = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -211,7 +237,6 @@ function StreamingText({ text, isStreaming, onReveal, onSiteNavigate }) {
     if (revealImmediately) {
       visibleRef.current = text
       setVisibleText(text)
-      onReveal()
       return undefined
     }
 
@@ -230,13 +255,11 @@ function StreamingText({ text, isStreaming, onReveal, onSiteNavigate }) {
         if (nextText === visibleRef.current) return
         visibleRef.current = nextText
         setVisibleText(nextText)
-        onReveal()
       },
       onComplete: () => {
         visibleRef.current = text
         setVisibleText(text)
         animationRef.current = null
-        onReveal()
       },
     })
 
@@ -244,7 +267,7 @@ function StreamingText({ text, isStreaming, onReveal, onSiteNavigate }) {
       animationRef.current?.cancel()
       animationRef.current = null
     }
-  }, [isStreaming, onReveal, text])
+  }, [isStreaming, text])
 
   return (
     <ChatText
@@ -291,6 +314,7 @@ async function chatFetch(input, init, messageRef) {
 export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }) {
   const [input, setInput] = useState('')
   const [replayStatus, setReplayStatus] = useState(thread.isReturning ? 'loading' : 'idle')
+  const [showLatestButton, setShowLatestButton] = useState(false)
   const isRehydrating = replayStatus === 'loading'
   const replayError = replayStatus === 'failed'
   const panelRef = useRef(null)
@@ -381,10 +405,20 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
   // but direct interaction with the transcript hands scroll control back.
   const followLatest = useCallback(() => {
     scrollFollowerRef.current.follow()
+    setShowLatestButton(chatIsAwayFromLatest(logRef.current))
   }, [])
 
   const interruptFollowing = useCallback(() => {
     scrollFollowerRef.current.interrupt()
+  }, [])
+
+  const syncLatestButton = useCallback(() => {
+    setShowLatestButton(chatIsAwayFromLatest(logRef.current))
+  }, [])
+
+  const scrollToLatest = useCallback(() => {
+    scrollFollowerRef.current.start()
+    inputRef.current?.focus()
   }, [])
 
   useLayoutEffect(() => {
@@ -501,6 +535,7 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
         onPointerMove={onSurfaceMove}
         onPointerLeave={onSurfaceLeave}
       >
+      <div className="site-chat-transcript">
       <div
         className="site-chat-log"
         ref={logRef}
@@ -510,6 +545,7 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
         onPointerDown={interruptFollowing}
         onTouchMove={interruptFollowing}
         onWheel={interruptFollowing}
+        onScroll={syncLatestButton}
       >
         {isRehydrating && <p className="site-chat-note">Picking up where you left off&hellip;</p>}
 
@@ -579,6 +615,9 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
             {serverMessageRef.current || GENERIC_ERROR}
           </p>
         )}
+      </div>
+
+      <ChatLatestButton isVisible={showLatestButton} onClick={scrollToLatest} />
       </div>
 
       <form

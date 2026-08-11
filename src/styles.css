@@ -787,7 +787,7 @@ body::after {
   padding: 0;
   border: 0;
   border-bottom: 1px solid var(--line);
-  background: transparent;
+  background: var(--paper);
   color: var(--muted);
   font-family: inherit;
   font-size: 0.82rem;
@@ -2044,11 +2044,83 @@ body.conversation-archive-open {
   z-index: 1;
 }
 
+.site-chat-transcript {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+}
+
 .site-chat-log {
+  height: 100%;
   flex: 1;
   padding: 16px;
   overflow-y: auto;
   scroll-behavior: smooth;
+}
+
+.site-chat-latest {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 14px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: 0 6px 18px rgba(21, 24, 33, 0.14);
+  color: var(--ink);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 6px) scale(0.96);
+  transition:
+    opacity 160ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 180ms var(--ease-portfolio);
+}
+
+.site-chat-latest.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0) scale(1);
+}
+
+.site-chat-latest svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-chat-latest:hover {
+    border-color: var(--line-strong);
+    box-shadow: 0 8px 22px rgba(21, 24, 33, 0.18);
+  }
+}
+
+.site-chat-latest:active {
+  transform: translateX(-50%) scale(0.94);
+}
+
+.site-chat-latest:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .site-chat-latest {
+    width: 44px;
+    height: 44px;
+  }
 }
 
 .site-chat-intro p,
@@ -2473,6 +2545,11 @@ body.conversation-archive-open {
 
   .site-chat-log {
     scroll-behavior: auto;
+  }
+
+  .site-chat-latest {
+    transform: translateX(-50%);
+    transition: opacity 120ms ease;
   }
 
   .site-chat-typing span {
