@@ -3,6 +3,7 @@ import { Database } from 'bun:sqlite'
 import { readFileSync, readdirSync } from 'node:fs'
 import worker, {
   callerKey,
+  createWorker,
   finalizeAssistantStream,
   loadTranscript,
   persistTurn,
@@ -14,6 +15,12 @@ import worker, {
   secured,
   withPageMarker,
 } from './index.js'
+import {
+  conversationInspectorAccess,
+  isLocalConversationInspector,
+  listConversationInspector,
+  loadConversationInspector,
+} from './conversation-inspector.js'
 import { createWorkerObservability } from './observability.js'
 
 const validChatBody = (overrides = {}) => ({
@@ -899,6 +906,273 @@ describe('Worker transcript replay', () => {
     expect(response.headers.get('x-operation-id')).toMatch(/^op_[a-f0-9]{32}$/)
     expect(issues).toContainEqual(expect.objectContaining({ outcomeCode: 'REPLAY_FAILED' }))
     expect(JSON.stringify(issues)).not.toContain('private transcript payload')
+  })
+})
+
+describe('Local conversation inspector', () => {
+  it('is available only on local hostnames', () => {
+    expect(isLocalConversationInspector('http://localhost:8787/api/conversations')).toBe(true)
+    expect(isLocalConversationInspector('http://127.0.0.1:8787/api/conversations')).toBe(true)
+    expect(isLocalConversationInspector('https://kwamina.fyi/api/conversations')).toBe(false)
+  })
+
+  it('lists recent conversations and returns bounded transcript metadata', async () => {
+    const { sqlite, d1 } = migratedSqliteD1()
+    sqlite.query(`
+      INSERT INTO conversations (
+        id, created_at, last_message_at, message_count, source, environment
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `).run('thread-local-123', 100, 200, 2, 'site', 'local')
+    sqlite.query(`
+      INSERT INTO messages (conversation_id, role, content, created_at, page_path)
+      VALUES (?, 'user', ?, ?, ?)
+    `).run('thread-local-123', 'How does this work?', 100, '/work/athena')
+    sqlite.query(`
+      INSERT INTO messages (
+        conversation_id, role, content, created_at,
+        assistant_version, corpus_version, model, latency_ms
+      ) VALUES (?, 'assistant', ?, ?, ?, ?, ?, ?)
+    `).run('thread-local-123', 'Like this.', 101, '2026-08-11.2', 'abc123def456', 'model-1', 240)
+
+    await expect(listConversationInspector(d1)).resolves.toEqual([
+      expect.objectContaining({
+        id: 'thread-local-123',
+        first_question: 'How does this work?',
+        message_count: 2,
+      }),
+    ])
+    await expect(loadConversationInspector(d1, 'thread-local-123')).resolves.toEqual({
+      conversation: expect.objectContaining({ id: 'thread-local-123', environment: 'local' }),
+      messages: [
+        expect.objectContaining({ role: 'user', page_path: '/work/athena' }),
+        expect.objectContaining({
+          role: 'assistant',
+          assistant_version: '2026-08-11.2',
+          corpus_version: 'abc123def456',
+          latency_ms: 240,
+        }),
+      ],
+    })
+  })
+
+  it('returns 404 before touching D1 outside local development', async () => {
+    const response = await worker.fetch(
+      new Request('https://kwamina.fyi/api/conversations'),
+      { DB: { prepare: () => { throw new Error('D1 should not be read') } } },
+      {},
+    )
+
+    expect(response.status).toBe(404)
+  })
+
+  it('serves the local list without caching it', async () => {
+    const response = await worker.fetch(
+      new Request('http://localhost:8787/api/conversations'),
+      {
+        DB: {
+          prepare() {
+            return {
+              bind() { return this },
+              async all() { return { results: [] } },
+            }
+          },
+        },
+      },
+      {},
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
+    await expect(response.json()).resolves.toEqual({ conversations: [] })
+  })
+
+  it('fails closed on production unless the admin host, feature flag, and Access identity agree', async () => {
+    const request = new Request('https://admin.kwamina.fyi/api/conversations', {
+      headers: { 'cf-access-jwt-assertion': 'signed-access-token' },
+    })
+    const configured = {
+      CONVERSATION_ARCHIVE_ENABLED: 'true',
+      CONVERSATION_ARCHIVE_HOSTNAME: 'admin.kwamina.fyi',
+      CF_ACCESS_TEAM_DOMAIN: 'https://kwamina.cloudflareaccess.com',
+      CF_ACCESS_AUD: 'archive-audience',
+      CF_ACCESS_ALLOWED_EMAIL: 'owner@example.com',
+    }
+
+    let verification
+    await expect(conversationInspectorAccess(request, configured, async (token, options) => {
+      verification = { token, options }
+      return { email: 'owner@example.com' }
+    })).resolves.toEqual({ allowed: true, productionOnly: true })
+    expect(verification).toEqual({
+      token: 'signed-access-token',
+      options: {
+        teamDomain: 'https://kwamina.cloudflareaccess.com',
+        audience: 'archive-audience',
+      },
+    })
+    await expect(conversationInspectorAccess(request, {
+      ...configured,
+      CONVERSATION_ARCHIVE_ENABLED: 'false',
+    }, async () => ({ email: 'owner@example.com' }))).resolves.toEqual({
+      allowed: false,
+      productionOnly: true,
+    })
+    await expect(conversationInspectorAccess(request, configured, async () => ({
+      email: 'someone-else@example.com',
+    }))).resolves.toEqual({ allowed: false, productionOnly: true })
+    await expect(conversationInspectorAccess(
+      new Request('https://kwamina.fyi/api/conversations', {
+        headers: { 'cf-access-jwt-assertion': 'signed-access-token' },
+      }),
+      configured,
+      async () => { throw new Error('the public hostname must not verify a token') },
+    )).resolves.toEqual({ allowed: false, productionOnly: true })
+  })
+
+  it('returns 404 before D1 when Access authentication is missing or invalid', async () => {
+    const makeEnv = () => ({
+      CONVERSATION_ARCHIVE_ENABLED: 'true',
+      CONVERSATION_ARCHIVE_HOSTNAME: 'admin.kwamina.fyi',
+      CF_ACCESS_TEAM_DOMAIN: 'https://kwamina.cloudflareaccess.com',
+      CF_ACCESS_AUD: 'archive-audience',
+      CF_ACCESS_ALLOWED_EMAIL: 'owner@example.com',
+      DB: { prepare: () => { throw new Error('D1 should not be read') } },
+    })
+
+    const acceptingWorker = createWorker({
+      verifyAccessToken: async () => ({ email: 'owner@example.com' }),
+    })
+    const rejectingWorker = createWorker({
+      verifyAccessToken: async () => { throw new Error('invalid signature') },
+    })
+    const missing = await acceptingWorker.fetch(
+      new Request('https://admin.kwamina.fyi/api/conversations'),
+      makeEnv(),
+      {},
+    )
+    const invalid = await rejectingWorker.fetch(
+      new Request('https://admin.kwamina.fyi/api/conversations', {
+        headers: { 'cf-access-jwt-assertion': 'invalid-token' },
+      }),
+      makeEnv(),
+      {},
+    )
+
+    expect(missing.status).toBe(404)
+    expect(invalid.status).toBe(404)
+  })
+
+  it('shows only production site conversations through the protected hostname', async () => {
+    const { sqlite, d1 } = migratedSqliteD1()
+    for (const row of [
+      ['thread-prod-123', 'site', 'production', 'Production question'],
+      ['thread-eval-123', 'evaluation', 'production', 'Evaluation question'],
+      ['thread-local-123', 'site', 'local', 'Local question'],
+    ]) {
+      sqlite.query(`
+        INSERT INTO conversations (
+          id, created_at, last_message_at, message_count, source, environment
+        ) VALUES (?, 100, 100, 1, ?, ?)
+      `).run(row[0], row[1], row[2])
+      sqlite.query(`
+        INSERT INTO messages (conversation_id, role, content, created_at)
+        VALUES (?, 'user', ?, 100)
+      `).run(row[0], row[3])
+    }
+
+    const archiveWorker = createWorker({
+      verifyAccessToken: async () => ({ email: 'owner@example.com' }),
+    })
+    const response = await archiveWorker.fetch(
+      new Request('https://admin.kwamina.fyi/api/conversations', {
+        headers: { 'cf-access-jwt-assertion': 'signed-access-token' },
+      }),
+      {
+        CONVERSATION_ARCHIVE_ENABLED: 'true',
+        CONVERSATION_ARCHIVE_HOSTNAME: 'admin.kwamina.fyi',
+        CF_ACCESS_TEAM_DOMAIN: 'https://kwamina.cloudflareaccess.com',
+        CF_ACCESS_AUD: 'archive-audience',
+        CF_ACCESS_ALLOWED_EMAIL: 'owner@example.com',
+        DB: d1,
+      },
+      {},
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({
+      conversations: [expect.objectContaining({ id: 'thread-prod-123' })],
+    })
+    await expect(loadConversationInspector(d1, 'thread-eval-123', {
+      productionOnly: true,
+    })).resolves.toBeNull()
+    await expect(loadConversationInspector(d1, 'thread-local-123', {
+      productionOnly: true,
+    })).resolves.toBeNull()
+
+    for (const id of ['thread-eval-123', 'thread-local-123']) {
+      const detailResponse = await archiveWorker.fetch(
+        new Request(`https://admin.kwamina.fyi/api/conversations/${id}`, {
+          headers: { 'cf-access-jwt-assertion': 'signed-access-token' },
+        }),
+        {
+          CONVERSATION_ARCHIVE_ENABLED: 'true',
+          CONVERSATION_ARCHIVE_HOSTNAME: 'admin.kwamina.fyi',
+          CF_ACCESS_TEAM_DOMAIN: 'https://kwamina.cloudflareaccess.com',
+          CF_ACCESS_AUD: 'archive-audience',
+          CF_ACCESS_ALLOWED_EMAIL: 'owner@example.com',
+          DB: d1,
+        },
+        {},
+      )
+      expect(detailResponse.status).toBe(404)
+    }
+  })
+
+  it('authorizes the private page before serving the SPA asset', async () => {
+    let assetReads = 0
+    const archiveWorker = createWorker({
+      verifyAccessToken: async () => ({ email: 'owner@example.com' }),
+    })
+    const configured = {
+      CONVERSATION_ARCHIVE_ENABLED: 'true',
+      CONVERSATION_ARCHIVE_HOSTNAME: 'admin.kwamina.fyi',
+      CF_ACCESS_TEAM_DOMAIN: 'https://kwamina.cloudflareaccess.com',
+      CF_ACCESS_AUD: 'archive-audience',
+      CF_ACCESS_ALLOWED_EMAIL: 'owner@example.com',
+      ASSETS: {
+        async fetch() {
+          assetReads += 1
+          return new Response('<main>Private archive</main>', {
+            headers: {
+              'content-type': 'text/html',
+              'content-security-policy': "default-src 'self'; script-src 'self'",
+              'x-content-type-options': 'nosniff',
+            },
+          })
+        },
+      },
+    }
+
+    const denied = await archiveWorker.fetch(
+      new Request('https://admin.kwamina.fyi/conversations'),
+      configured,
+      {},
+    )
+    const allowed = await archiveWorker.fetch(
+      new Request('https://admin.kwamina.fyi/conversations', {
+        headers: { 'cf-access-jwt-assertion': 'signed-access-token' },
+      }),
+      configured,
+      {},
+    )
+
+    expect(denied.status).toBe(404)
+    expect(assetReads).toBe(1)
+    expect(allowed.status).toBe(200)
+    expect(allowed.headers.get('x-content-type-options')).toBe('nosniff')
+    expect(allowed.headers.get('content-security-policy')).toBe(
+      "default-src 'self'; script-src 'self'",
+    )
   })
 })
 

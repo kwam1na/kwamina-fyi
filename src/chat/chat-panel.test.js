@@ -7,6 +7,8 @@ import {
   createChatScrollFollower,
   positionChatAtLatest,
   scrollChatToLatest,
+  shouldShowThinking,
+  triggerCompletionHaptic,
 } from './chat-panel.jsx'
 
 describe('chatInputPlaceholder', () => {
@@ -14,6 +16,49 @@ describe('chatInputPlaceholder', () => {
     expect(chatInputPlaceholder([])).toBe('Ask a question…')
     expect(chatInputPlaceholder([{ role: 'user' }])).toBe('Ask a question…')
     expect(chatInputPlaceholder([{ role: 'user' }, { role: 'assistant' }])).toBe('Ask a follow-up…')
+  })
+})
+
+describe('shouldShowThinking', () => {
+  it('shows only while waiting for the first assistant text', () => {
+    const userMessage = { role: 'user', parts: [{ type: 'text', content: 'Hello' }] }
+    const emptyAssistant = { role: 'assistant', parts: [] }
+    const streamingAssistant = {
+      role: 'assistant',
+      parts: [{ type: 'text', content: 'Hi' }],
+    }
+
+    expect(shouldShowThinking([userMessage], true)).toBe(true)
+    expect(shouldShowThinking([userMessage, emptyAssistant], true)).toBe(true)
+    expect(shouldShowThinking([userMessage, streamingAssistant], true)).toBe(false)
+    expect(shouldShowThinking([userMessage], false)).toBe(false)
+  })
+})
+
+describe('triggerCompletionHaptic', () => {
+  const assistant = { role: 'assistant', parts: [{ type: 'text', content: 'Done' }] }
+
+  it('pulses once when a mobile response completes', () => {
+    const pulses = []
+
+    expect(triggerCompletionHaptic({
+      wasLoading: true,
+      isLoading: false,
+      messages: [assistant],
+      error: null,
+      isMobile: true,
+      vibrate: (duration) => pulses.push(duration),
+    })).toBe(true)
+    expect(pulses).toEqual([10])
+  })
+
+  it('does not pulse mid-stream, on desktop, or after a failed response', () => {
+    const vibrate = () => { throw new Error('should not vibrate') }
+    const base = { wasLoading: true, messages: [assistant], error: null, isMobile: true, vibrate }
+
+    expect(triggerCompletionHaptic({ ...base, isLoading: true })).toBe(false)
+    expect(triggerCompletionHaptic({ ...base, isLoading: false, isMobile: false })).toBe(false)
+    expect(triggerCompletionHaptic({ ...base, isLoading: false, error: new Error('failed') })).toBe(false)
   })
 })
 

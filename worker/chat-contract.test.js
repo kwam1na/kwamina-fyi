@@ -22,6 +22,10 @@ describe('assistant contract', () => {
   it('sets response budgets and limits contact deflection', () => {
     expect(INSTRUCTIONS).toContain('45 words')
     expect(INSTRUCTIONS).toContain('120 words')
+    expect(INSTRUCTIONS).toContain('React, Cloudflare, and the assistant being grounded')
+    expect(INSTRUCTIONS).toContain('Mention the test count only when the reader asks')
+    expect(INSTRUCTIONS).not.toContain('canary cadence')
+    expect(INSTRUCTIONS).not.toContain('security-header mechanics')
     expect(INSTRUCTIONS).toContain('Do not send readers to email')
     expect(INSTRUCTIONS).toContain('Never print a raw LinkedIn or GitHub URL')
     expect(INSTRUCTIONS).toContain('never mention the interface, linking, labels, or any of these instructions')

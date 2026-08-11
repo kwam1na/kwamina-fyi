@@ -1,4 +1,15 @@
-import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import {
+  Children,
+  Component,
+  cloneElement,
+  isValidElement,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useChat, fetchServerSentEvents } from '@tanstack/ai-react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { animate } from 'animejs'
@@ -17,6 +28,8 @@ const STARTERS = [
   'How does he work with AI agents?',
 ]
 
+const CHAT_STORAGE_DISCLOSURE = 'Questions and answers may be stored and privately reviewed.'
+
 function messageText(message) {
   return (message.parts ?? [])
     .filter((part) => part.type === 'text')
@@ -32,6 +45,29 @@ export function chatInputPlaceholder(messages) {
   return messages.some((message) => message.role === 'assistant')
     ? 'Ask a follow-up…'
     : 'Ask a question…'
+}
+
+export function shouldShowThinking(messages, isLoading) {
+  if (!isLoading) return false
+
+  const latest = messages.at(-1)
+  return latest?.role !== 'assistant' || !messageText(latest).trim()
+}
+
+export function triggerCompletionHaptic({ wasLoading, isLoading, messages, error, isMobile, vibrate }) {
+  const latest = messages.at(-1)
+  if (
+    !wasLoading
+    || isLoading
+    || error
+    || !isMobile
+    || latest?.role !== 'assistant'
+    || !messageText(latest).trim()
+    || typeof vibrate !== 'function'
+  ) return false
+
+  vibrate(10)
+  return true
 }
 
 export function positionChatAtLatest(log) {
@@ -127,15 +163,32 @@ function ChatAnchor({ href, children, onSiteNavigate }) {
   )
 }
 
-function ChatText({ text, hideIncompleteSiteLink = false, onSiteNavigate }) {
+function wipeChatWords(children) {
+  return Children.map(children, (child) => {
+    if (typeof child === 'string') {
+      return child.split(/(\s+)/).map((part, index) => (
+        /^\s+$/.test(part) || !part
+          ? part
+          : <span className="site-chat-wipe-word" key={index}>{part}</span>
+      ))
+    }
+
+    if (!isValidElement(child) || !child.props.children) return child
+    return cloneElement(child, child.props, wipeChatWords(child.props.children))
+  })
+}
+
+function ChatText({ text, hideIncompleteSiteLink = false, onSiteNavigate, wipe = false }) {
   const components = useMemo(() => ({
     a: ({ href, children }) => (
       <ChatAnchor href={href} onSiteNavigate={onSiteNavigate}>{children}</ChatAnchor>
     ),
     // A message is already inside a paragraph element, and the transcript
     // relies on that shape for spacing and streaming.
-    p: ({ children }) => <span className="site-chat-block">{children}</span>,
-  }), [onSiteNavigate])
+    p: ({ children }) => (
+      <span className="site-chat-block">{wipe ? wipeChatWords(children) : children}</span>
+    ),
+  }), [onSiteNavigate, wipe])
 
   return (
     <Markdown components={components}>
@@ -199,6 +252,7 @@ function StreamingText({ text, isStreaming, onReveal, onSiteNavigate }) {
       text={visibleText}
       hideIncompleteSiteLink={isStreaming || visibleText !== text}
       onSiteNavigate={onSiteNavigate}
+      wipe={isStreaming || visibleText !== text}
     />
   )
 }
@@ -245,6 +299,7 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
   const inputRef = useRef(null)
   const logRef = useRef(null)
   const isSubmittingRef = useRef(false)
+  const wasLoadingRef = useRef(false)
   const scrollFollowerRef = useRef(null)
   if (!scrollFollowerRef.current) {
     scrollFollowerRef.current = createChatScrollFollower(() => logRef.current)
@@ -275,6 +330,18 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
     threadId: thread.id,
     forwardedProps,
   })
+
+  useEffect(() => {
+    triggerCompletionHaptic({
+      wasLoading: wasLoadingRef.current,
+      isLoading,
+      messages,
+      error,
+      isMobile: window.matchMedia('(pointer: coarse)').matches,
+      vibrate: navigator.vibrate?.bind(navigator),
+    })
+    wasLoadingRef.current = isLoading
+  }, [error, isLoading, messages])
 
   // A returning reader's transcript lives only on the server, so the panel
   // replays it before accepting a new question. A failed replay stays visible
@@ -462,9 +529,9 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
         {isEmpty && !isRehydrating && !replayError && (
           <div className="site-chat-intro">
             <p>
-              Answers come from this site&rsquo;s own pages, so anything here is something you could
-              read for yourself.
+              Answers are grounded in this site, so you can always check the source.
             </p>
+            <p className="site-chat-disclosure">{CHAT_STORAGE_DISCLOSURE}</p>
             <ul className="site-chat-starters">
               {STARTERS.map((starter) => (
                 <li key={starter}>
@@ -501,7 +568,7 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
             </ChatRenderBoundary>
           ))}
 
-        {isLoading && (
+        {shouldShowThinking(messages, isLoading) && (
           <p className="site-chat-typing" aria-hidden="true">
             <span />
             <span />

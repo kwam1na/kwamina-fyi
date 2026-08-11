@@ -183,6 +183,9 @@ The contract enforces these boundaries:
   life, or undocumented opinions;
 - answer direct questions concisely and avoid repeating the complete Athena
   positioning unnecessarily;
+- answer broad questions about how the site was built with only the stack and
+  grounding approach, reserving operational and verification detail for
+  explicit follow-ups;
 - produce canonical labeled site links when directing readers elsewhere;
 - mention contact destinations only when contact, opportunities, or a personal
   perspective are actually requested;
@@ -225,6 +228,56 @@ them, preserving useful validation and rate-limit messages in the UI.
 thread credential is supplied in `x-chat-thread-id`. Other API
 paths return JSON 404s. An hourly scheduled handler removes expired D1
 rate-limit rows.
+
+Local development exposes a read-only conversation archive at
+`/conversations`. Production may expose the same route only at
+`admin.kwamina.fyi`, behind a Cloudflare Access self-hosted application. The
+Worker validates Access's `Cf-Access-Jwt-Assertion` against the configured team
+issuer and application audience, then requires the token's email claim to
+match the configured owner. Missing configuration, a different hostname, a
+missing or invalid token, or a different identity returns 404 before D1 is
+read.
+
+The `/api/conversations` list and detail endpoints read at most 100
+conversations and 100 messages and return `private, no-store`. Production
+queries show only human site conversations (`source = site`, `environment =
+production`); local development retains the full local archive. The private
+page request itself passes through the same Worker authorization boundary
+before the SPA asset is served. `workers.dev` and preview URLs are disabled in
+the checked-in Wrangler configuration so they cannot bypass the Access
+hostname.
+
+### Enabling the private production archive
+
+Keep the archive disabled until all of these steps are complete:
+
+1. Add `admin.kwamina.fyi` as a custom domain for this Worker.
+2. Create a Cloudflare Access self-hosted application covering the entire
+   `admin.kwamina.fyi` hostname. Its Allow policy must name the owner's exact
+   email; do not use the One-Time PIN login method by itself as the policy.
+3. Set `VITE_CONVERSATION_ARCHIVE_ENABLED=true` and
+   `VITE_CONVERSATION_ARCHIVE_HOSTNAME=admin.kwamina.fyi` in the production
+   build environment.
+4. Set the runtime bindings below. The feature flag is deliberately a Worker
+   secret so it can be disabled without changing source:
+
+   ```bash
+   wrangler secret put CF_ACCESS_TEAM_DOMAIN
+   wrangler secret put CF_ACCESS_AUD
+   wrangler secret put CF_ACCESS_ALLOWED_EMAIL
+   wrangler secret put CONVERSATION_ARCHIVE_ENABLED
+   ```
+
+   `CF_ACCESS_TEAM_DOMAIN` is the full HTTPS team URL ending in
+   `.cloudflareaccess.com`; `CF_ACCESS_AUD` is the application's audience tag;
+   `CONVERSATION_ARCHIVE_ENABLED` must be exactly `true`.
+5. Before enabling the final flag, verify signed-out access, a different
+   identity, the public site hostname, and any deployment hostname all fail.
+   Then verify the allowed identity can read the list and one detail response.
+
+The archive sends no transcript content to observability or analytics. Access
+configuration belongs in Cloudflare rather than this repository; no identity,
+audience tag, or Access token is committed here.
 
 ## Conversation history and D1
 
@@ -370,7 +423,8 @@ Schema and code must ship in this order because the Worker reads and writes the
 new columns immediately:
 
 1. Confirm `ANTHROPIC_API_KEY`, `RATE_LIMIT_KEY`, D1, rate-limit, asset, and
-   cron bindings.
+   cron bindings. If the private archive is enabled, confirm its Access
+   application, build settings, and four runtime secrets first.
 2. Run the canonical release command:
 
    ```bash
@@ -410,7 +464,7 @@ Cloudflare version; do not reverse the additive migrations.
 ## Intentionally out of scope
 
 - account-based or cross-device history;
-- conversation list, deletion, export, or feedback UI;
+- conversation deletion, export, or feedback UI;
 - embeddings and retrieval infrastructure;
 - model tool calls and external actions;
 - transcript analytics dashboard;

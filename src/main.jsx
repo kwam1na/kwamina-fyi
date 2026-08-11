@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { lazy, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   createRootRoute,
@@ -7,6 +7,7 @@ import {
   Outlet,
   redirect,
   RouterProvider,
+  useRouterState,
 } from '@tanstack/react-router'
 import { StaticPage } from './static-page.jsx'
 import { ThemeToggle } from './theme-toggle.jsx'
@@ -17,7 +18,13 @@ import { ErrorPage } from './error-page.jsx'
 import { startBrowserObservability } from './observability/browser.js'
 import { observeCoreWebVitals, startManualAnalytics } from './observability/analytics.js'
 import { createSimpleAnalyticsProvider } from './observability/simple-analytics.js'
-import { LEGACY_REDIRECTS, ROUTE_PATHS } from './routes.js'
+import {
+  LEGACY_REDIRECTS,
+  PRIVATE_ROUTE_PATHS,
+  ROUTE_PATHS,
+  isConversationArchiveRouteEnabled,
+  shouldRenderSiteChrome,
+} from './routes.js'
 import homepage from '../docs/content/homepage.html?raw'
 import about from '../docs/content/about.html?raw'
 import athena from '../docs/content/work/athena/index.html?raw'
@@ -27,12 +34,19 @@ import readOptimizedReporting from '../docs/content/work/athena/read-optimized-r
 import './styles.css'
 
 function RootLayout() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const showSiteChrome = shouldRenderSiteChrome(pathname, conversationArchiveRouteEnabled)
+
   return (
     <>
       <Outlet />
-      <ThemeToggle />
-      <ScrollToTop />
-      <ChatWidget />
+      {showSiteChrome && (
+        <>
+          <ThemeToggle />
+          <ScrollToTop />
+          <ChatWidget />
+        </>
+      )}
     </>
   )
 }
@@ -79,6 +93,23 @@ const readOptimizedReportingRoute = createRoute({
   component: () => <StaticPage documentHtml={readOptimizedReporting} pagePath="/work/athena/read-optimized-reporting/" title="Read-optimized reporting — Athena" />,
 })
 
+const conversationArchiveRouteEnabled = isConversationArchiveRouteEnabled({
+  isDevelopment: import.meta.env.DEV,
+  enabled: import.meta.env.VITE_CONVERSATION_ARCHIVE_ENABLED === 'true',
+  hostname: window.location.hostname,
+  archiveHostname: import.meta.env.VITE_CONVERSATION_ARCHIVE_HOSTNAME,
+})
+
+const ConversationsPage = conversationArchiveRouteEnabled
+  ? lazy(() => import('./conversations-page.jsx'))
+  : null
+
+const conversationsRoute = ConversationsPage && createRoute({
+  getParentRoute: () => rootRoute,
+  path: PRIVATE_ROUTE_PATHS.conversations,
+  component: ConversationsPage,
+})
+
 const legacyRedirectRoutes = Object.entries(LEGACY_REDIRECTS).map(([from, to]) =>
   createRoute({
     getParentRoute: () => rootRoute,
@@ -96,6 +127,7 @@ const routeTree = rootRoute.addChildren([
   localFirstPosRoute,
   agentReadyRepositoryRoute,
   readOptimizedReportingRoute,
+  ...(conversationsRoute ? [conversationsRoute] : []),
   ...legacyRedirectRoutes,
 ])
 
