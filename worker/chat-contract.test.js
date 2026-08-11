@@ -6,7 +6,7 @@ import {
   conversationSource,
   deploymentEnvironment,
 } from './chat-contract.js'
-import corpus, { CORPUS_VERSION } from '../src/generated/corpus.js'
+import corpus, { CORPUS_VERSION, PAGES } from '../src/generated/corpus.js'
 
 describe('assistant contract', () => {
   it('guards against transcript-derived grounding failures', () => {
@@ -109,6 +109,40 @@ describe('assistant contract', () => {
     expect(corpus).toMatch(/checkout independent of a\s+cloud round trip/)
     expect(corpus).not.toContain('Connectivity there is a real constraint')
     expect(corpus).not.toContain('internet access in the field is not reliable enough')
+  })
+
+  it('includes explicitly approved personal interests without publishing them as a page', () => {
+    expect(corpus).toContain('<document title="Personal notes">')
+    expect(corpus).toContain('hearty, hazy IPAs with citrus notes')
+    expect(corpus).toContain('Kokoroko is an enduring favorite')
+    expect(corpus).toContain('Christopher Nolan')
+    expect(corpus).toContain('a good horror or thriller movie')
+    expect(corpus).toContain('tries to stay fit and works out consistently')
+    expect(corpus).toContain('health is wealth')
+    expect(corpus).toContain('born and raised in Ghana')
+    expect(corpus).not.toContain('considers Ghana home')
+    expect(PAGES).not.toContainEqual(expect.objectContaining({ title: 'Personal notes' }))
+  })
+
+  it('allows documented personal answers without inviting inference', () => {
+    expect(INSTRUCTIONS).toContain("work, background, documented personal interests")
+    expect(INSTRUCTIONS).toContain('Personal notes')
+    expect(INSTRUCTIONS).toContain('Never infer a personal fact, preference, or opinion')
+    expect(INSTRUCTIONS).toContain('Only discuss Kwamina, his work, and his documented personal interests')
+  })
+
+  it('keeps personal answers selective instead of inventorying the corpus', () => {
+    // A visitor clarified "is he active?" with "lifestyle-wise" and received
+    // every documented interest. The follow-up should narrow the active topic
+    // to fitness and outdoors rather than trigger a personal-profile dump.
+    expect(INSTRUCTIONS).toContain('Treat a follow-up as narrowing the previous question')
+    expect(INSTRUCTIONS).toContain('Choose the one or two facts that best answer the question')
+    expect(INSTRUCTIONS).toContain('Do not inventory everything you know about him')
+    expect(INSTRUCTIONS).toContain('lifestyle-wise')
+    expect(INSTRUCTIONS).toContain('not a request for his music, beer, films, and background')
+    expect(INSTRUCTIONS).toContain('explicitly asks for a complete list or exhaustive overview')
+    expect(INSTRUCTIONS).toContain('Treat its sections as independent topics, not one profile to summarize')
+    expect(INSTRUCTIONS).toContain('Never continue into another Personal notes section')
   })
 })
 

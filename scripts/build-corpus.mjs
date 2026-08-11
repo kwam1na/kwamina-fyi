@@ -1,10 +1,10 @@
-// Builds the chatbot's knowledge base from the site's own published content.
+// Builds the chatbot's knowledge base from the site's curated content.
 //
 // The corpus is small enough to live entirely in the model's system prompt, so
 // there is no retrieval step: this script flattens each page to readable text
 // and emits one module the Worker imports. Keeping the source of truth as the
-// published pages is deliberate — the assistant cannot claim anything a visitor
-// could not also read on the site, and editing a page updates the assistant.
+// published pages and explicitly approved assistant-only notes is deliberate:
+// every claim remains traceable to content Kwamina controls.
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
@@ -19,6 +19,7 @@ const outputPath = join(root, 'src/generated/corpus.js')
 const SOURCES = [
   { file: 'docs/content/homepage.html', path: ROUTE_PATHS.home, title: 'Homepage' },
   { file: 'docs/content/about.html', path: ROUTE_PATHS.about, title: 'About' },
+  { file: 'docs/content/personal-notes.md', path: null, title: 'Personal notes' },
   { file: 'docs/content/work/athena/index.html', path: ROUTE_PATHS.athena, title: 'Athena — product story' },
   { file: 'docs/content/work/athena/local-first-pos/index.html', path: ROUTE_PATHS.localFirstPos, title: 'Athena — local-first point of sale' },
   { file: 'docs/content/work/athena/agent-ready-repository/index.html', path: ROUTE_PATHS.agentReadyRepository, title: 'Athena — agent-ready repository' },
