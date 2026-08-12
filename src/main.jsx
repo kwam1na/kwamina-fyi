@@ -34,17 +34,6 @@ import agentReadyRepository from '../docs/content/work/athena/agent-ready-reposi
 import readOptimizedReporting from '../docs/content/work/athena/read-optimized-reporting/index.html?raw'
 import './styles.css'
 
-function SentryTestButton() {
-  return (
-    <button
-      onClick={() => {
-        throw new Error('Controlled Sentry browser verification')
-      }}
-    >
-      Break the world
-    </button>
-  )
-}
 
 function RootLayout() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
@@ -58,7 +47,6 @@ function RootLayout() {
           <ThemeToggle />
           <ScrollToTop />
           <ChatWidget />
-          {conversationArchiveRouteEnabled && <SentryTestButton />}
         </>
       )}
     </>
