@@ -10,6 +10,12 @@ const readyEnvironment = {
   VITE_SENTRY_DSN: 'https://public@example.ingest.sentry.io/1',
 }
 
+const workersBuildEnvironment = {
+  ...readyEnvironment,
+  SENTRY_RELEASE: undefined,
+  WORKERS_CI_COMMIT_SHA: 'abcdef0123456789abcdef0123456789abcdef01',
+}
+
 describe('observability build settings', () => {
   it('keeps provider collection and source maps disabled by default', () => {
     expect(observabilityBuildSettings({})).toEqual({
@@ -49,6 +55,15 @@ describe('observability build settings', () => {
         },
         telemetry: false,
       },
+    })
+  })
+
+  it('uses the Cloudflare Workers build commit as the immutable release', () => {
+    const settings = observabilityBuildSettings(workersBuildEnvironment)
+
+    expect(settings.release).toBe('kwamina-fyi@abcdef0123456789abcdef0123456789abcdef01')
+    expect(settings.sentryPluginOptions.release).toEqual({
+      name: 'kwamina-fyi@abcdef0123456789abcdef0123456789abcdef01',
     })
   })
 })

@@ -18,6 +18,7 @@ import { ErrorPage } from './error-page.jsx'
 import { startBrowserObservability } from './observability/browser.js'
 import { observeCoreWebVitals, startManualAnalytics } from './observability/analytics.js'
 import { createSimpleAnalyticsProvider } from './observability/simple-analytics.js'
+import { installStaleAssetRecovery } from './stale-asset-recovery.js'
 import {
   LEGACY_REDIRECTS,
   PRIVATE_ROUTE_PATHS,
@@ -33,6 +34,18 @@ import agentReadyRepository from '../docs/content/work/athena/agent-ready-reposi
 import readOptimizedReporting from '../docs/content/work/athena/read-optimized-reporting/index.html?raw'
 import './styles.css'
 
+function SentryTestButton() {
+  return (
+    <button
+      onClick={() => {
+        throw new Error('Controlled Sentry browser verification')
+      }}
+    >
+      Break the world
+    </button>
+  )
+}
+
 function RootLayout() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const showSiteChrome = shouldRenderSiteChrome(pathname, conversationArchiveRouteEnabled)
@@ -45,6 +58,7 @@ function RootLayout() {
           <ThemeToggle />
           <ScrollToTop />
           <ChatWidget />
+          {conversationArchiveRouteEnabled && <SentryTestButton />}
         </>
       )}
     </>
@@ -141,6 +155,8 @@ const router = createRouter({
   // error page rather than the router's built-in stack trace.
   defaultErrorComponent: ErrorPage,
 })
+
+installStaleAssetRecovery()
 
 startBrowserObservability({
   environment: import.meta.env.PROD ? 'production' : 'local',

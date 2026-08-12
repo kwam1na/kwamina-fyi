@@ -106,6 +106,10 @@ or deep-canary job. Enable `OBSERVABILITY_PROVIDER_READY=true` only after Sentry
 has passed this checklist. Enable `VITE_SIMPLE_ANALYTICS_READY=true` only after
 the Simple Analytics site and privacy configuration have passed it.
 
+Cloudflare Workers Builds supplies `WORKERS_CI_COMMIT_SHA`; the Vite build maps
+it to the immutable `kwamina-fyi@<git-sha>` Sentry release. A manual production
+build must provide that value explicitly through `SENTRY_RELEASE`.
+
 ## Visits provider
 
 Simple Analytics is the approved visits provider because its supported manual
