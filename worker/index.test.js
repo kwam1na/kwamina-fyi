@@ -5,12 +5,14 @@ import worker, {
   callerKey,
   createWorker,
   finalizeAssistantStream,
-  loadTranscript,
+  loadConversationContext,
+  loadEarlierMessages,
   persistTurn,
   readJsonBody,
   releaseTurn,
   rejectionFor,
   reserveTurn,
+  refreshConversationMemory,
   resolvePage,
   secured,
   withPageMarker,
@@ -783,6 +785,222 @@ describe('Worker stream finalization', () => {
 })
 
 describe('Worker transcript replay', () => {
+  it('keeps a durable memory while returning only the newest verbatim window', async () => {
+    const { sqlite, d1 } = migratedSqliteD1()
+    sqlite.query('INSERT INTO conversations (id, created_at, last_message_at, message_count) VALUES (?, ?, ?, ?)')
+      .run('thread-123', 1, 40, 40)
+    const insert = sqlite.query('INSERT INTO messages (conversation_id, role, content, created_at) VALUES (?, ?, ?, ?)')
+    for (let index = 1; index <= 40; index += 1) {
+      insert.run('thread-123', index % 2 ? 'user' : 'assistant', `Message ${index}`, index)
+    }
+    sqlite.query('INSERT INTO conversation_memories (conversation_id, content, summarized_through_id, summarized_message_count, updated_at) VALUES (?, ?, ?, ?, ?)')
+      .run('thread-123', 'The reader is discussing Dashy evaluation.', 10, 10, 50)
+
+    await expect(loadConversationContext(d1, 'thread-123')).resolves.toMatchObject({
+      memory: {
+        content: 'The reader is discussing Dashy evaluation.',
+        messageCount: 10,
+        updatedAt: 50,
+      },
+      hasEarlierMessages: true,
+      messages: expect.arrayContaining([
+        expect.objectContaining({ content: 'Message 11' }),
+        expect.objectContaining({ content: 'Message 40' }),
+      ]),
+    })
+    const context = await loadConversationContext(d1, 'thread-123')
+    expect(context.messages).toHaveLength(30)
+    expect(context.messages[0].content).toBe('Message 11')
+    sqlite.close()
+  })
+
+  it('rolls newly displaced messages into the existing memory', async () => {
+    const { sqlite, d1 } = migratedSqliteD1()
+    sqlite.query('INSERT INTO conversations (id, created_at, last_message_at, message_count) VALUES (?, ?, ?, ?)')
+      .run('thread-123', 1, 34, 34)
+    const insert = sqlite.query('INSERT INTO messages (conversation_id, role, content, created_at) VALUES (?, ?, ?, ?)')
+    for (let index = 1; index <= 34; index += 1) {
+      insert.run('thread-123', index % 2 ? 'user' : 'assistant', `Message ${index}`, index)
+    }
+    sqlite.query('INSERT INTO conversation_memories (conversation_id, content, summarized_through_id, summarized_message_count, updated_at) VALUES (?, ?, ?, ?, ?)')
+      .run('thread-123', 'Existing memory.', 2, 2, 2)
+    const inputs = []
+
+    const context = await loadConversationContext(d1, 'thread-123')
+    const memory = await refreshConversationMemory(d1, 'thread-123', context, {
+      now: () => 100,
+      summarize: async (input) => {
+        inputs.push(input)
+        return 'Updated memory.'
+      },
+    })
+
+    expect(inputs).toHaveLength(1)
+    expect(inputs[0]).toContain('Existing memory.')
+    expect(inputs[0]).toContain('User: Message 3')
+    expect(inputs[0]).toContain('Assistant: Message 4')
+    expect(memory).toEqual({
+      memory: { content: 'Updated memory.', messageCount: 4, updatedAt: 100 },
+      complete: true,
+    })
+    expect(sqlite.query('SELECT content, summarized_through_id, summarized_message_count FROM conversation_memories WHERE conversation_id = ?').get('thread-123')).toEqual({
+      content: 'Updated memory.',
+      summarized_through_id: 4,
+      summarized_message_count: 4,
+    })
+    sqlite.close()
+  })
+
+  it('bounds each memory refresh and reports an incomplete backlog', async () => {
+    const { sqlite, d1 } = migratedSqliteD1()
+    sqlite.query('INSERT INTO conversations (id, created_at, last_message_at, message_count) VALUES (?, ?, ?, ?)')
+      .run('thread-123', 1, 100, 100)
+    const insert = sqlite.query('INSERT INTO messages (conversation_id, role, content, created_at) VALUES (?, ?, ?, ?)')
+    for (let index = 1; index <= 100; index += 1) {
+      insert.run('thread-123', index % 2 ? 'user' : 'assistant', `Message ${index}`, index)
+    }
+    const inputs = []
+
+    const result = await refreshConversationMemory(d1, 'thread-123', await loadConversationContext(d1, 'thread-123'), {
+      summarize: async (input) => {
+        inputs.push(input)
+        return 'Partial memory.'
+      },
+    })
+
+    expect(inputs).toHaveLength(1)
+    expect(inputs[0]).toContain('Message 30')
+    expect(inputs[0]).not.toContain('Message 31')
+    expect(result.complete).toBe(false)
+    expect(sqlite.query('SELECT summarized_through_id FROM conversation_memories WHERE conversation_id = ?').get('thread-123'))
+      .toEqual({ summarized_through_id: 30 })
+    sqlite.close()
+  })
+
+  it('never lets an older refresh regress durable memory', async () => {
+    const { sqlite, d1 } = migratedSqliteD1()
+    sqlite.query('INSERT INTO conversations (id, created_at, last_message_at, message_count) VALUES (?, ?, ?, ?)')
+      .run('thread-123', 1, 34, 34)
+    const insert = sqlite.query('INSERT INTO messages (conversation_id, role, content, created_at) VALUES (?, ?, ?, ?)')
+    for (let index = 1; index <= 34; index += 1) insert.run('thread-123', index % 2 ? 'user' : 'assistant', `Message ${index}`, index)
+    const staleContext = await loadConversationContext(d1, 'thread-123')
+    await refreshConversationMemory(d1, 'thread-123', staleContext, { summarize: async () => 'Newer memory.' })
+    const staleResult = await refreshConversationMemory(d1, 'thread-123', staleContext, { summarize: async () => 'Stale memory.' })
+
+    expect(staleResult.memory.content).toBe('Newer memory.')
+    expect(sqlite.query('SELECT content, summarized_through_id FROM conversation_memories WHERE conversation_id = ?').get('thread-123'))
+      .toEqual({ content: 'Newer memory.', summarized_through_id: 4 })
+    sqlite.close()
+  })
+
+  it('adds a compound index for history cursors', () => {
+    const { sqlite } = migratedSqliteD1()
+    const indexes = sqlite.query("PRAGMA index_list('messages')").all().map((row) => row.name)
+    expect(indexes).toContain('idx_messages_conversation_id')
+    sqlite.close()
+  })
+
+  it('pages earlier stored messages without changing model context', async () => {
+    const { sqlite, d1 } = migratedSqliteD1()
+    sqlite.query('INSERT INTO conversations (id, created_at, last_message_at, message_count) VALUES (?, ?, ?, ?)')
+      .run('thread-123', 1, 36, 36)
+    const insert = sqlite.query('INSERT INTO messages (conversation_id, role, content, created_at) VALUES (?, ?, ?, ?)')
+    for (let index = 1; index <= 36; index += 1) {
+      insert.run('thread-123', index % 2 ? 'user' : 'assistant', `Message ${index}`, index)
+    }
+
+    await expect(loadEarlierMessages(d1, 'thread-123', { beforeId: 7, limit: 4 })).resolves.toEqual({
+      messages: [
+        { id: 3, role: 'user', content: 'Message 3', created_at: 3 },
+        { id: 4, role: 'assistant', content: 'Message 4', created_at: 4 },
+        { id: 5, role: 'user', content: 'Message 5', created_at: 5 },
+        { id: 6, role: 'assistant', content: 'Message 6', created_at: 6 },
+      ],
+      nextBeforeId: 3,
+    })
+    sqlite.close()
+  })
+
+  it('serves read-only earlier history through the possession credential', async () => {
+    const { sqlite, d1 } = migratedSqliteD1()
+    sqlite.query('INSERT INTO conversations (id, created_at, last_message_at, message_count) VALUES (?, ?, ?, ?)')
+      .run('thread-123', 1, 6, 6)
+    const insert = sqlite.query('INSERT INTO messages (conversation_id, role, content, created_at) VALUES (?, ?, ?, ?)')
+    for (let index = 1; index <= 6; index += 1) {
+      insert.run('thread-123', index % 2 ? 'user' : 'assistant', `Message ${index}`, index)
+    }
+
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat/history?before=5', {
+      headers: { 'x-chat-thread-id': 'thread-123' },
+    }), { DB: d1 }, {})
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
+    expect(await response.json()).toEqual({
+      messages: [
+        { id: 1, role: 'user', content: 'Message 1', created_at: 1 },
+        { id: 2, role: 'assistant', content: 'Message 2', created_at: 2 },
+        { id: 3, role: 'user', content: 'Message 3', created_at: 3 },
+        { id: 4, role: 'assistant', content: 'Message 4', created_at: 4 },
+      ],
+      nextBeforeId: null,
+    })
+    sqlite.close()
+  })
+
+  it('refreshes stale memory before replaying an over-window conversation', async () => {
+    const { sqlite, d1 } = migratedSqliteD1()
+    sqlite.query('INSERT INTO conversations (id, created_at, last_message_at, message_count) VALUES (?, ?, ?, ?)')
+      .run('thread-123', 1, 32, 32)
+    const insert = sqlite.query('INSERT INTO messages (conversation_id, role, content, created_at) VALUES (?, ?, ?, ?)')
+    for (let index = 1; index <= 32; index += 1) {
+      insert.run('thread-123', index % 2 ? 'user' : 'assistant', `Message ${index}`, index)
+    }
+
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat/transcript', {
+      headers: { 'x-chat-thread-id': 'thread-123' },
+    }), {
+      DB: d1,
+      WORKER_NOW: () => 50,
+      WORKER_SUMMARIZE: async () => ({ summary: 'The opening turn established the reader’s topic.' }),
+    }, {})
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      memory: {
+        content: 'The opening turn established the reader’s topic.',
+        messageCount: 2,
+        updatedAt: 50,
+      },
+      hasEarlierMessages: true,
+      memoryUnavailable: false,
+    })
+    sqlite.close()
+  })
+
+  it('discloses a replay memory failure while keeping recent messages available', async () => {
+    const { sqlite, d1 } = migratedSqliteD1()
+    sqlite.query('INSERT INTO conversations (id, created_at, last_message_at, message_count) VALUES (?, ?, ?, ?)')
+      .run('thread-123', 1, 32, 32)
+    const insert = sqlite.query('INSERT INTO messages (conversation_id, role, content, created_at) VALUES (?, ?, ?, ?)')
+    for (let index = 1; index <= 32; index += 1) insert.run('thread-123', index % 2 ? 'user' : 'assistant', `Message ${index}`, index)
+    const observed = observedEnv({
+      DB: d1,
+      WORKER_SUMMARIZE: async () => { throw new Error('summary failed') },
+    })
+
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat/transcript', {
+      headers: { 'x-chat-thread-id': 'thread-123' },
+    }), observed.env, {})
+    const transcript = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(transcript.memoryUnavailable).toBe(true)
+    expect(transcript.messages).toHaveLength(30)
+    expect(observed.issues).toContainEqual(expect.objectContaining({ outcomeCode: 'MEMORY_REFRESH_FAILED' }))
+    sqlite.close()
+  })
+
   it('rate-limits transcript reads before accessing D1', async () => {
     const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat/transcript', {
       headers: {
@@ -798,10 +1016,10 @@ describe('Worker transcript replay', () => {
   })
 
   it('returns the newest history window in chronological order', async () => {
-    let prepared
+    const prepared = []
     const db = {
       prepare(sql) {
-        prepared = {
+        const statement = {
           binds: [],
           sql: sql.replace(/\s+/g, ' ').trim(),
           bind(...values) {
@@ -816,17 +1034,23 @@ describe('Worker transcript replay', () => {
               ],
             }
           },
+          async first() { return null },
         }
-        return prepared
+        prepared.push(statement)
+        return statement
       },
     }
 
-    await expect(loadTranscript(db, 'thread-123')).resolves.toEqual([
-      { role: 'user', content: 'Older', created_at: 3 },
-      { role: 'assistant', content: 'Newest', created_at: 4 },
-    ])
-    expect(prepared.sql).toContain('ORDER BY created_at DESC, id DESC LIMIT ?')
-    expect(prepared.binds).toEqual(['thread-123', 30])
+    await expect(loadConversationContext(db, 'thread-123')).resolves.toMatchObject({
+      memory: null,
+      hasEarlierMessages: false,
+      messages: [
+        { role: 'user', content: 'Older', created_at: 3 },
+        { role: 'assistant', content: 'Newest', created_at: 4 },
+      ],
+    })
+    expect(prepared[0].sql).toContain('ORDER BY created_at DESC, id DESC LIMIT ?')
+    expect(prepared[0].binds).toEqual(['thread-123', 31])
   })
 
   it('prevents stored conversations from being cached', async () => {
@@ -835,6 +1059,7 @@ describe('Worker transcript replay', () => {
         return {
           bind() { return this },
           async all() { return { results: [] } },
+          async first() { return null },
         }
       },
     }
@@ -858,7 +1083,11 @@ describe('Worker transcript replay', () => {
     const { env, logs } = observedEnv({
       DB: {
         prepare() {
-          return { bind() { return this }, async all() { return { results: [...rows].reverse() } } }
+          return {
+            bind() { return this },
+            async all() { return { results: [...rows].reverse() } },
+            async first() { return null },
+          }
         },
       },
     })
@@ -876,7 +1105,7 @@ describe('Worker transcript replay', () => {
       CHAT_EVALUATION_TOKEN: 'server-evaluation-secret',
       DB: {
         prepare() {
-          return { bind() { return this }, async all() { return { results: [] } } }
+          return { bind() { return this }, async all() { return { results: [] } }, async first() { return null } }
         },
       },
     })
@@ -1244,6 +1473,102 @@ describe('Worker conversation admission', () => {
       status: 429,
       error: 'One moment — that was a little fast. Try again in a second.',
     })
+  })
+
+  it('accepts a long client transcript and sends durable memory plus recent messages to the model', async () => {
+    const { sqlite, d1 } = migratedSqliteD1()
+    sqlite.query(`
+      INSERT INTO conversations (
+        id, created_at, last_message_at, message_count,
+        turn_status, turn_started_at, turn_token
+      ) VALUES (?, ?, ?, ?, 'idle', NULL, NULL)
+    `).run('thread-123', 1, 1, 34)
+    const insert = sqlite.query('INSERT INTO messages (conversation_id, role, content, created_at) VALUES (?, ?, ?, ?)')
+    for (let index = 1; index <= 34; index += 1) {
+      insert.run('thread-123', index % 2 ? 'user' : 'assistant', `Stored ${index}`, index)
+    }
+    let modelInput
+    async function* stream() {
+      yield { type: 'TEXT_MESSAGE_CONTENT', messageId: 'assistant-1', delta: 'Answer' }
+      yield { type: 'RUN_FINISHED', threadId: 'thread-123', runId: 'server-run' }
+    }
+
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST',
+      body: JSON.stringify(validChatBody({
+        messages: Array.from({ length: 41 }, (_, index) => ({
+          id: `client-${index}`,
+          role: index % 2 ? 'assistant' : 'user',
+          content: index === 40 ? 'Newest question' : `Client ${index}`,
+        })),
+      })),
+    }), {
+      ANTHROPIC_API_KEY: 'configured',
+      DB: d1,
+      WORKER_NOW: () => 100_000,
+      WORKER_SUMMARIZE: async ({ text }) => {
+        expect(text).toContain('User: Stored 1')
+        expect(text).toContain('Assistant: Stored 4')
+        return { summary: 'The reader is discussing a long-running topic.' }
+      },
+      WORKER_CHAT: (input) => {
+        modelInput = input.messages
+        return stream()
+      },
+    }, {})
+    await response.text()
+
+    expect(response.status).toBe(200)
+    expect(modelInput[0]).toEqual({
+      role: 'user',
+      content: '[Conversation memory — summary of earlier messages]\nThe reader is discussing a long-running topic.',
+    })
+    expect(modelInput).toHaveLength(32)
+    expect(modelInput.at(-1).content).toBe('Newest question')
+    sqlite.close()
+  })
+
+  it('fails open when chat memory refresh fails', async () => {
+    const { sqlite, d1 } = migratedSqliteD1()
+    sqlite.query(`
+      INSERT INTO conversations (
+        id, created_at, last_message_at, message_count,
+        turn_status, turn_started_at, turn_token
+      ) VALUES (?, ?, ?, ?, 'idle', NULL, NULL)
+    `).run('thread-123', 1, 1, 32)
+    const insert = sqlite.query('INSERT INTO messages (conversation_id, role, content, created_at) VALUES (?, ?, ?, ?)')
+    for (let index = 1; index <= 32; index += 1) insert.run('thread-123', index % 2 ? 'user' : 'assistant', `Stored ${index}`, index)
+    let modelInput
+    async function* stream() {
+      yield { type: 'TEXT_MESSAGE_CONTENT', messageId: 'assistant-1', delta: 'Answer' }
+      yield { type: 'RUN_FINISHED', threadId: 'thread-123', runId: 'server-run' }
+    }
+    const observed = observedEnv({
+      ANTHROPIC_API_KEY: 'configured',
+      DB: d1,
+      WORKER_NOW: () => 100_000,
+      WORKER_SUMMARIZE: async () => { throw new Error('summary failed') },
+      WORKER_CHAT: (input) => {
+        modelInput = input.messages
+        return stream()
+      },
+    })
+
+    const response = await worker.fetch(new Request('https://kwamina.fyi/api/chat', {
+      method: 'POST',
+      body: JSON.stringify(validChatBody({ messages: [{ id: 'new', role: 'user', content: 'Newest question' }] })),
+    }), observed.env, {})
+    await response.text()
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('x-chat-memory-status')).toBe('unavailable')
+    expect(modelInput).toHaveLength(31)
+    expect(modelInput[0].content).toBe('Stored 3')
+    expect(modelInput.at(-1).content).toBe('Newest question')
+    expect(observed.issues).toContainEqual(expect.objectContaining({ outcomeCode: 'MEMORY_REFRESH_FAILED' }))
+    expect(sqlite.query('SELECT message_count, turn_status FROM conversations WHERE id = ?').get('thread-123'))
+      .toEqual({ message_count: 34, turn_status: 'idle' })
+    sqlite.close()
   })
 })
 

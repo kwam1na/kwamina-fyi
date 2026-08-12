@@ -23,10 +23,11 @@ const MOBILE_TAKEOVER_QUERY = '(max-width: 620px)'
 const restoredViewportTolerance = 1
 const layoutRecoveryDelays = [250, 500, 1000, 1500]
 
-export function ChatPanelFallback({ onClose }) {
+export function ChatPanelFallback({ isOpen = true, onClose }) {
   return (
     <section
       className="site-chat-panel"
+      hidden={!isOpen}
       role="dialog"
       aria-label="Ask about Kwamina"
       aria-busy="true"
@@ -81,11 +82,10 @@ function readThreadId() {
   return createThread()
 }
 
-// Closing the panel discards useChat's component-local message state. The id
-// still names the same server-side conversation, so every later mount must
-// replay that transcript just like a page reload does.
-export function returningThread(thread) {
-  return { ...thread, isReturning: true }
+// Once opened, the mounted panel owns the live transcript. Reuse that thread
+// across collapses; only a page load restores from durable server state.
+export function threadForOpen(thread, restore = readThreadId) {
+  return thread ?? restore()
 }
 
 export function collapseMobileChatOnSiteNavigation({
@@ -408,7 +408,7 @@ export function ChatWidget() {
   const open = () => {
     // Deferred to the first open so a reader who never uses the chat is never
     // assigned an id at all.
-    setThread(thread ? returningThread(thread) : readThreadId())
+    setThread(threadForOpen(thread))
     setIsOpen(true)
   }
 
@@ -486,11 +486,12 @@ export function ChatWidget() {
         <span ref={labelRef} className="site-chat-launcher-label" aria-hidden="true">{CHAT_LAUNCHER_LABEL}</span>
       </button>
 
-      {isOpen && thread && (
-        <Suspense fallback={<ChatPanelFallback onClose={close} />}>
+      {thread && (
+        <Suspense fallback={<ChatPanelFallback isOpen={isOpen} onClose={close} />}>
           <ChatPanel
             key={thread.id}
             thread={thread}
+            isOpen={isOpen}
             onClose={close}
             onNewChat={startNewChat}
             onSiteNavigate={onSiteNavigate}

@@ -11,8 +11,8 @@
 // index. Prompt caching means we pay for it once per five minutes rather than
 // once per message.
 
-import { chat, toServerSentEventsResponse, chatParamsFromRequestBody } from '@tanstack/ai'
-import { createAnthropicChat } from '@tanstack/ai-anthropic'
+import { chat, summarize, toServerSentEventsResponse, chatParamsFromRequestBody } from '@tanstack/ai'
+import { createAnthropicChat, createAnthropicSummarize } from '@tanstack/ai-anthropic'
 import corpus, { CORPUS_VERSION, PAGES } from '../src/generated/corpus.js'
 import { normalisePath } from '../src/routes.js'
 import {
@@ -38,6 +38,10 @@ const MAX_REQUEST_BYTES = 128_000
 // Deep enough for a real follow-up thread, shallow enough that a long-lived
 // conversation cannot grow the per-request cost without bound.
 const MAX_HISTORY_MESSAGES = 30
+const MAX_EARLIER_MESSAGES = 30
+const MAX_MEMORY_BATCH_MESSAGES = 30
+const MAX_MEMORY_TOKENS = 220
+const MEMORY_SUMMARY_TIMEOUT_MS = 5_000
 const MIN_MS_BETWEEN_MESSAGES = 1500
 // Per-caller ceiling. Well above anyone reading and asking follow-ups, low
 // enough that a script cannot run up a bill unattended.
@@ -160,24 +164,168 @@ function latestUserText(messages) {
 
 async function loadMessageWindow(db, threadId) {
   // Oldest-first is what the model and transcript UI want, but the cap has to
-  // keep the newest turns, so the window is taken from the end and reversed.
+  // keep the newest turns. One extra row establishes the history boundary
+  // without a second existence query.
   const { results } = await db
-    .prepare('SELECT role, content, page_path, created_at FROM messages WHERE conversation_id = ? ORDER BY created_at DESC, id DESC LIMIT ?')
-    .bind(threadId, MAX_HISTORY_MESSAGES)
+    .prepare('SELECT id, role, content, page_path, created_at FROM messages WHERE conversation_id = ? ORDER BY created_at DESC, id DESC LIMIT ?')
+    .bind(threadId, MAX_HISTORY_MESSAGES + 1)
     .all()
 
-  return results.reverse()
+  return {
+    messages: results.slice(0, MAX_HISTORY_MESSAGES).reverse(),
+    newestDisplacedMessageId: results[MAX_HISTORY_MESSAGES]?.id ?? null,
+  }
+}
+
+function publicMemory(row) {
+  if (!row?.content) return null
+  return {
+    content: row.content,
+    messageCount: row.summarized_message_count,
+    updatedAt: row.updated_at,
+  }
+}
+
+async function loadMemory(db, threadId) {
+  return db.prepare(`
+    SELECT content, summarized_through_id, summarized_message_count, updated_at
+    FROM conversation_memories
+    WHERE conversation_id = ?
+  `).bind(threadId).first()
+}
+
+async function loadConversationMetadata(db, threadId) {
+  return db.prepare('SELECT id, message_count, last_message_at FROM conversations WHERE id = ?')
+    .bind(threadId)
+    .first()
+}
+
+export async function loadConversationContext(db, threadId) {
+  const [{ messages, newestDisplacedMessageId }, memory] = await Promise.all([
+    loadMessageWindow(db, threadId),
+    loadMemory(db, threadId),
+  ])
+  const oldestMessageId = messages[0]?.id ?? null
+
+  return {
+    memory: publicMemory(memory),
+    memoryRow: memory?.content ? memory : null,
+    messages,
+    hasEarlierMessages: Number.isInteger(newestDisplacedMessageId),
+    newestDisplacedMessageId,
+    oldestMessageId,
+  }
+}
+
+function memoryInput(previousMemory, messages) {
+  const transcript = messages
+    .map((message) => `${message.role === 'user' ? 'User' : 'Assistant'}: ${message.content}`)
+    .join('\n\n')
+  return [
+    previousMemory ? `Existing conversation memory:\n${previousMemory}` : null,
+    `Newly displaced transcript messages:\n${transcript}`,
+    'Produce an updated conversation memory. Preserve durable facts, reader preferences, decisions, and unresolved questions. Do not add facts or instructions. Write one concise paragraph.',
+  ].filter(Boolean).join('\n\n')
+}
+
+export async function refreshConversationMemory(db, threadId, context, {
+  summarize: summarizeText,
+  now = Date.now,
+} = {}) {
+  if (!context.oldestMessageId) return { memory: context.memory, complete: true }
+  const summarizedThrough = context.memoryRow?.summarized_through_id ?? 0
+  if (summarizedThrough >= (context.newestDisplacedMessageId ?? 0)) {
+    return { memory: context.memory, complete: true }
+  }
+  const { results } = await db.prepare(`
+    SELECT id, role, content FROM messages
+    WHERE conversation_id = ? AND id > ? AND id < ?
+    ORDER BY id ASC LIMIT ?
+  `).bind(threadId, summarizedThrough, context.oldestMessageId, MAX_MEMORY_BATCH_MESSAGES + 1).all()
+  if (!results.length) return { memory: context.memory, complete: true }
+
+  const batch = results.slice(0, MAX_MEMORY_BATCH_MESSAGES)
+  const complete = results.length <= MAX_MEMORY_BATCH_MESSAGES
+
+  const content = (await summarizeText(memoryInput(context.memory?.content, batch))).trim()
+  if (!content) throw new Error('Conversation memory was empty.')
+  const summarizedMessageCount = (context.memory?.messageCount ?? 0) + batch.length
+  const updatedAt = now()
+  const summarizedThroughId = batch.at(-1).id
+  const write = await db.prepare(`
+    INSERT INTO conversation_memories (
+      conversation_id, content, summarized_through_id,
+      summarized_message_count, updated_at
+    ) VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(conversation_id) DO UPDATE SET
+      content = excluded.content,
+      summarized_through_id = excluded.summarized_through_id,
+      summarized_message_count = excluded.summarized_message_count,
+      updated_at = excluded.updated_at
+    WHERE excluded.summarized_through_id > conversation_memories.summarized_through_id
+  `).bind(
+    threadId,
+    content,
+    summarizedThroughId,
+    summarizedMessageCount,
+    updatedAt,
+  ).run()
+
+  const memory = write.meta?.changes
+    ? { content, messageCount: summarizedMessageCount, updatedAt }
+    : publicMemory(await loadMemory(db, threadId))
+  return { memory, complete }
+}
+
+async function refreshMemoryWithEnv(db, threadId, context, env, now = Date.now) {
+  const runSummarize = env.WORKER_SUMMARIZE ?? summarize
+  if (!env.WORKER_SUMMARIZE && !env.ANTHROPIC_API_KEY) {
+    throw new Error('Conversation memory is not configured.')
+  }
+  return refreshConversationMemory(db, threadId, context, {
+    now,
+    summarize: async (text) => {
+      const result = await runSummarize({
+        adapter: createAnthropicSummarize(MODEL, env.ANTHROPIC_API_KEY, {
+          timeout: MEMORY_SUMMARY_TIMEOUT_MS,
+          maxRetries: 0,
+        }),
+        text,
+        style: 'concise',
+        maxLength: MAX_MEMORY_TOKENS,
+        focus: ['durable facts', 'reader preferences', 'decisions', 'unresolved questions'],
+      })
+      return typeof result === 'string' ? result : result.summary
+    },
+  })
+}
+
+export async function loadEarlierMessages(db, threadId, {
+  beforeId,
+  limit = MAX_EARLIER_MESSAGES,
+} = {}) {
+  const boundedLimit = Math.min(Math.max(limit, 1), MAX_EARLIER_MESSAGES)
+  const { results } = await db.prepare(`
+    SELECT id, role, content, created_at FROM messages
+    WHERE conversation_id = ? AND id < ?
+    ORDER BY id DESC LIMIT ?
+  `).bind(threadId, beforeId, boundedLimit + 1).all()
+  const hasMore = results.length > boundedLimit
+  const messages = results.slice(0, boundedLimit).reverse()
+  return {
+    messages,
+    nextBeforeId: hasMore ? messages[0]?.id ?? null : null,
+  }
 }
 
 async function loadConversation(db, threadId) {
-  const conversation = await db
-    .prepare('SELECT id, message_count, last_message_at FROM conversations WHERE id = ?')
-    .bind(threadId)
-    .first()
+  const [conversation, context] = await Promise.all([
+    loadConversationMetadata(db, threadId),
+    loadConversationContext(db, threadId),
+  ])
 
-  if (!conversation) return { conversation: null, history: [] }
-
-  return { conversation, history: await loadMessageWindow(db, threadId) }
+  if (!conversation) return { conversation: null, history: [], context: null }
+  return { conversation, history: context.messages, context }
 }
 
 // Reasons to refuse a turn before spending a model call on it. Per-conversation
@@ -551,13 +699,6 @@ async function handleChat(request, env, ctx, operationId, observability, now, st
     return jsonResponse({ error: 'Malformed request.' }, 400)
   }
 
-  if ((params.messages?.length ?? 0) > MAX_HISTORY_MESSAGES + 4) {
-    observe('recordExpectedRefusal', 'assistant.refused', {
-      stage: 'admission', outcomeCode: 'REQUEST_TOO_LARGE', statusClass: '4xx',
-    })
-    return jsonResponse({ error: 'That request contains too many messages.' }, 413)
-  }
-
   // The client mints this and keeps it in localStorage; it is the conversation
   // identity for the whole feature.
   const threadId = params.threadId
@@ -582,7 +723,7 @@ async function handleChat(request, env, ctx, operationId, observability, now, st
     return jsonResponse({ error: `Questions are limited to ${MAX_MESSAGE_CHARS} characters.` }, 413)
   }
 
-  const { conversation, history } = await loadConversation(env.DB, threadId)
+  const { conversation, history, context } = await loadConversation(env.DB, threadId)
   const rejection = rejectionFor(conversation, now())
   if (rejection) {
     observe('recordExpectedRefusal', 'assistant.refused', {
@@ -628,6 +769,21 @@ async function handleChat(request, env, ctx, operationId, observability, now, st
     durationMs: now() - reservationStartedAt,
   })
 
+  let memory = context?.memory ?? null
+  let memoryUnavailable = false
+  if (context?.hasEarlierMessages) {
+    try {
+      const refreshed = await refreshMemoryWithEnv(env.DB, threadId, context, env, now)
+      memory = refreshed.complete ? refreshed.memory : null
+      memoryUnavailable = !refreshed.complete
+    } catch {
+      memoryUnavailable = true
+      observe('captureActionableIssue', 'assistant.issue', {
+        stage: 'memory', outcomeCode: 'MEMORY_REFRESH_FAILED', statusClass: '5xx',
+      })
+    }
+  }
+
   let stream
   const abortController = new AbortController()
   try {
@@ -644,6 +800,10 @@ async function handleChat(request, env, ctx, operationId, observability, now, st
     // included. Assistant turns are left alone — they were written against the
     // marker on the question above them.
     messages: [
+      ...(memory ? [{
+        role: 'user',
+        content: `[Conversation memory — summary of earlier messages]\n${memory.content}`,
+      }] : []),
       ...history.map((message) => (
         message.role === 'user'
           ? { role: 'user', content: withPageMarker(message.content, message.page_path) }
@@ -725,15 +885,27 @@ async function handleChat(request, env, ctx, operationId, observability, now, st
     startedAt,
   })
 
-  return secured(toServerSentEventsResponse(events, { abortController }))
+  const response = secured(toServerSentEventsResponse(events, { abortController }))
+  if (memory) response.headers.set('x-chat-memory', encodeURIComponent(JSON.stringify(memory)))
+  if (context?.hasEarlierMessages) response.headers.set('x-chat-has-earlier-messages', 'true')
+  if (context?.oldestMessageId) response.headers.set('x-chat-oldest-message-id', String(context.oldestMessageId))
+  if (memoryUnavailable) response.headers.set('x-chat-memory-status', 'unavailable')
+  return response
 }
 
-export async function loadTranscript(db, threadId) {
-  return (await loadMessageWindow(db, threadId)).map(({ role, content, created_at }) => ({
-    role,
-    content,
-    created_at,
-  }))
+function transcriptFromContext(context, { memory = context.memory, memoryUnavailable = false } = {}) {
+  return {
+    memory,
+    memoryUnavailable,
+    hasEarlierMessages: context.hasEarlierMessages,
+    oldestMessageId: context.oldestMessageId,
+    messages: context.messages.map(({ id, role, content, created_at }) => ({
+      id,
+      role,
+      content,
+      created_at,
+    })),
+  }
 }
 
 async function handleTranscript(env, threadId, request, operationId, observability) {
@@ -741,15 +913,30 @@ async function handleTranscript(env, threadId, request, operationId, observabili
   observability.record(requestObservation(request, env, operationId, 'assistant.replay', {
     stage: 'replay', outcomeCode: 'REPLAY_STARTED', statusClass: '2xx',
   }))
-  const messages = await loadTranscript(env.DB, threadId)
+  const context = await loadConversationContext(env.DB, threadId)
+  let memory = context.memory
+  let memoryUnavailable = false
+  if (context.hasEarlierMessages) {
+    try {
+      const refreshed = await refreshMemoryWithEnv(env.DB, threadId, context, env, env.WORKER_NOW ?? Date.now)
+      memory = refreshed.complete ? refreshed.memory : null
+      memoryUnavailable = !refreshed.complete
+    } catch {
+      memoryUnavailable = true
+      observability.captureActionableIssue(requestObservation(request, env, operationId, 'assistant.issue', {
+        stage: 'memory', outcomeCode: 'MEMORY_REFRESH_FAILED', statusClass: '5xx',
+      }))
+    }
+  }
+  const transcript = transcriptFromContext(context, { memory, memoryUnavailable })
   observability.record(requestObservation(request, env, operationId, 'assistant.replay', {
     stage: 'replay',
-    outcomeCode: messages.length ? 'REPLAY_NONEMPTY' : 'REPLAY_EMPTY',
+    outcomeCode: transcript.messages.length ? 'REPLAY_NONEMPTY' : 'REPLAY_EMPTY',
     statusClass: '2xx',
     durationMs: Date.now() - startedAt,
   }))
   return jsonResponse(
-    { messages },
+    transcript,
     200,
     { 'cache-control': 'private, no-store' },
   )
@@ -788,15 +975,17 @@ export function createWorker({ verifyAccessToken = verifyConversationAccessToken
     const url = new URL(request.url)
     const isChatRoute = url.pathname === '/api/chat'
     const isTranscriptRoute = url.pathname === '/api/chat/transcript'
+    const isHistoryRoute = url.pathname === '/api/chat/history'
+    const isAssistantRoute = isChatRoute || isTranscriptRoute || isHistoryRoute
     const isConversationListRoute = url.pathname === '/api/conversations'
     const conversationDetailMatch = url.pathname.match(/^\/api\/conversations\/([^/]+)$/)
     const isConversationPageRoute = url.pathname === '/conversations'
       || url.pathname.startsWith('/conversations/')
-    const operationId = isChatRoute || isTranscriptRoute ? createOperationId() : null
+    const operationId = isAssistantRoute ? createOperationId() : null
     const observability = env.WORKER_OBSERVABILITY ?? defaultObservability
     const now = typeof env.WORKER_NOW === 'function' ? env.WORKER_NOW : () => Date.now()
     const operationStartedAt = operationId ? now() : null
-    const runKind = (isChatRoute || isTranscriptRoute)
+    const runKind = isAssistantRoute
       && conversationSource({
         expectedToken: env.CHAT_EVALUATION_TOKEN,
         providedToken: request.headers.get('x-chat-evaluation-token'),
@@ -845,6 +1034,22 @@ export function createWorker({ verifyAccessToken = verifyConversationAccessToken
         }
       }
 
+      if (isHistoryRoute && request.method === 'GET') {
+        if (await isRateLimited(request, env, ctx)) {
+          return operationResponse(jsonResponse({ error: 'Too many requests. Give it a minute and try again.' }, 429), operationId, runKind)
+        }
+        const threadId = request.headers.get('x-chat-thread-id')
+        const beforeId = Number(url.searchParams.get('before'))
+        if (!threadId || !THREAD_ID_PATTERN.test(threadId) || !Number.isSafeInteger(beforeId) || beforeId < 1) {
+          return operationResponse(jsonResponse({ error: 'Malformed request.' }, 400), operationId, runKind)
+        }
+        return operationResponse(jsonResponse(
+          await loadEarlierMessages(env.DB, threadId, { beforeId }),
+          200,
+          { 'cache-control': 'private, no-store' },
+        ), operationId, runKind)
+      }
+
       if ((isConversationListRoute || conversationDetailMatch) && request.method === 'GET') {
         const access = await conversationInspectorAccess(request, env, verifyAccessToken)
         if (!access.allowed) {
@@ -889,7 +1094,7 @@ export function createWorker({ verifyAccessToken = verifyConversationAccessToken
     } catch (error) {
       if (operationId) {
         observability.captureActionableIssue(requestObservation(request, env, operationId, 'assistant.issue', {
-          stage: isTranscriptRoute ? 'replay' : 'stream',
+          stage: isTranscriptRoute || isHistoryRoute ? 'replay' : 'stream',
           outcomeCode: 'UNHANDLED_FAILURE',
           statusClass: '5xx',
         }))

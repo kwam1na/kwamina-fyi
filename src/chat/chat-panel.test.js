@@ -3,6 +3,8 @@ import { createElement } from 'react'
 import { act, create } from 'react-test-renderer'
 import {
   ChatRenderBoundary,
+  ConversationMemory,
+  EarlierMessagesPanel,
   ChatLatestButton,
   StreamingText,
   chatIsAwayFromLatest,
@@ -104,6 +106,125 @@ describe('ChatLatestButton', () => {
     button.props.onClick()
     expect(calls).toEqual(['latest'])
 
+    await act(async () => renderer.unmount())
+  })
+})
+
+describe('ConversationMemory', () => {
+  it('labels summarized context and offers the stored transcript', async () => {
+    const actions = []
+    let renderer
+    await act(async () => {
+      renderer = create(createElement(ConversationMemory, {
+        memory: {
+          content: 'Earlier discussion covered Dashy evaluation.',
+          messageCount: 12,
+        },
+        hasEarlierMessages: true,
+        onViewEarlier: () => actions.push('history'),
+      }))
+    })
+
+    expect(renderedText(renderer.toJSON())).toContain('Earlier context')
+    expect(renderedText(renderer.toJSON())).toContain('Conversation memory')
+    expect(renderedText(renderer.toJSON())).toContain('12 messages summarized')
+    expect(renderedText(renderer.toJSON())).toContain('Earlier discussion covered Dashy evaluation.')
+    renderer.root.findByType('button').props.onClick()
+    expect(actions).toEqual(['history'])
+    await act(async () => renderer.unmount())
+  })
+
+  it('discloses when older context was unavailable without blocking the conversation', async () => {
+    const actions = []
+    let renderer
+    await act(async () => {
+      renderer = create(createElement(ConversationMemory, {
+        memory: null,
+        hasEarlierMessages: true,
+        memoryUnavailable: true,
+        onViewEarlier: () => actions.push('history'),
+      }))
+    })
+
+    const section = renderer.root.findByProps({ 'aria-label': 'Conversation memory' })
+    expect(renderer.root.findByProps({ role: 'status' }).parent).toBe(section)
+    expect(renderedText(renderer.toJSON())).toContain('Older context wasn’t available for this answer.')
+    const button = renderer.root.findByType('button')
+    expect(button.parent).toBe(section)
+    button.props.onClick()
+    expect(actions).toEqual(['history'])
+    await act(async () => renderer.unmount())
+  })
+})
+
+describe('EarlierMessagesPanel', () => {
+  it('renders stored history as read-only and exposes pagination', async () => {
+    const actions = []
+    let renderer
+    await act(async () => {
+      renderer = create(createElement(EarlierMessagesPanel, {
+        messages: [
+          { id: 1, role: 'user', content: 'What is Dashy?' },
+          { id: 2, role: 'assistant', content: 'An event dashboard assistant.' },
+        ],
+        hasMore: true,
+        isLoading: false,
+        error: null,
+        onLoadEarlier: () => actions.push('load'),
+      }))
+    })
+
+    expect(renderedText(renderer.toJSON())).toContain('Stored transcript')
+    expect(renderedText(renderer.toJSON())).toContain('aren’t sent verbatim with new questions')
+    expect(renderedText(renderer.toJSON())).toContain('What is Dashy?')
+    renderer.root.findByType('button').props.onClick()
+    expect(actions).toEqual(['load'])
+    await act(async () => renderer.unmount())
+  })
+
+  it('keeps a failed initial page retryable', async () => {
+    const actions = []
+    let renderer
+    await act(async () => {
+      renderer = create(createElement(EarlierMessagesPanel, {
+        messages: [],
+        hasMore: true,
+        isLoading: false,
+        error: true,
+        onLoadEarlier: () => actions.push('retry'),
+      }))
+    })
+
+    expect(renderedText(renderer.toJSON())).toContain('Couldn’t load earlier messages.')
+    renderer.root.findByType('button').props.onClick()
+    expect(actions).toEqual(['retry'])
+    await act(async () => renderer.unmount())
+  })
+
+  it('formats links in stored assistant messages', async () => {
+    let renderer
+    await act(async () => {
+      renderer = create(createElement(EarlierMessagesPanel, {
+        messages: [
+          {
+            id: 1,
+            role: 'assistant',
+            content: 'See [Athena](https://athena-os.app/landing).',
+          },
+        ],
+        hasMore: false,
+        isLoading: false,
+        error: null,
+        onLoadEarlier: () => {},
+      }))
+    })
+
+    expect(renderedText(renderer.toJSON())).toContain('See Athena.')
+    expect(renderer.root.findByType('a').props).toMatchObject({
+      href: 'https://athena-os.app/landing',
+      target: '_blank',
+      rel: 'noreferrer',
+    })
     await act(async () => renderer.unmount())
   })
 })

@@ -4,6 +4,7 @@ const RUN_KINDS = new Set(['human', 'synthetic'])
 const ROUTES = new Map([
   ['/api/chat', 'api_chat'],
   ['/api/chat/transcript', 'api_transcript'],
+  ['/api/chat/history', 'api_history'],
 ])
 const EVENTS = new Set([
   'assistant.issue',
@@ -17,6 +18,7 @@ const STAGES = new Set([
   'admission',
   'reservation',
   'model_start',
+  'memory',
   'first_content',
   'stream',
   'persistence',
@@ -33,6 +35,7 @@ const OUTCOME_CODES = new Set([
   'EMPTY_COMPLETION',
   'MODEL_STARTED',
   'MODEL_FAILED',
+  'MEMORY_REFRESH_FAILED',
   'PERSISTENCE_FAILED',
   'PERSISTENCE_STARTED',
   'PERSISTENCE_COMMITTED',

@@ -6,7 +6,7 @@ import {
   collapseMobileChatOnSiteNavigation,
   createThread,
   lockMobilePageScroll,
-  returningThread,
+  threadForOpen,
   shouldRestoreLauncherFocus,
   shouldSweepLauncher,
   subscribeToMobileTakeover,
@@ -32,6 +32,11 @@ describe('ChatPanelFallback', () => {
     expect(fallback.props['aria-label']).toBe('Ask about Kwamina')
     expect(closeButton.props['aria-label']).toBe('Close chat')
     expect(closeButton.props.onClick).toBe(onClose)
+  })
+
+  it('can stay mounted without remaining visible after collapse', () => {
+    const fallback = ChatPanelFallback({ isOpen: false, onClose: () => {} })
+    expect(fallback.props.hidden).toBe(true)
   })
 })
 
@@ -60,12 +65,10 @@ describe('createThread', () => {
   })
 })
 
-describe('returningThread', () => {
-  it('preserves the existing conversation id and marks it for transcript replay', () => {
-    expect(returningThread({ id: 'thread-123', isReturning: false })).toEqual({
-      id: 'thread-123',
-      isReturning: true,
-    })
+describe('threadForOpen', () => {
+  it('reuses the mounted conversation without requesting transcript replay', () => {
+    const thread = { id: 'thread-123', isReturning: false }
+    expect(threadForOpen(thread, () => { throw new Error('should not restore') })).toBe(thread)
   })
 })
 

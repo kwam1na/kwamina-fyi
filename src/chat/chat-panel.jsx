@@ -16,7 +16,12 @@ import { animate } from 'animejs'
 import { NoticeArrow } from '../notice-page.jsx'
 import Markdown from 'react-markdown'
 import { classifyChatHref, prepareChatMarkdown } from './chat-links.js'
-import { fetchStoredMessages, renderContextForChatMessage } from './chat-transcript.js'
+import {
+  fetchEarlierMessages,
+  fetchStoredMessages,
+  memoryStateFromResponse,
+  renderContextForChatMessage,
+} from './chat-transcript.js'
 import { chatPageLabelForPath, chatTitleForPath } from './chat-title.js'
 import { FlipText } from './flip-text.jsx'
 import { revealDuration, revealedPrefix } from './stream-reveal.js'
@@ -128,6 +133,77 @@ export function ChatLatestButton({ isVisible, onClick }) {
         <path d="M12 5v14m6.5-6.5L12 19l-6.5-6.5" />
       </svg>
     </button>
+  )
+}
+
+export function ConversationMemory({
+  memory,
+  hasEarlierMessages,
+  memoryUnavailable = false,
+  onViewEarlier,
+}) {
+  if (!memory && !memoryUnavailable) return null
+
+  return (
+    <div className="site-chat-memory-boundary">
+      <p className="site-chat-memory-divider"><span>Earlier context</span></p>
+      <section className="site-chat-memory" aria-label="Conversation memory">
+        <header>
+          <strong>Conversation memory</strong>
+          {memory && <span>{memory.messageCount} messages summarized</span>}
+        </header>
+        {memoryUnavailable && (
+          <p className="site-chat-memory-warning" role="status">
+            Older context wasn&rsquo;t available for this answer.
+          </p>
+        )}
+        {memory && <p className="site-chat-memory-copy">{memory.content}</p>}
+        {hasEarlierMessages && (
+          <button type="button" onClick={onViewEarlier}>View earlier messages</button>
+        )}
+      </section>
+    </div>
+  )
+}
+
+export function EarlierMessagesPanel({
+  messages,
+  hasMore,
+  isLoading,
+  error,
+  onLoadEarlier,
+  onSiteNavigate,
+}) {
+  return (
+    <div className="site-chat-history">
+      <div className="site-chat-history-intro">
+        <strong>Stored transcript</strong>
+        <p>These messages remain in your transcript but aren&rsquo;t sent verbatim with new questions.</p>
+      </div>
+      {hasMore && (
+        <button
+          type="button"
+          className="site-chat-history-load"
+          onClick={onLoadEarlier}
+          disabled={isLoading}
+        >
+          {isLoading ? 'Loading…' : 'Load earlier messages'}
+        </button>
+      )}
+      {error && <p className="site-chat-error" role="alert">Couldn&rsquo;t load earlier messages.</p>}
+      <div className="site-chat-history-list">
+        {messages.map((message) => (
+          <div key={message.id} className={`site-chat-history-message is-${message.role}`}>
+            <strong>{message.role === 'user' ? 'You' : 'Assistant'}</strong>
+            <p>
+              {message.role === 'assistant'
+                ? <ChatText text={message.content} onSiteNavigate={onSiteNavigate} />
+                : message.content}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -286,7 +362,7 @@ export function StreamingText({ text, isStreaming, onReveal, onSiteNavigate }) {
 // what surfaces from `useChat` is a flattened plain Error with no `cause`. So
 // the message is read here, where the response still exists, and left in a ref
 // for the render that the failure is about to trigger.
-async function chatFetch(input, init, messageRef) {
+async function chatFetch(input, init, messageRef, memoryRef) {
   messageRef.current = null
 
   let response
@@ -297,7 +373,10 @@ async function chatFetch(input, init, messageRef) {
     throw expectedChatFailure(messageRef.current)
   }
 
-  if (response.ok) return response
+  if (response.ok) {
+    memoryRef.current = memoryStateFromResponse(response)
+    return response
+  }
 
   const message = await response
     .json()
@@ -311,10 +390,20 @@ async function chatFetch(input, init, messageRef) {
 // Default-exported so the launcher can reach it through React.lazy. The
 // TanStack AI client is ~150kB of the bundle; a reader who never opens the
 // chat should never download it.
-export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }) {
+export default function ChatPanel({ thread, isOpen = true, onClose, onNewChat, onSiteNavigate }) {
   const [input, setInput] = useState('')
   const [replayStatus, setReplayStatus] = useState(thread.isReturning ? 'loading' : 'idle')
   const [showLatestButton, setShowLatestButton] = useState(false)
+  const [memoryState, setMemoryState] = useState({
+    memory: null,
+    hasEarlierMessages: false,
+    memoryUnavailable: false,
+    oldestMessageId: null,
+  })
+  const [showHistory, setShowHistory] = useState(false)
+  const [earlierMessages, setEarlierMessages] = useState([])
+  const [historyBeforeId, setHistoryBeforeId] = useState(null)
+  const [historyStatus, setHistoryStatus] = useState('idle')
   const isRehydrating = replayStatus === 'loading'
   const replayError = replayStatus === 'failed'
   const panelRef = useRef(null)
@@ -323,6 +412,7 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
   const logRef = useRef(null)
   const isSubmittingRef = useRef(false)
   const wasLoadingRef = useRef(false)
+  const liveMemoryRef = useRef(null)
   const scrollFollowerRef = useRef(null)
   if (!scrollFollowerRef.current) {
     scrollFollowerRef.current = createChatScrollFollower(() => logRef.current)
@@ -333,7 +423,7 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
   const serverMessageRef = useRef(null)
   const connection = useMemo(
     () => fetchServerSentEvents('/api/chat', {
-      fetchClient: (input, init) => chatFetch(input, init, serverMessageRef),
+      fetchClient: (input, init) => chatFetch(input, init, serverMessageRef, liveMemoryRef),
     }),
     [],
   )
@@ -355,14 +445,19 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
   })
 
   useEffect(() => {
+    const wasLoading = wasLoadingRef.current
     triggerCompletionHaptic({
-      wasLoading: wasLoadingRef.current,
+      wasLoading,
       isLoading,
       messages,
       error,
       isMobile: window.matchMedia('(pointer: coarse)').matches,
       vibrate: navigator.vibrate?.bind(navigator),
     })
+    if (wasLoading && !isLoading && liveMemoryRef.current) {
+      setMemoryState(liveMemoryRef.current)
+      liveMemoryRef.current = null
+    }
     wasLoadingRef.current = isLoading
   }, [error, isLoading, messages])
 
@@ -380,7 +475,13 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
     fetchStoredMessages(thread.id, { signal: abort.signal })
       .then((stored) => {
         if (disposed) return
-        setMessages(stored)
+        setMessages(stored.messages)
+        setMemoryState({
+          memory: stored.memory,
+          hasEarlierMessages: stored.hasEarlierMessages,
+          memoryUnavailable: stored.memoryUnavailable,
+          oldestMessageId: stored.oldestMessageId,
+        })
         setReplayStatus('loaded')
       })
       .catch(() => {
@@ -398,8 +499,8 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
   }, [replayStatus, thread.id, setMessages])
 
   useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+    if (isOpen) inputRef.current?.focus()
+  }, [isOpen])
 
   // A new answer takes precedence over the reader's prior transcript position,
   // but direct interaction with the transcript hands scroll control back.
@@ -478,6 +579,28 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
     setReplayStatus('loading')
   }, [])
 
+  const loadEarlier = useCallback(async (beforeId) => {
+    if (!beforeId || historyStatus === 'loading') return
+    setHistoryStatus('loading')
+    try {
+      const page = await fetchEarlierMessages(thread.id, { beforeId })
+      setEarlierMessages((current) => [...page.messages, ...current])
+      setHistoryBeforeId(page.nextBeforeId)
+      setHistoryStatus('loaded')
+    } catch {
+      setHistoryStatus('failed')
+    }
+  }, [historyStatus, thread.id])
+
+  const openHistory = useCallback(() => {
+    scrollFollowerRef.current.interrupt()
+    setShowHistory(true)
+    if (!earlierMessages.length) {
+      setHistoryBeforeId(memoryState.oldestMessageId)
+      void loadEarlier(memoryState.oldestMessageId)
+    }
+  }, [earlierMessages.length, loadEarlier, memoryState.oldestMessageId])
+
   const isEmpty = messages.length === 0
 
   const surfaceRef = useRef(null)
@@ -507,14 +630,19 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
     <div
       className="site-chat-panel"
       ref={panelRef}
+      hidden={!isOpen}
       role="dialog"
       aria-modal="false"
       aria-label={chatTitle}
     >
       <header className="site-chat-header">
-        <p className="site-chat-title">Ask about <FlipText value={chatPageLabel} /></p>
+        <p className="site-chat-title">
+          {showHistory ? 'Earlier messages' : <>Ask about <FlipText value={chatPageLabel} /></>}
+        </p>
         <div className="site-chat-header-actions">
-          {!isEmpty && (
+          {showHistory ? (
+            <button type="button" className="site-chat-new" onClick={() => setShowHistory(false)}>Done</button>
+          ) : !isEmpty && (
             <button type="button" className="site-chat-new" onClick={onNewChat}>New chat</button>
           )}
           <button type="button" className="site-chat-close" onClick={onClose} aria-label="Close chat">
@@ -547,7 +675,19 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
         onWheel={interruptFollowing}
         onScroll={syncLatestButton}
       >
-        {isRehydrating && <p className="site-chat-note">Picking up where you left off&hellip;</p>}
+        {showHistory ? (
+          <EarlierMessagesPanel
+            messages={earlierMessages}
+            hasMore={historyBeforeId !== null}
+            isLoading={historyStatus === 'loading'}
+            error={historyStatus === 'failed'}
+            onLoadEarlier={() => loadEarlier(historyBeforeId)}
+            onSiteNavigate={onSiteNavigate}
+          />
+        ) : <>
+        {isRehydrating && (
+          <p className="site-chat-note is-rehydrating">Picking up where you left off&hellip;</p>
+        )}
 
         {replayError && (
           <div className="site-chat-replay-error" role="alert">
@@ -577,6 +717,13 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
             </ul>
           </div>
         )}
+
+        <ConversationMemory
+          memory={memoryState.memory}
+          hasEarlierMessages={memoryState.hasEarlierMessages}
+          memoryUnavailable={memoryState.memoryUnavailable}
+          onViewEarlier={openHistory}
+        />
 
         {/* A run that fails before its first token leaves an assistant message
             with no text behind it; rendering that is an empty bubble sitting
@@ -615,6 +762,7 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
             {serverMessageRef.current || GENERIC_ERROR}
           </p>
         )}
+        </>}
       </div>
 
       <ChatLatestButton
@@ -623,7 +771,7 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
       />
       </div>
 
-      <form
+      {!showHistory && <form
         ref={formRef}
         className="site-chat-form"
         onSubmit={(event) => {
@@ -658,7 +806,7 @@ export default function ChatPanel({ thread, onClose, onNewChat, onSiteNavigate }
             </svg>
           </button>
         </div>
-      </form>
+      </form>}
       </div>
     </div>
   )

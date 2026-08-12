@@ -118,6 +118,7 @@ describe('Worker observability contract', () => {
       'SOURCE_EXHAUSTED', 'SOURCE_FAILED', 'STREAM_CANCELLED', 'STREAM_COMPLETED',
       'PERSISTENCE_STARTED', 'PERSISTENCE_COMMITTED', 'TERMINAL_EMITTED',
       'SERVER_DURABLE_SUCCESS', 'REPLAY_STARTED', 'REPLAY_EMPTY', 'REPLAY_NONEMPTY',
+      'MEMORY_REFRESH_FAILED',
     ]) {
       expect(sanitizeWorkerEvent({
         event: 'assistant.operation',

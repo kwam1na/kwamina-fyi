@@ -86,9 +86,17 @@ current page view.
 Returning threads call `GET /api/chat/transcript` and send the possession-based
 thread credential in `x-chat-thread-id`. Keeping the credential out of the URL
 prevents normal request-path telemetry from retaining a replayable transcript
-key. The response contains the newest 30 stored messages, presented
-oldest-to-newest for rendering, and is marked `Cache-Control: private,
-no-store`.
+key. The response contains the durable conversation memory plus the newest 30
+stored messages, presented oldest-to-newest for rendering, and is marked
+`Cache-Control: private, no-store`. When older messages exist, the panel shows
+the memory at the chronological boundary and offers a read-only earlier-history
+view. Viewing stored history never adds it back to model context.
+
+Memory refreshes advance in bounded 30-message batches. A large unsummarized
+backlog stays disclosed as unavailable until later requests catch the memory
+up to the recent-message boundary; it is never sent as one unbounded summary
+prompt. Production summaries use a five-second deadline with retries disabled,
+and concurrent checkpoints can only move the memory boundary forward.
 
 Replay has an eight-second client timeout. While replay is active, submission
 is held so a late transcript cannot replace a new turn. If replay fails, the
@@ -303,15 +311,22 @@ Migrations must be applied in filename order:
 | `0004_chat_provenance.sql` | Conversation source/environment and assistant version, corpus version, model, latency, plus analysis index |
 | `0005_turn_reservations.sql` | Atomic per-thread model-turn reservation and stale recovery timestamp |
 | `0006_turn_ownership.sql` | Reservation ownership token that prevents superseded streams from writing or releasing a newer turn |
+| `0009_conversation_memories.sql` | Durable rolling memory, summarized transcript boundary, and `(conversation_id, id)` history cursor index |
 
 The server's D1 transcript is authoritative for model context. The browser's
 copy exists for display and for submitting the newest question; it cannot
 rewrite prior turns.
 
-Conversation length is not capped. Model and UI replay cost remain bounded by
-selecting the newest 30 messages in descending database order, then reversing
-the result into chronological order. The model-history and transcript endpoint
-share one query helper so their windows cannot drift.
+Conversation length is not capped. Every completed turn remains stored. Model
+context stays bounded to a durable rolling memory plus the newest 30 verbatim
+messages. As older messages leave that window, the Worker folds them into the
+memory before the next answer or transcript replay. The visible replay uses the
+same recent window, makes the memory boundary explicit, and lets the reader page
+through older stored messages without expanding model context.
+
+Memory refresh fails open. The assistant continues with recent messages and the
+panel discloses that older context was unavailable for that answer; the durable
+transcript is unaffected.
 
 ### Stored fields and privacy
 
@@ -367,6 +382,8 @@ account/key should retain an external spend cap and billing alert.
   expose the transport failure, release the reservation, and log
   `chat.persist_failed` without logging the replayable thread credential.
 - D1/rate-limit binding failure: log and fail open for availability.
+- Memory refresh failure: continue with recent context, disclose the limitation,
+  and retain the full transcript.
 - Unknown API route: JSON 404; non-API routes remain static SPA behavior.
 
 The complete signal contract, provider readiness gates, alert ownership, and
@@ -464,8 +481,8 @@ Cloudflare version; do not reverse the additive migrations.
 - Add prompt behavior to `chat-contract.js`, increment the assistant version,
   and add a regression assertion.
 - Add corpus sources only when their facts are suitable for public answers.
-- Keep message-window changes shared between model history and transcript
-  replay.
+- Keep the recent-message window shared between model context and transcript
+  replay, and keep the rolling-memory boundary aligned with it.
 - Treat new provenance as additive, non-identifying data with a clear analysis
   question.
 - Revisit RAG only when the corpus budget, latency, or answer quality provides
