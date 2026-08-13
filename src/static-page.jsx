@@ -5,6 +5,7 @@ import { NAVIGABLE_PATHS, PRIVATE_ROUTE_PATHS, normalisePath } from './routes.js
 import { recordNavigation, returnLabels, returnStack } from './return-stack.js'
 import { bindProximityScope, bindProximityScopes } from './proximity-focus.js'
 import { addConversationArchiveEntry } from './admin-navigation.js'
+import { readingLineFor } from './reading-position.js'
 
 function addRouteBreadcrumbs(body, pagePath) {
   const segments = normalisePath(pagePath).split('/').filter(Boolean)
@@ -778,7 +779,10 @@ export function StaticPage({ documentHtml, pagePath, title, conversationArchiveE
     }
 
     const update = () => {
-      const readingLine = window.innerHeight * 0.35
+      // Shared with the mobile reading-position control, which reports the
+      // same fact from the corner: two thresholds would let the rail and the
+      // control disagree about which section the reader is in.
+      const readingLine = readingLineFor(window.innerHeight)
       let current = sections[0]
       sections.forEach((section) => {
         if (section.getBoundingClientRect().top <= readingLine) current = section

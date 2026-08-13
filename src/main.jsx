@@ -12,6 +12,7 @@ import {
 import { StaticPage } from './static-page.jsx'
 import { ThemeToggle } from './theme-toggle.jsx'
 import { ScrollToTop } from './scroll-to-top.jsx'
+import { ReadingPosition } from './reading-position.jsx'
 import { ChatWidget } from './chat/chat-widget.jsx'
 import { NotFoundPage } from './not-found-page.jsx'
 import { ErrorPage } from './error-page.jsx'
@@ -46,6 +47,7 @@ function RootLayout() {
         <>
           <ThemeToggle />
           <ScrollToTop />
+          <ReadingPosition />
           <ChatWidget />
         </>
       )}

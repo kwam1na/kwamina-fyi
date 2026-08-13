@@ -518,6 +518,381 @@ body::after {
   }
 }
 
+/* ── Reading position ───────────────────────────────────────────────────────
+   The context rail sits beside the article and stays put on a wide screen. At
+   the story layout's own breakpoint it stacks above the article instead, so it
+   scrolls away and takes the reader's sense of place with it — on a phone the
+   answer to "where am I in this piece" is available only at the very top of
+   the page.
+
+   This is that answer, kept within reach: a third disc in the corner cluster,
+   wearing the scroll-to-top's surface, blur, and easing so the row reads as
+   one family. It arrives as the rail leaves the top of the viewport rather
+   than at the fixed distance the other two use — a handoff, so the reader
+   never sees both at once. The glyph is the rail in miniature — three rules
+   for the list, and the rail's own indicator bar holding the reader's place —
+   so the control answers at a glance and only has to be opened to act on. */
+:root {
+  /* One step further along the row than the launcher, which is itself one step
+   * from the scroll-to-top. --split-travel is that step, so the three stay
+   * evenly spaced from a single number and follow it when it changes at the
+   * breakpoint. */
+  --rail-trigger-travel: calc(var(--split-travel) * 2);
+}
+
+.reading-position {
+  position: fixed;
+  z-index: 41;
+  right: 24px;
+  bottom: 24px;
+  display: grid;
+  width: var(--launcher-size);
+  height: var(--launcher-size);
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--nav-surface, var(--paper));
+  box-shadow: 0 4px 16px rgba(21, 24, 33, 0.08);
+  color: var(--copy);
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  /* Its resting strength once revealed, named rather than repeated. The states
+   * below re-declare this token instead of `opacity`, so the mobile block can
+   * set a different resting value further down the sheet without silently
+   * outranking them — the trap of two equally specific rules where the last
+   * one written wins. */
+  --trigger-opacity: 0.52;
+  opacity: 0;
+  pointer-events: none;
+  /* The row offset rides `translate` and the reveal rides `transform`, the same
+   * division the launcher makes: an inline transform would otherwise outrank
+   * the press below. */
+  translate: calc(-1 * var(--rail-trigger-travel)) 0;
+  transform: translateY(18px) scale(0.92);
+  transition: transform 160ms var(--ease-portfolio), color 160ms ease,
+    background-color 160ms ease, opacity 160ms ease;
+}
+
+.reading-position.is-visible {
+  opacity: var(--trigger-opacity);
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.reading-position:active {
+  transform: scale(0.97);
+}
+
+/* Holding something open is a state worth showing, not just a panel worth
+ * drawing: the control it came from stays at full strength while it is up. */
+.reading-position.is-open {
+  --trigger-opacity: 1;
+}
+
+.reading-position:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+}
+
+.reading-position.is-on-footer {
+  background: color-mix(in srgb, var(--footer-surface) 86%, transparent);
+  color: var(--color-paper);
+}
+
+.reading-position-glyph {
+  width: 18px;
+  height: 18px;
+}
+
+.reading-position-glyph-rules {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.7;
+}
+
+.reading-position-glyph-indicator {
+  fill: var(--focus);
+  /* Travels between sections rather than cutting to the next one, which is
+   * what makes it read as a position along a list. */
+  transition: y 220ms var(--ease-portfolio);
+}
+
+/* Over the inverted footer the accent loses its contrast, so the bar borrows
+ * the control's own colour there. */
+.reading-position.is-on-footer .reading-position-glyph-indicator {
+  fill: currentColor;
+}
+
+.reading-position-popover {
+  position: fixed;
+  z-index: 42;
+  right: 24px;
+  bottom: calc(24px + var(--launcher-size) + 12px);
+  width: min(288px, calc(100vw - 48px));
+  max-height: min(58vh, 420px);
+  padding: 14px 16px 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--nav-surface, var(--paper));
+  box-shadow: 0 18px 48px rgba(21, 24, 33, 0.16);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* It grows out of the control that opened it, not out of its own corner:
+   * the origin is the trigger's centre, measured back along the row from this
+   * surface's right edge. */
+  transform-origin: calc(100% - var(--rail-trigger-travel) - var(--launcher-size) / 2) 100%;
+  opacity: 0;
+  /* Closed, the material is not there at all — the blur arrives with the scale
+   * so the surface reads as glass condensing out of the page rather than as a
+   * finished panel being faded up. */
+  -webkit-backdrop-filter: blur(0) saturate(100%);
+  backdrop-filter: blur(0) saturate(100%);
+  transform: translateY(8px) scale(0.9);
+  visibility: hidden;
+  transition: transform 260ms var(--ease-portfolio), opacity 160ms ease,
+    -webkit-backdrop-filter 260ms ease, backdrop-filter 260ms ease,
+    visibility 0s linear 260ms;
+}
+
+.reading-position-popover.is-open {
+  opacity: 1;
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  transform: translateY(0) scale(1);
+  visibility: visible;
+  /* Mirrored, so the panel leaves the way it came and the visibility flip
+   * lands at the start of the arrival rather than the end of it.
+   *
+   * The opacity leg is also the panel's way back from the thinned state it
+   * takes while the page scrolls (below), which is why it is paced with the
+   * material rather than ahead of it: giving way is a response to a gesture
+   * and has to be immediate, coming back is nobody's gesture and should not
+   * snap. */
+  transition: transform 260ms var(--ease-portfolio), opacity 220ms ease,
+    -webkit-backdrop-filter 260ms ease, backdrop-filter 260ms ease,
+    visibility 0s linear;
+}
+
+/* Scrolling with the panel up: the page is the thing moving and the panel is
+ * the thing in front of it, so the panel gives way. Thinned rather than
+ * dismissed — the reader is scrolling *and* watching the list, and the current
+ * section keeps marking itself underneath, which turns the panel into a
+ * readout of where they are going for as long as they are going there.
+ *
+ * Opacity on the group rather than a lighter fill: the border, the type, and
+ * the accent bar all have to recede together, and a translucent background
+ * alone would leave solid text floating over moving copy.
+ *
+ * It gives way fast and returns unhurried. The scroll is already under way by
+ * the time this can respond, so any delay reads as the panel lagging the page;
+ * coming back is nobody's gesture and should not snap. */
+.reading-position-popover.is-open.is-page-scrolling {
+  /* Far enough back that the article reads through it unimpeded — the page is
+   * what the reader is looking at while it moves — and no further: the marked
+   * section still has to be legible, or the panel is just an obstruction that
+   * happens to be faint. */
+  opacity: 0.32;
+  transition: opacity 110ms ease;
+}
+
+/* The control the panel came out of steps back with it, so the pair reads as
+ * one thing yielding rather than two elements disagreeing. */
+.reading-position.is-open.is-page-scrolling {
+  /* Not as far back as the panel: it is a small disc rather than a surface
+   * over the copy, and it is the thing the reader taps to put the panel away
+   * — a control that faint reads as unavailable. */
+  --trigger-opacity: 0.42;
+}
+
+.reading-position-popover.is-on-footer {
+  border-color: color-mix(in srgb, var(--color-paper) 18%, transparent);
+  background: color-mix(in srgb, var(--footer-surface) 92%, transparent);
+  color: var(--color-paper);
+}
+
+.reading-position-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0;
+  /* Vibrancy: over a blurred surface the rail's own dimmed grey would go soft,
+   * so the label keeps its size and gains contrast and weight instead. */
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.reading-position-count {
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.reading-position-popover.is-on-footer .reading-position-heading,
+.reading-position-popover.is-on-footer .reading-position-readtime {
+  color: color-mix(in srgb, var(--color-paper) 72%, transparent);
+}
+
+.reading-position-popover.is-on-footer .reading-position-count,
+.reading-position-popover.is-on-footer .reading-position-list a {
+  color: var(--color-paper);
+}
+
+.reading-position-readtime {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reading-position-list {
+  display: flex;
+  flex-direction: column;
+  margin: 12px 0 0;
+  padding: 0;
+  gap: 2px;
+  list-style: none;
+}
+
+.reading-position-list a {
+  position: relative;
+  display: block;
+  /* Comfortably past the 44px touch target once the type's leading is counted,
+   * and the padding is what carries it — a taller line would loosen the list
+   * instead. */
+  padding: 9px 8px 9px 14px;
+  border-radius: 8px;
+  color: var(--copy);
+  font-size: 0.88rem;
+  line-height: 1.35;
+  text-decoration: none;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.reading-position-list a::before {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  width: 2px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--focus);
+  content: '';
+  opacity: 0;
+  transform: translateY(-50%) scaleY(0.4);
+  transition: opacity 160ms ease, transform 220ms var(--ease-portfolio);
+}
+
+/* The same mark the rail uses for the same fact, so a reader moving between
+ * the two layouts is reading one language. */
+.reading-position-list a[aria-current='location'] {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.reading-position-list a[aria-current='location']::before {
+  opacity: 1;
+  transform: translateY(-50%) scaleY(1);
+}
+
+.reading-position-popover.is-on-footer .reading-position-list a::before {
+  background: var(--color-paper);
+}
+
+.reading-position-list a:active {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.reading-position-list a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .reading-position.is-visible:hover {
+    --trigger-opacity: 1;
+    color: var(--ink);
+    transform: translateY(-1px);
+  }
+
+  .reading-position.is-on-footer:hover {
+    color: var(--color-paper);
+  }
+
+  .reading-position-list a:hover {
+    background: color-mix(in srgb, currentColor 8%, transparent);
+    color: var(--ink);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .reading-position,
+  .reading-position-popover {
+    background: var(--paper);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .reading-position-popover.is-open {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* A reader who has asked for solid surfaces has asked for them while
+   * scrolling too. The panel keeps its place in front of the page and simply
+   * stays legible. */
+  .reading-position.is-open.is-page-scrolling {
+    --trigger-opacity: 1;
+  }
+
+  .reading-position-popover.is-open.is-page-scrolling {
+    opacity: 1;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .reading-position {
+    border: 1px solid var(--line-strong);
+    background: var(--paper);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* A gentler equivalent, not none: the fade and the indicator's move survive,
+   * the travel and the growth do not. */
+  .reading-position,
+  .reading-position.is-visible,
+  .reading-position:active,
+  .reading-position-popover,
+  .reading-position-popover.is-open {
+    transform: none;
+  }
+
+  .reading-position,
+  .reading-position-glyph-indicator,
+  .reading-position-list a::before {
+    transition-duration: 1ms;
+  }
+
+  .reading-position-popover {
+    transition: opacity 160ms ease, visibility 0s linear 160ms;
+  }
+
+  .reading-position-popover.is-open {
+    transition: opacity 160ms ease, visibility 0s linear;
+  }
+}
+
 @media (max-width: 620px) {
   .routed-page .site-nav {
     position: static;
@@ -589,6 +964,25 @@ body::after {
 
   .scroll-top.is-visible {
     opacity: 0.64;
+  }
+
+  /* Third disc in the same row, on the same tucked-in offset. Its size comes
+   * from --launcher-size with the rest of the cluster; only the corner offset
+   * and the panel hanging off it belong here. */
+  /* A touch of extra strength for the phone, where these controls sit over
+   * busier copy and are read at arm's length. On the base selector, not on
+   * .is-visible: the open and scrolling states are more specific and have to
+   * keep outranking this from further up the sheet. */
+  .reading-position {
+    right: 16px;
+    bottom: 16px;
+    --trigger-opacity: 0.64;
+  }
+
+  .reading-position-popover {
+    right: 16px;
+    bottom: calc(16px + var(--launcher-size) + 12px);
+    width: min(288px, calc(100vw - 32px));
   }
 }
 
