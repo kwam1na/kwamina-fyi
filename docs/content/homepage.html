@@ -526,6 +526,7 @@
           transition:
             grid-template-rows 300ms var(--ease-reveal),
             row-gap 300ms var(--ease-reveal),
+            opacity 160ms var(--ease-out),
             transform 160ms var(--ease-out);
         }
 
@@ -536,8 +537,21 @@
           transition: opacity 200ms var(--ease-reveal);
         }
 
-        .writing-item:hover,
-        .writing-item:focus-visible {
+        /* The index rests at full ink. Once the pointer is inside the list the
+           set steps back and only the row being addressed keeps full strength;
+           leaving the list restores everything. Keyboard focus does the same,
+           so tabbing through reads like hovering. Pointer devices only, so
+           touch readers always see the whole set at full. */
+        .writing-list:hover .writing-item,
+        .writing-list:focus-within .writing-item {
+          opacity: 0.58;
+        }
+
+        /* Scoped to the list so this outweighs the group dim above rather than
+           tying with it. */
+        .writing-list .writing-item:hover,
+        .writing-list .writing-item:focus-visible {
+          opacity: 1;
           grid-template-rows: auto 1fr;
           row-gap: 12px;
         }
