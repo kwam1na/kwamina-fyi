@@ -10,8 +10,76 @@ import {
   shouldRestoreLauncherFocus,
   shouldSweepLauncher,
   subscribeToMobileTakeover,
+  watchHiddenPageSettle,
   watchMobileViewportRestoration,
 } from './chat-widget.jsx'
+
+// A pair of event targets that record what is listening, so the settle can be
+// driven without a page to hide.
+function stubTargets() {
+  const make = () => {
+    const listeners = new Map()
+    return {
+      listeners,
+      addEventListener: (type, listener) => listeners.set(type, listener),
+      removeEventListener: (type, listener) => {
+        if (listeners.get(type) === listener) listeners.delete(type)
+      },
+      emit: (type, event) => listeners.get(type)?.(event),
+    }
+  }
+
+  return { documentObject: { ...make(), hidden: false }, windowObject: make() }
+}
+
+describe('watchHiddenPageSettle', () => {
+  it('puts the split in its end state when the page stops being watched', () => {
+    const { documentObject, windowObject } = stubTargets()
+    let settles = 0
+    watchHiddenPageSettle({ settle: () => { settles += 1 }, documentObject, windowObject })
+
+    // Anime's engine pauses on a hidden page, so a split in flight would
+    // otherwise be left holding the offset its last frames were going to undo.
+    documentObject.hidden = true
+    documentObject.listeners.get('visibilitychange')()
+    expect(settles).toBe(1)
+
+    // Coming back is not a second interruption; the corner already settled.
+    documentObject.hidden = false
+    documentObject.listeners.get('visibilitychange')()
+    expect(settles).toBe(1)
+  })
+
+  it('settles a page restored from the back/forward cache, but not a fresh load', () => {
+    const { documentObject, windowObject } = stubTargets()
+    let settles = 0
+    watchHiddenPageSettle({ settle: () => { settles += 1 }, documentObject, windowObject })
+
+    windowObject.emit('pageshow', { persisted: false })
+    expect(settles).toBe(0)
+
+    windowObject.emit('pageshow', { persisted: true })
+    expect(settles).toBe(1)
+  })
+
+  it('stops listening on teardown so an unmounted launcher is never written to', () => {
+    const { documentObject, windowObject } = stubTargets()
+    let settles = 0
+    const stop = watchHiddenPageSettle({
+      settle: () => { settles += 1 },
+      documentObject,
+      windowObject,
+    })
+
+    stop()
+    documentObject.hidden = true
+    documentObject.listeners.get('visibilitychange')?.()
+    windowObject.emit('pageshow', { persisted: true })
+    expect(settles).toBe(0)
+    expect(documentObject.listeners.size).toBe(0)
+    expect(windowObject.listeners.size).toBe(0)
+  })
+})
 
 describe('chat launcher copy', () => {
   it('presents the trigger as chat in visible and accessible text', () => {

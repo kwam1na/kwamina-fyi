@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { SCROLL_TO_TOP_REVEAL_PX } from '../scroll-progress.js'
 import { useFooterOverlap } from '../use-footer-overlap.js'
-import { animateSplit } from './launcher-split.js'
+import { SPLIT_DURATION_MS, animateSplit, settleSplit } from './launcher-split.js'
 
 // The panel pulls in the TanStack AI client, which is the single largest
 // dependency on the site. Loading it on first open keeps it off the critical
@@ -174,6 +174,46 @@ export function useLauncherSweep(isLabelled, {
     // Retired on the animation's own end event rather than a matching timeout,
     // so the class cannot outlive the motion it describes.
     endSweep: useCallback(() => setIsSweeping(false), []),
+  }
+}
+
+// How long after a split begins the corner stops waiting for it. The motion's
+// own last frame plus enough slack that a loaded main thread is not mistaken
+// for a stalled one.
+const SPLIT_SETTLE_MS = SPLIT_DURATION_MS + 160
+
+/**
+ * The two moments the frame clock is known to have stopped: the page being
+ * hidden, and a page coming back from the back/forward cache.
+ *
+ * Both matter because the split's end state is only written by frames. Hiding
+ * the page pauses anime's engine mid-motion, and a reader who returns is
+ * looking at a control that stopped halfway — the icon parked clear of the
+ * pill it belongs to. Nobody watched the motion, so there is nothing worth
+ * resuming: settle to the end state and let them come back to a finished
+ * corner. Timers alone cannot cover this — a hidden tab throttles them to
+ * minutes, while these events are not throttled at all.
+ */
+export function watchHiddenPageSettle({
+  settle,
+  documentObject = globalThis.document,
+  windowObject = globalThis.window,
+} = {}) {
+  const onVisibilityChange = () => {
+    if (!documentObject.hidden) return
+    settle()
+  }
+  // Only a restore: a normal load has nothing left over to settle.
+  const onPageShow = (event) => {
+    if (!event?.persisted) return
+    settle()
+  }
+
+  documentObject.addEventListener('visibilitychange', onVisibilityChange)
+  windowObject.addEventListener('pageshow', onPageShow)
+  return () => {
+    documentObject.removeEventListener('visibilitychange', onVisibilityChange)
+    windowObject.removeEventListener('pageshow', onPageShow)
   }
 }
 
@@ -377,7 +417,26 @@ export function ChatWidget() {
     const launcher = launcherRef.current
     if (!launcher) return undefined
 
+    let settleTimer = 0
+
+    // The corner's resting state is written by the motion's last frame and
+    // nowhere else, and the motion opens by putting the icon back where the
+    // reader last saw it — a deliberate offset that only the remaining frames
+    // undo. So a split that starts and never finishes does not leave the
+    // control halfway; it leaves it wrong, with the icon sitting clear of its
+    // own pill. This is the guarantee that the end state lands whatever
+    // becomes of the frames.
+    const settle = () => {
+      window.clearTimeout(settleTimer)
+      settleTimer = 0
+      timelineRef.current?.pause()
+      timelineRef.current = null
+      settleSplit({ launcher, label: labelRef.current, isCollapsed: shouldCollapse })
+    }
+
     const play = (immediate) => {
+      window.clearTimeout(settleTimer)
+      settleTimer = 0
       timelineRef.current?.pause()
       timelineRef.current = animateSplit({
         launcher,
@@ -385,6 +444,11 @@ export function ChatWidget() {
         isCollapsed: shouldCollapse,
         immediate,
       })
+      // Armed for the animated path only — the immediate one has already
+      // written the end state. If the motion lands on time this rewrites the
+      // values it just wrote, which costs one style write per crossing and is
+      // the price of the guarantee above.
+      if (timelineRef.current) settleTimer = window.setTimeout(settle, SPLIT_SETTLE_MS)
     }
 
     // First paint lands on the end state with no travel; a threshold crossing
@@ -398,9 +462,12 @@ export function ChatWidget() {
     const breakpoint = window.matchMedia(MOBILE_TAKEOVER_QUERY)
     const onBreakpointChange = () => play(true)
     breakpoint.addEventListener('change', onBreakpointChange)
+    const stopHiddenPageSettle = watchHiddenPageSettle({ settle })
 
     return () => {
+      window.clearTimeout(settleTimer)
       breakpoint.removeEventListener('change', onBreakpointChange)
+      stopHiddenPageSettle()
       timelineRef.current?.pause()
     }
   }, [shouldCollapse])
