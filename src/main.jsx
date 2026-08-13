@@ -33,6 +33,8 @@ import athena from '../docs/content/work/athena/index.html?raw'
 import localFirstPos from '../docs/content/work/athena/local-first-pos/index.html?raw'
 import agentReadyRepository from '../docs/content/work/athena/agent-ready-repository/index.html?raw'
 import readOptimizedReporting from '../docs/content/work/athena/read-optimized-reporting/index.html?raw'
+import proseNotPolicy from '../docs/content/work/athena/prose-not-policy/index.html?raw'
+import validButNotThisTicket from '../docs/content/work/athena/valid-but-not-this-ticket/index.html?raw'
 import './styles.css'
 
 
@@ -108,6 +110,18 @@ const readOptimizedReportingRoute = createRoute({
   component: () => <SitePage documentHtml={readOptimizedReporting} pagePath="/work/athena/read-optimized-reporting/" title="Read-optimized reporting — Athena" />,
 })
 
+const proseNotPolicyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTE_PATHS.proseNotPolicy,
+  component: () => <SitePage documentHtml={proseNotPolicy} pagePath="/work/athena/prose-not-policy/" title="Prose, not policy — Athena" />,
+})
+
+const validButNotThisTicketRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTE_PATHS.validButNotThisTicket,
+  component: () => <SitePage documentHtml={validButNotThisTicket} pagePath="/work/athena/valid-but-not-this-ticket/" title="Valid, but not this ticket — Athena" />,
+})
+
 const ConversationsPage = conversationArchiveRouteEnabled
   ? lazy(() => import('./conversations-page.jsx'))
   : null
@@ -135,6 +149,8 @@ const routeTree = rootRoute.addChildren([
   localFirstPosRoute,
   agentReadyRepositoryRoute,
   readOptimizedReportingRoute,
+  proseNotPolicyRoute,
+  validButNotThisTicketRoute,
   ...(conversationsRoute ? [conversationsRoute] : []),
   ...legacyRedirectRoutes,
 ])

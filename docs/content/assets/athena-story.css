@@ -1316,10 +1316,10 @@ a:hover .inline-link-icon {
   margin-top: 28px;
 }
 
-/* Three reflections hang off the story now. In the 2-up grid the last one
-   would sit alone on a second row at half width, reading like an afterthought
-   rather than a peer. */
-.deep-links--trio {
+/* Five reflections hang off the story now. In the 2-up grid the fifth would
+   sit alone at half width, reading as a leftover; three columns close as a
+   full row of three over a pair. */
+.deep-links--quint {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 

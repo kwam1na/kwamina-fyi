@@ -15,6 +15,8 @@ export const ROUTE_PATHS = {
   localFirstPos: '/work/athena/local-first-pos',
   agentReadyRepository: '/work/athena/agent-ready-repository',
   readOptimizedReporting: '/work/athena/read-optimized-reporting',
+  proseNotPolicy: '/work/athena/prose-not-policy',
+  validButNotThisTicket: '/work/athena/valid-but-not-this-ticket',
 }
 
 // Private tools are intentionally excluded from the public route and in-app

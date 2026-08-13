@@ -24,6 +24,8 @@ const SOURCES = [
   { file: 'docs/content/work/athena/local-first-pos/index.html', path: ROUTE_PATHS.localFirstPos, title: 'Athena — local-first point of sale' },
   { file: 'docs/content/work/athena/agent-ready-repository/index.html', path: ROUTE_PATHS.agentReadyRepository, title: 'Athena — agent-ready repository' },
   { file: 'docs/content/work/athena/read-optimized-reporting/index.html', path: ROUTE_PATHS.readOptimizedReporting, title: 'Athena — read-optimized reporting' },
+  { file: 'docs/content/work/athena/prose-not-policy/index.html', path: ROUTE_PATHS.proseNotPolicy, title: 'Athena — prose, not policy' },
+  { file: 'docs/content/work/athena/valid-but-not-this-ticket/index.html', path: ROUTE_PATHS.validButNotThisTicket, title: 'Athena — valid, but not this ticket' },
   // Assistant-facing only: describes the site's own engineering, including the
   // assistant itself. Deliberately unpublished — path: null keeps it out of the
   // page allowlist, and the emitted document says it has no public page.

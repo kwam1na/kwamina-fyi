@@ -30,6 +30,14 @@
         --section-space: 112px;
         --ease-in: var(--ease-portfolio-in);
         --ease-out: var(--ease-portfolio);
+        /* Disclosure gets its own curve. `grid-template-rows: 0fr -> 1fr`
+           interpolates quadratically — measured, a linear easing produces
+           exactly t² in pixels — so the house near-expo curve compounds into a
+           lurch that covers 93% of the distance by half time and then creeps
+           for the rest. This curve was picked against the measured pixel
+           output, not its own control points: 34% / 67% / 92% of the travel at
+           quarter / half / three-quarter time. */
+        --ease-reveal: cubic-bezier(0.6, 0.8, 0.7, 1);
         --nav-surface: rgba(252, 252, 251, 0.86);
         color-scheme: light;
       }
@@ -432,29 +440,117 @@
         margin-bottom: 48px;
       }
 
-      .writing-item {
-        display: grid;
-        grid-template-columns: minmax(240px, 0.44fr) minmax(0, 1fr);
-        gap: 56px;
-        padding: 40px 0;
+      /* The section reads as an index: five titles compare at a glance rather
+         than five paragraphs, with an ordering spine in the margin and the
+         length of each piece at the end of its line. The set closes itself. */
+      .writing-list {
         border-top: 1px solid var(--line);
       }
 
+      .writing-item {
+        display: grid;
+        grid-template-columns: 52px minmax(0, 1fr) auto;
+        grid-template-rows: auto auto;
+        align-items: baseline;
+        gap: 12px 28px;
+        padding: 22px 0;
+        border-bottom: 1px solid var(--line);
+        transition: transform 160ms var(--ease-out);
+      }
+
+      /* The whole row is one target, so the press answers on the row —
+         the same scale the project and footer links already use. */
+      .writing-item:active {
+        transform: scale(0.995);
+      }
+
+      .writing-index {
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.08em;
+      }
+
+      /* Tracking is size-specific: at this size the serif reads too open, so
+         it tightens. Body copy below stays at 0. */
       .writing-item h3 {
         margin: 0;
         color: var(--ink);
         font-family: var(--serif);
-        font-size: 2rem;
+        font-size: 2.5rem;
         font-weight: 650;
-        line-height: 1.06;
+        line-height: 1.04;
+        letter-spacing: -0.02em;
+        transition: transform 160ms var(--ease-out);
       }
 
+      .writing-meta {
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      /* Visible by default, so the copy is never unreachable where there is no
+         pointer to hover with. The disclosure below is the enhancement.
+         The space above this copy is the grid's row gap rather than padding
+         here: padding sits inside the clipped box and sets the row's automatic
+         minimum, which pinned the collapsed row open at 12px and made the
+         reveal start with a visible jump. The gap animates from zero instead. */
       .writing-item p {
-        max-width: 620px;
+        grid-column: 2 / 3;
+        grid-row: 2;
+        align-self: stretch;
+        min-height: 0;
+        max-width: 560px;
         margin: 0;
+        overflow: hidden;
         color: var(--copy);
         font-size: 1rem;
-        line-height: 1.68;
+        line-height: 1.62;
+      }
+
+      /* Only where a pointer can actually hover: the description collapses to
+         nothing and opens for the row being addressed, so the index stays
+         compact. Keyboard focus opens it too — reaching a row by tab must
+         disclose as much as reaching it by pointer. */
+      @media (hover: hover) and (pointer: fine) {
+        /* The row and its gap open together from nothing, so there is no step
+           at the start. The title's nudge keeps the house curve and its own
+           short duration — that one answers the pointer immediately, while the
+           disclosure takes the longer, evenly paced ride. */
+        .writing-item {
+          grid-template-rows: auto 0fr;
+          row-gap: 0;
+          transition:
+            grid-template-rows 300ms var(--ease-reveal),
+            row-gap 300ms var(--ease-reveal),
+            transform 160ms var(--ease-out);
+        }
+
+        /* Lands before the row settles, so the copy is already legible while
+           the last of the opening plays out rather than fading over it. */
+        .writing-item p {
+          opacity: 0;
+          transition: opacity 200ms var(--ease-reveal);
+        }
+
+        .writing-item:hover,
+        .writing-item:focus-visible {
+          grid-template-rows: auto 1fr;
+          row-gap: 12px;
+        }
+
+        .writing-item:hover p,
+        .writing-item:focus-visible p {
+          opacity: 1;
+        }
+
+        .writing-item:hover h3,
+        .writing-item:focus-visible h3 {
+          transform: translateX(8px);
+        }
       }
 
       .bridge {
@@ -670,9 +766,8 @@
           font-size: 3.4rem;
         }
 
-        .writing-item {
-          grid-template-columns: minmax(210px, 0.42fr) minmax(0, 1fr);
-          gap: 28px;
+        .writing-item h3 {
+          font-size: 2.1rem;
         }
 
         .bridge {
@@ -769,10 +864,24 @@
           padding: 24px 0;
         }
 
+        /* The ordering numerals are the first thing to go when the line gets
+           short — they are decoration, and the title needs the width. */
         .writing-item {
-          grid-template-columns: 1fr;
-          gap: 14px;
-          padding: 32px 0;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 12px 16px;
+          padding: 20px 0;
+        }
+
+        .writing-index {
+          display: none;
+        }
+
+        .writing-item h3 {
+          font-size: 1.55rem;
+        }
+
+        .writing-item p {
+          grid-column: 1 / -1;
         }
 
         .site-footer {
@@ -807,6 +916,25 @@
           animation-duration: 1ms !important;
           scroll-behavior: auto !important;
           transition-duration: 1ms !important;
+        }
+
+        /* Durations collapse above, so the positional cues drop out entirely
+           rather than becoming instant jumps. The disclosure goes with them:
+           without the motion that explains it, every description simply stays
+           open and nothing shifts under the pointer. */
+        .writing-item:hover h3,
+        .writing-item:focus-visible h3,
+        .writing-item:active {
+          transform: none;
+        }
+
+        .writing-item {
+          grid-template-rows: auto auto;
+          row-gap: 12px;
+        }
+
+        .writing-item p {
+          opacity: 1;
         }
       }
     </style>
@@ -999,31 +1127,57 @@
 
           <div class="writing-list">
             <a class="writing-item" href="work/athena/">
+              <span class="writing-index" aria-hidden="true">01</span>
               <h3>The Athena story</h3>
+              <span class="writing-meta">6 min read</span>
               <p>
                 The product problem, operating model, and current state of a
                 business OS for owner-led retail.
               </p>
             </a>
             <a class="writing-item" href="work/athena/local-first-pos">
+              <span class="writing-index" aria-hidden="true">02</span>
               <h3>Local-first point of sale</h3>
+              <span class="writing-meta">5 min read</span>
               <p>
                 How the register records the work before it reports success and
                 keeps checkout independent of a cloud round trip.
               </p>
             </a>
             <a class="writing-item" href="work/athena/agent-ready-repository">
+              <span class="writing-index" aria-hidden="true">03</span>
               <h3>Agent-ready repository</h3>
+              <span class="writing-meta">6 min read</span>
               <p>
                 How the repository is structured so AI agents can contribute,
                 with evidence following every change.
               </p>
             </a>
             <a class="writing-item" href="work/athena/read-optimized-reporting">
+              <span class="writing-index" aria-hidden="true">04</span>
               <h3>Read-optimized reporting</h3>
+              <span class="writing-meta">13 min read</span>
               <p>
                 How one fact ledger and one pure fold turn a store&rsquo;s
                 operating record into reports that cost a single read.
+              </p>
+            </a>
+            <a class="writing-item" href="work/athena/prose-not-policy">
+              <span class="writing-index" aria-hidden="true">05</span>
+              <h3>Prose, not policy</h3>
+              <span class="writing-meta">7 min read</span>
+              <p>
+                How an advisory review-first instruction became an enforced,
+                candidate-bound obligation before the expensive merge gate.
+              </p>
+            </a>
+            <a class="writing-item" href="work/athena/valid-but-not-this-ticket">
+              <span class="writing-index" aria-hidden="true">06</span>
+              <h3>Valid, but not this ticket</h3>
+              <span class="writing-meta">6 min read</span>
+              <p>
+                How review findings gained a scope axis, deferral gained teeth,
+                and deliveries started leaving a durable record of their cost.
               </p>
             </a>
           </div>

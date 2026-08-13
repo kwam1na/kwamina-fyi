@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Valid, but not this ticket — Athena</title>
+  <meta name="description"
+    content="How Athena's review loop learned to defer good suggestions without losing them, and how delivery runs started leaving a durable record of what they cost.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,650;1,6..72,500&amp;display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="../../../assets/athena-story.css">
+</head>
+
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <nav class="site-nav" aria-label="Primary navigation">
+    <a class="brand" href="../../../homepage.html">kwamina.fyi</a>
+  </nav>
+
+  <header class="story-hero">
+    <div class="page-inner">
+      <a class="hero-return" href="../" aria-label="Back to Athena"><span aria-hidden="true">&larr;</span><span
+          class="hero-return-label" aria-hidden="true">Athena</span></a>
+      <p class="eyebrow">Athena technical reflection</p>
+      <h1>Valid, but not this ticket</h1>
+      <p class="hero-lede">Once the merge gate enforced review, a quieter failure surfaced: reviewers proposing good
+        work that was not the ticket, and fixing it the only legal response. This is how findings gained a scope,
+        deferral gained teeth, and deliveries started leaving a record of what they cost.</p>
+    </div>
+  </header>
+
+  <main id="main" class="page-inner">
+    <div class="story-layout">
+      <aside class="context-rail" aria-label="Page context">
+        <p class="rail-readtime">6 min read</p>
+        <nav class="rail-nav" aria-label="On this page">
+          <p class="context-label">On this page</p>
+          <div class="rail-links">
+            <span class="rail-indicator" aria-hidden="true"></span>
+            <a href="#orientation">The ratchet</a>
+            <a href="#scope-axis">A scope for every finding</a>
+            <a href="#deferral">Deferral with teeth</a>
+            <a href="#telemetry">A record that survives</a>
+            <a href="#obligation">The gate holds it</a>
+            <a href="#corrections">What the rule got wrong first</a>
+            <a href="#limits">What this does not promise</a>
+            <a href="#sources">Evidence reviewed</a>
+          </div>
+        </nav>
+        <nav class="rail-nav" aria-label="Athena navigation">
+          <p class="context-label">Athena</p>
+          <div class="rail-links">
+            <a href="../">Complete product story</a>
+            <a href="../prose-not-policy/">Prose, not policy</a>
+            <a href="../agent-ready-repository/">Agent-ready repository</a>
+            <a href="../local-first-pos/">Local-first point of sale</a>
+            <a href="../read-optimized-reporting/">Read-optimized reporting</a>
+          </div>
+        </nav>
+      </aside>
+
+      <article class="story">
+        <section id="orientation" class="story-section" aria-labelledby="orientation-title">
+          <p class="section-kicker">The ratchet</p>
+          <h2 id="orientation-title">A gate that counts findings makes every suggestion scope</h2>
+          <p data-claim="claim-scope-ratchet">The merge gate now refuses to run until the exact candidate has a green
+            review, which is where <a class="prose-link" href="../prose-not-policy/">Prose, not policy</a> ends. That
+            worked, and it exposed the next problem: findings carried severity and routing but no way to say
+            &ldquo;valid, but not this ticket.&rdquo; The rule that made that bite sits upstream of the gate: the
+            execution skill may finalize a green review only at unanimous approval with zero unresolved actionable
+            findings, and the evidence recorder rejects a manifest carrying any. With the gate accepting nothing but a
+            green review, a reviewer&rsquo;s &ldquo;also handle this case&rdquo; left one legal move: build it.</p>
+          <p data-claim="claim-scope-ratchet-convergence">Each round of fixes produced new diff, and the next round
+            reviewed that diff fresh. A review loop with no vocabulary for deferral has no definition of convergence
+            beyond unanimity, and unanimity kept moving.</p>
+        </section>
+
+        <section id="scope-axis" class="story-section" aria-labelledby="scope-axis-title">
+          <p class="section-kicker">The scope axis</p>
+          <h2 id="scope-axis-title">Every finding is judged against the delivery contract</h2>
+          <p data-claim="claim-scope-axis">Findings now carry a second axis beside severity: in contract, adjacent, or
+            expansion, judged against what the ticket actually promised. Reviewer personas propose a classification; the
+            synthesis step owns the final call, and on disagreement it keeps the more in-contract reading, so scope
+            cannot quietly drift outward.</p>
+        </section>
+
+        <section id="deferral" class="story-section" aria-labelledby="deferral-title">
+          <p class="section-kicker">Deferral with teeth</p>
+          <h2 id="deferral-title">A finding leaves the delivery only by becoming a ticket</h2>
+          <p data-claim="claim-scope-deferral-eligibility">Deferral is deliberately narrow. A defect the delivery
+            introduced always blocks: severity outranks scope, and no classification softens a P0 or P1. Only
+            low-severity expansion findings qualify, and an independent scope check confirms each candidate, because the
+            orchestrator that wrote the code should not grade its own scope unchallenged.</p>
+          <p data-claim="claim-scope-deferral-ticket">Deferral is also not deletion. A deferred finding resolves only
+            through an actually filed tracker issue, and the evidence recorder rejects any deferral that is blocking,
+            high-severity, not an expansion, or missing a tracker-shaped issue id.</p>
+
+          <figure class="evidence-figure delivery-loop-figure" aria-describedby="disposition-flow-description">
+            <figcaption>
+              <span class="figure-label">Where a finding can go</span>
+              Severity is decided before scope, and nothing leaves the delivery without a name.
+            </figcaption>
+            <div class="delivery-loop" aria-hidden="true">
+              <div><span>01</span><strong>Finding</strong><code>severity + scope</code></div>
+              <div><span>02</span><strong>P0 / P1</strong><code>fix now, any scope</code></div>
+              <div><span>03</span><strong>In contract</strong><code>fix in this delivery</code></div>
+              <div><span>04</span><strong>Expansion, P2/P3</strong><code>confirm the scope call</code></div>
+              <div><span>05</span><strong>Defer</strong><code>file the follow-up ticket</code></div>
+              <div><span>06</span><strong>Record</strong><code>manifest carries the facts</code></div>
+            </div>
+            <ol id="disposition-flow-description" class="structured-equivalent">
+              <li>Every finding carries severity and a scope judged against the delivery contract.</li>
+              <li>High-severity defects block regardless of scope; newly shipped breakage is always the delivery&rsquo;s
+                job.</li>
+              <li>In-contract findings are fixed inside the delivery, as before.</li>
+              <li>Low-severity expansion findings pass an independent scope check before they may defer.</li>
+              <li>Deferral resolves only through a filed follow-up ticket, never through silence.</li>
+              <li>The final manifest records severity, scope, and the ticket id for the recorder to verify.</li>
+            </ol>
+          </figure>
+
+          <p data-claim="claim-scope-manifest-enforcement">The sharpest correction from the work&rsquo;s own review: the
+            first cut stated all of this as prose the orchestrator could ignore by setting one boolean. The manifest now
+            carries each finding&rsquo;s severity and scope, and the recorder checks the eligibility rule itself. A rule
+            the same agent both authors and is judged by has to be enforced by something that agent does not write.</p>
+        </section>
+
+        <section id="telemetry" class="story-section" aria-labelledby="telemetry-title">
+          <p class="section-kicker">Durable telemetry</p>
+          <h2 id="telemetry-title">Every delivery now leaves a durable record of its cost</h2>
+          <p data-claim="claim-scope-telemetry-gap">It did not before. The run ledger was gitignored and overwritten
+            every run, obligation records lived in Git-private per-worktree storage, and reviewer artifacts in temporary
+            directories. Since every ticket starts in a fresh worktree, no artifact could answer a basic question: how
+            has the cost of delivering been moving?</p>
+          <p data-claim="claim-scope-telemetry-corpus">Now each passing gate run can be promoted into a tracked corpus,
+            one file per run so parallel worktrees never conflict, recording iterations, finding counts, deferrals, and
+            a self-reported review cost. The corpus is registered as neutral for both review evidence and freshness
+            fingerprints, which breaks an otherwise circular dependency: recording a run must not invalidate the review
+            evidence it describes.</p>
+          <p data-claim="claim-scope-cost-neutrality">Cost is kept agent-agnostic on purpose: a unit, a total, and who
+            reported it, never converted between units. The run summary withholds a trend delta when the last run
+            metered a different unit, and says so, rather than manufacturing a comparison.</p>
+        </section>
+
+        <section id="obligation" class="story-section" aria-labelledby="obligation-title">
+          <p class="section-kicker">The gate holds it</p>
+          <h2 id="obligation-title">The record became the gate&rsquo;s third obligation</h2>
+          <p data-claim="claim-scope-telemetry-obligation">The merge gate already models its prerequisites as typed
+            obligations, so this needed no new machinery: <code>telemetry.recorded</code> joined <code>review.green</code> and
+            <code>documentation.current</code> as a live obligation. It activates only at a size worth measuring, the
+            same changed-line threshold as the solution-note policy. An interactive human may waive it for a single run;
+            agents cannot, since silently skipping the record is the exact failure the obligation exists to prevent, and
+            CI enforces it independently.</p>
+        </section>
+
+        <section id="corrections" class="story-section" aria-labelledby="corrections-title">
+          <p class="section-kicker">Self-correction</p>
+          <h2 id="corrections-title">What the rule got wrong before it got it right</h2>
+          <p data-claim="claim-scope-first-cut-tax">The first cut fired on any deliverable change with no waiver at all,
+            which made the bookkeeping obligation stricter than the review obligation: a human fixing one line would
+            have owed a fifteen-minute merge gate purely to emit a record. An obligation whose remedy is expensive needs
+            a size threshold and a human escape hatch, or it taxes exactly the contributors it was not aimed at.</p>
+          <p data-claim="claim-scope-freshness-deadlock">The freshness rule then deadlocked the process that satisfies
+            it. Any deliverable edit staled the record, and the gate refused the very run that would produce a fresh
+            one; the only escape was to fabricate exactly the misreported telemetry the rule existed to prevent. The fix
+            keys local leniency on whether a passing run has completed for this deliverable, while CI stays
+            unconditional. The precondition had gone in without first tracing the loop that would clear it.</p>
+          <p data-claim="claim-scope-inert-waiver">And extending waivers to live obligations exposed a latent bug: the
+            waiver flag was honored by code that never received the inputs a waiver needs, so it had been silently
+            inert, hidden because the one live obligation declared it off. The fix routed both paths through one shared
+            function, added a registry invariant so the flag and the allowed outcomes cannot disagree, and covered the
+            full cross-product of obligation kind, waiver policy, and caller. A configuration flag is only real where
+            the code that reads it runs.</p>
+        </section>
+
+        <section id="limits" class="story-section" aria-labelledby="limits-title">
+          <p class="section-kicker">Candid limits</p>
+          <h2 id="limits-title">What this does not promise</h2>
+          <p data-claim="claim-scope-limits">Scope discipline changes what the gate demands, not what people do with the
+            freedom. The system records honest facts and leaves judgment where it was.</p>
+          <ul class="limit-list">
+            <li>Review cost is self-reported by the agent harness that ran the review, not independently metered.</li>
+            <li>A deferred finding is only as good as the follow-up ticket&rsquo;s afterlife; filing is enforced,
+              finishing is not.</li>
+            <li>The scope call is a judgment against the contract; the machine checks eligibility, not wisdom.</li>
+            <li>The activation threshold means small deliveries leave no record; the trend describes substantial work
+              only.</li>
+          </ul>
+        </section>
+
+        <section id="sources" class="story-section" aria-labelledby="sources-title">
+          <p class="section-kicker">Evidence reviewed</p>
+          <h2 id="sources-title">The discipline is visible in its own artifacts</h2>
+          <p>This account is grounded in what the work left behind, including the corrections its own review forced.</p>
+          <ul class="source-list">
+            <li>The harness solution note recording the scope axis, the deferral rules, and the three corrections,
+              written the day the work landed.</li>
+            <li>The gate registry and evidence recorder: the third obligation, the deferral checks, and the telemetry
+              validation.</li>
+            <li>The review and execution skills that judge scope at synthesis and pass the delivery contract into
+              review.</li>
+            <li>The tracked telemetry corpus itself, whose first record describes the delivery that introduced it.</li>
+          </ul>
+        </section>
+
+        <nav class="deep-links deep-links--reflection" aria-label="Continue exploring Athena">
+          <a class="deep-link" href="../">
+            <span>Complete Athena story</span>
+            <small>Return to the product problem, operating model, and current state.</small>
+          </a>
+          <a class="deep-link" href="../prose-not-policy/">
+            <span>Previous: Prose, not policy</span>
+            <small>The enforcement this discipline builds on.</small>
+          </a>
+        </nav>
+      </article>
+    </div>
+    <p class="page-byline page-inner">Co-authored with AI agents</p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="page-inner">
+      <div class="footer-grid">
+        <div>
+          <p class="footer-label">Navigate</p>
+          <div class="footer-links">
+            <a class="text-link" href="../">Athena</a>
+            <a class="text-link" href="../../../homepage.html" data-scroll-top>Homepage</a>
+          </div>
+        </div>
+        <div>
+          <p class="footer-label">Contact</p>
+          <div class="footer-links">
+            <a class="text-link" href="mailto:kwami.nuh@gmail.com">kwami.nuh@gmail.com</a>
+          </div>
+        </div>
+      </div>
+      <p class="footer-meta">&copy; 2026 Kwamina Essuah Mensah</p>
+    </div>
+  </footer>
+</body>
+
+</html>

@@ -29,6 +29,16 @@ PAGES = {
     / "athena"
     / "agent-ready-repository"
     / "index.html",
+    "prose_not_policy": CONTENT_ROOT
+    / "work"
+    / "athena"
+    / "prose-not-policy"
+    / "index.html",
+    "valid_but_not_this_ticket": CONTENT_ROOT
+    / "work"
+    / "athena"
+    / "valid-but-not-this-ticket"
+    / "index.html",
 }
 UNSAFE_ATHENA_ASSETS = {
     "athena-daily-operations.png",
@@ -43,6 +53,8 @@ ARTICLE_PAGES = (
     "local_first_pos",
     "agent_ready_repository",
     "read_optimized_reporting",
+    "prose_not_policy",
+    "valid_but_not_this_ticket",
 )
 
 
@@ -147,6 +159,14 @@ def published_read_time(path: Path) -> int | None:
         path.read_text(encoding="utf-8"),
     )
     return int(match.group(1)) if match else None
+
+
+def flattened(html: str) -> str:
+    # The phrase assertions below run against authored HTML, which a formatter
+    # is free to re-wrap at any column — and did, silently breaking a passing
+    # assertion whose wording had not changed. Collapsing whitespace keeps
+    # those assertions about what the page says, not where its lines end.
+    return re.sub(r"\s+", " ", html.lower())
 
 
 def is_external(reference: str) -> bool:
@@ -329,7 +349,7 @@ class StaticPageTests(unittest.TestCase):
         self.assertIn("work/athena/", homepage.hrefs)
         expected_home = PAGES["homepage"].resolve()
         expected_athena = PAGES["athena"].resolve()
-        for page_name in ("local_first_pos", "agent_ready_repository"):
+        for page_name in ("local_first_pos", "agent_ready_repository", "prose_not_policy", "valid_but_not_this_ticket"):
             resolved = {
                 resolve_site_reference(PAGES[page_name], href)
                 for href in parse_page(PAGES[page_name]).hrefs
@@ -403,7 +423,7 @@ class StaticPageTests(unittest.TestCase):
         self.assert_claims_mapped(parser, 8)
 
     def test_athena_main_story_preserves_claim_boundaries(self) -> None:
-        html = PAGES["athena"].read_text(encoding="utf-8").lower()
+        html = flattened(PAGES["athena"].read_text(encoding="utf-8"))
         self.assertIn("provisioned, locally authorized register", html)
         self.assertIn("not yet a complete cross-domain command center", html)
         self.assertIn("connectivity does not sit on the critical path", html)
@@ -439,7 +459,7 @@ class StaticPageTests(unittest.TestCase):
     def test_local_first_pos_reflection_contract(self) -> None:
         path = PAGES["local_first_pos"]
         html = path.read_text(encoding="utf-8")
-        lowered = html.lower()
+        lowered = flattened(html)
         parser = parse_page(path)
         expected_sections = {
             "online-first",
@@ -485,7 +505,7 @@ class StaticPageTests(unittest.TestCase):
     def test_agent_ready_repository_reflection_contract(self) -> None:
         path = PAGES["agent_ready_repository"]
         html = path.read_text(encoding="utf-8")
-        lowered = html.lower()
+        lowered = flattened(html)
         parser = parse_page(path)
         expected_sections = {
             "orientation",
@@ -538,7 +558,7 @@ class StaticPageTests(unittest.TestCase):
     def test_read_optimized_reporting_reflection_contract(self) -> None:
         path = PAGES["read_optimized_reporting"]
         html = path.read_text(encoding="utf-8")
-        lowered = html.lower()
+        lowered = flattened(html)
         parser = parse_page(path)
         expected_sections = {
             "orientation",
@@ -595,6 +615,117 @@ class StaticPageTests(unittest.TestCase):
         )
         self.assert_claims_mapped(parser, 5)
 
+    def test_valid_but_not_this_ticket_reflection_contract(self) -> None:
+        path = PAGES["valid_but_not_this_ticket"]
+        html = path.read_text(encoding="utf-8")
+        lowered = flattened(html)
+        parser = parse_page(path)
+        expected_sections = {
+            "orientation",
+            "scope-axis",
+            "deferral",
+            "telemetry",
+            "obligation",
+            "corrections",
+            "limits",
+            "sources",
+        }
+
+        self.assertTrue(expected_sections.issubset(set(parser.ids)))
+        for phrase in (
+            "valid, but not this ticket",
+            "no definition of convergence beyond unanimity",
+            "severity outranks scope",
+            "grade its own scope unchallenged",
+            "not deletion",
+            "actually filed tracker issue",
+            "enforced by something that agent does not write",
+            "one file per run",
+            "must not invalidate the review evidence it describes",
+            "never converted between units",
+            "agents cannot",
+            "taxes exactly the contributors it was not aimed at",
+            "without first tracing the loop that would clear it",
+            "only real where the code that reads it runs",
+            "filing is enforced, finishing is not",
+            "not independently metered",
+        ):
+            self.assertIn(phrase, lowered)
+        # The gate enforces filing and recording, not outcomes. Wording that
+        # claims deferred work gets done, or that cost is independently
+        # measured, would overstate what the mechanisms deliver.
+        for unsupported in (
+            "guarantees the follow-up",
+            "always converges",
+            "eliminates scope creep",
+        ):
+            self.assertNotIn(unsupported, lowered)
+        self.assertEqual(nav_fragment_targets(html, "On this page"), expected_sections)
+
+        self.assert_accessible_figures(
+            path,
+            1,
+            {
+                "disposition-flow-description": ("severity", "block", "in-contract", "scope check", "ticket", "manifest"),
+            },
+        )
+        self.assert_claims_mapped(parser, 12)
+
+    def test_prose_not_policy_reflection_contract(self) -> None:
+        path = PAGES["prose_not_policy"]
+        html = path.read_text(encoding="utf-8")
+        lowered = flattened(html)
+        parser = parse_page(path)
+        expected_sections = {
+            "orientation",
+            "marker-problem",
+            "obligations",
+            "candidate-binding",
+            "caller-posture",
+            "ordering-defects",
+            "limits",
+            "sources",
+        }
+
+        self.assertTrue(expected_sections.issubset(set(parser.ids)))
+        for phrase in (
+            "prose is advisory",
+            "judgment-bearing",
+            "forgeable",
+            "never presented as passing review",
+            "shell tail",
+            "fifty changed relevant lines",
+            "stale rather than arguably still fine",
+            "no unreviewed-delta path",
+            "does not become human",
+            "fails closed",
+            "ordering defects",
+            "superseded rather than silently blocking",
+            "accidental and casual workflow bypass",
+        ):
+            self.assertIn(phrase, lowered)
+        # The enforcement targets casual bypass and records exceptions honestly.
+        # Wording that claims tamper-proofing, or that a waiver equals a passed
+        # review, would overstate the threat model the requirements set.
+        for unsupported in (
+            "tamper-proof",
+            "cannot be bypassed",
+            "guarantees review quality",
+            "proves the caller is human",
+        ):
+            self.assertNotIn(unsupported, lowered)
+        self.assertEqual(nav_fragment_targets(html, "On this page"), expected_sections)
+
+        self.assert_accessible_figures(
+            path,
+            2,
+            {
+                "admission-flow-description": ("preparation", "activation", "resolves", "decision", "records", "spawn"),
+                "caller-posture-description": ("agent", "human", "ci", "unknown"),
+            },
+        )
+        self.assert_claims_mapped(parser, 10)
+
     def test_articles_publish_a_read_time_that_matches_their_length(self) -> None:
         # A hand-authored estimate drifts silently as an article is edited, and
         # a wrong one is worse than none: it is the first promise the page
@@ -611,6 +742,34 @@ class StaticPageTests(unittest.TestCase):
                     1,
                     f"{name} claims {published} min read; its word count reads as {expected} min",
                 )
+
+    def test_homepage_index_read_times_match_the_articles_they_link(self) -> None:
+        # The index publishes each piece's length beside its title, so that
+        # number now lives in two files and can drift. The article's own rail
+        # is the source of truth, and it is already held to the article's word
+        # count above — so binding the two here makes the homepage figure
+        # correct by the same measure rather than by hand.
+        html = PAGES["homepage"].read_text(encoding="utf-8")
+        rows = re.findall(
+            r'<a class="writing-item" href="([^"]+)"[\s\S]*?'
+            r'<span class="writing-meta">\s*([^<]+?)\s*</span>',
+            html,
+        )
+        self.assertEqual(len(rows), len(ARTICLE_PAGES))
+        for href, published in rows:
+            with self.subTest(href=href):
+                destination = resolve_site_reference(PAGES["homepage"], href)
+                self.assertIsNotNone(destination)
+                expected = published_read_time(destination)
+                self.assertIsNotNone(expected, f"{href} publishes no read time")
+                self.assertEqual(published, f"{expected} min read")
+
+    def test_homepage_index_numbers_every_entry_in_order(self) -> None:
+        # The numerals are decorative (aria-hidden), so nothing else would
+        # catch them falling out of step with the list they label.
+        html = PAGES["homepage"].read_text(encoding="utf-8")
+        numerals = re.findall(r'<span class="writing-index"[^>]*>\s*(\d+)\s*</span>', html)
+        self.assertEqual(numerals, [f"{i:02d}" for i in range(1, len(ARTICLE_PAGES) + 1)])
 
     def test_read_time_sits_at_the_top_of_the_context_rail(self) -> None:
         # Placement is the contract: it has to be the first thing in the rail
