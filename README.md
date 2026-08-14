@@ -92,6 +92,7 @@ bun run db:migrate && bun run preview
 | `bun run preview` | Build, then serve SPA + Worker via `wrangler dev` on :8787 |
 | `bun test` | Corpus build, `bun test`, and the Python content tests |
 | `bun run corpus` | Regenerate `src/generated/corpus.js` only |
+| `bun run diagrams:import -- /path/to/bundle` | Verify and import Athena's paired light/dark architecture PNGs, public mirrors, and evidence rows |
 | `bun run resume` / `resume:docx` | Rebuild the resume PDF and DOCX |
 | `bun run db:migrate` / `db:migrate:remote` | Apply D1 migrations locally / in production |
 | `bun run smoke:production` | Run the production canary against the live origin |
@@ -107,6 +108,20 @@ bun run db:migrate && bun run preview
    have no public page.
 4. Run `bun test`; the content tests check links, assets, and evidence
    references.
+
+## Athena architecture diagrams
+
+Athena owns the architecture sources and exports a `kwamina-fyi` bundle with
+paired light/dark PNGs plus a SHA-256 manifest. Import a generated bundle with:
+
+```bash
+bun run diagrams:import -- /path/to/kwamina-fyi-diagrams
+```
+
+The importer verifies the manifest, writes reviewed canonical copies to
+`docs/content/assets/`, mirrors them byte-for-byte under `public/assets/`, and
+replaces the generated diagram section in the Athena evidence ledger. The site
+then uses its existing theme-aware image classes to select the matching PNG.
 
 ## Testing
 

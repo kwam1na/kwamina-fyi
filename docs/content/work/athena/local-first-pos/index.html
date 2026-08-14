@@ -75,23 +75,14 @@
                 <span class="figure-label">Cashier-to-cloud sequence</span>
                 Local acceptance stays on the cashier path; cloud projection follows in the background.
               </figcaption>
-              <div class="sequence-flow" aria-hidden="true">
-                <div class="sequence-node"><span>01</span><strong>Cashier action</strong><small>Start or change the sale</small></div>
-                <span class="sequence-arrow">&rarr;</span>
-                <div class="sequence-node"><span>02</span><strong>Append local evidence</strong><small>Write to the register event log</small></div>
-                <span class="sequence-arrow">&rarr;</span>
-                <div class="sequence-node"><span>03</span><strong>Cashier success</strong><small>Continue from the local read model</small></div>
-                <span class="sequence-arrow sequence-arrow--background">&rarr;</span>
-                <div class="sequence-node"><span>04</span><strong>Background synchronization</strong><small>Upload ordered local events</small></div>
-                <span class="sequence-arrow">&rarr;</span>
-                <div class="sequence-node"><span>05</span><strong>Cloud acceptance or review</strong><small>Project records or surface a conflict</small></div>
-              </div>
+              <img class="workspace-capture workspace-capture--light" src="../../../assets/athena-pos-local-mechanics-light.png" alt="POS terminal mechanics: a cashier command passes readiness checks, appends an immutable event, updates local projections and mappings, returns success from durable local state, and later joins an ordered synchronization batch." loading="lazy" width="2720" height="1530">
+              <img class="workspace-capture workspace-capture--dark" src="../../../assets/athena-pos-local-mechanics-dark.png" alt="POS terminal mechanics in the dark theme: a cashier command passes readiness checks, appends an immutable event, updates local projections and mappings, returns success from durable local state, and later joins an ordered synchronization batch." loading="lazy" width="2720" height="1530">
               <ol id="cashier-cloud-description" class="structured-equivalent">
-                <li>The cashier performs an action on an already provisioned and locally authorized register.</li>
-                <li>Athena appends the resulting event to the durable local register log.</li>
-                <li>Only after the append succeeds does the cashier receive success and continue from the local read model.</li>
-                <li>When synchronization is available, Athena uploads the ordered local events in the background.</li>
-                <li>The cloud either accepts and projects those events or returns evidence that needs review.</li>
+                <li>The cashier action starts on an already provisioned and locally authorized register.</li>
+                <li>The append local evidence step appends the resulting event to the durable register log.</li>
+                <li>Cashier success returns only after the append succeeds, and the interface continues from the local read model.</li>
+                <li>Background synchronization uploads the ordered local events when connectivity is available.</li>
+                <li>Cloud acceptance or review either projects those events or returns evidence that needs attention.</li>
               </ol>
             </figure>
           </section>
@@ -108,6 +99,22 @@
             <h2 id="sync-and-reconciliation-title">Synchronize in order. Reconcile without rewriting history.</h2>
             <p data-claim="claim-pos-idempotent-sync">When the cloud is reachable, events upload in order through an authenticated terminal boundary. The upload is idempotent, so retrying the same evidence cannot mint a second sale, and accepted mappings tie local identifiers to cloud records.</p>
             <p>Acceptance is not the only outcome. A stale product reference, changed authority, or conflicting cloud state becomes manager-visible review work; the completed sale is preserved, the receipt never rewritten, the mismatch never hidden.</p>
+
+            <figure class="evidence-figure" aria-describedby="pos-cloud-architecture-description">
+              <figcaption>
+                <span class="figure-label">POS and cloud-sync boundary</span>
+                Local authority protects the cashier timeline; cloud authority projects the shared business record.
+              </figcaption>
+              <img class="workspace-capture workspace-capture--light" src="../../../assets/athena-pos-cloud-sync-overview-light.png" alt="Athena POS and cloud-sync architecture: the POS application commits to durable local state, a background runtime uploads pending events to authenticated event admission, and cloud policy projects canonical records while mappings, cursor outcomes, reviews, and lifecycle authority return to the terminal." loading="lazy" width="2720" height="1530">
+              <img class="workspace-capture workspace-capture--dark" src="../../../assets/athena-pos-cloud-sync-overview-dark.png" alt="Athena POS and cloud-sync architecture in the dark theme: the POS application commits to durable local state, a background runtime uploads pending events to authenticated event admission, and cloud policy projects canonical records while mappings, cursor outcomes, reviews, and lifecycle authority return to the terminal." loading="lazy" width="2720" height="1530">
+              <ol id="pos-cloud-architecture-description" class="structured-equivalent">
+                <li>The POS application commits cashier work to durable local state before reporting success.</li>
+                <li>The sync runtime uploads pending events as an ordered batch through authenticated event admission.</li>
+                <li>Projection and reconciliation policy creates canonical Athena records or review work.</li>
+                <li>Mappings, cursor outcomes, reviews, and lifecycle authority return to the terminal.</li>
+              </ol>
+            </figure>
+
             <h3 id="sync-drain-bug">The bug that taught the sync model</h3>
             <div data-claim="claim-pos-sync-drain">
               <p>Strict ordering earned its design by failing. Upload order was originally computed at sync time, from events carrying the signed-in cashier&rsquo;s proof. The failure arrived in three steps: a cashier signed out with unsynced sales, their events dropped out of the upload set, and later staff took earlier sequence numbers. The server did its job correctly: it held the shifted batch as out-of-order, forever.</p>

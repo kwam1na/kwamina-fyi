@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "corpus": "node scripts/build-corpus.mjs",
+    "diagrams:import": "node scripts/import-athena-diagram-bundle.mjs",
     "resume": "sh scripts/build-resume.sh",
     "resume:docx": "node scripts/build-resume-docx.mjs",
     "dev": "bun run corpus && vite",

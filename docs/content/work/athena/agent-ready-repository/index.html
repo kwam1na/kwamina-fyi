@@ -162,6 +162,21 @@
             <p>Each layer answers a question the one before it cannot: does the behavior work, do adjacent systems still agree, is the repository coherent, what did the implementation path miss, does the release candidate hold, does the deployed boundary behave.</p>
             <p data-claim="claim-agent-runtime">Static checks are one sensor. Named behavior scenarios boot representative runtime paths and emit machine-readable <code>[harness:behavior:report]</code> lines (phase durations, matched signals) that an agent or a trend dashboard can parse. Production-facing work continues into deployed logs, state, and responses, so confidence is grounded in the environment that matters.</p>
 
+            <figure class="evidence-figure" aria-describedby="harness-architecture-description">
+              <figcaption>
+                <span class="figure-label">Harness architecture</span>
+                Repo policy shapes the candidate; the delivery orchestrator runs distinct admission gates before reusable proof reaches pull-request CI.
+              </figcaption>
+              <img class="workspace-capture workspace-capture--light" src="../../../assets/athena-harness-overview-light.png" alt="Athena delivery harness architecture: repository policy and contracts shape a prepared candidate; the delivery orchestrator runs contract preflight and obligation admission; validation providers produce candidate-bound evidence for pull-request CI." loading="lazy" width="2720" height="1530">
+              <img class="workspace-capture workspace-capture--dark" src="../../../assets/athena-harness-overview-dark.png" alt="Athena delivery harness architecture in the dark theme: repository policy and contracts shape a prepared candidate; the delivery orchestrator runs contract preflight and obligation admission; validation providers produce candidate-bound evidence for pull-request CI." loading="lazy" width="2720" height="1530">
+              <ol id="harness-architecture-description" class="structured-equivalent">
+                <li>Repository policy and navigation shape a prepared delivery candidate.</li>
+                <li>The delivery orchestrator reads harness contracts and starts contract preflight.</li>
+                <li>Obligation admission checks the candidate&rsquo;s review, documentation, and telemetry requirements.</li>
+                <li>Validation providers produce reusable, candidate-bound evidence for pull-request CI.</li>
+              </ol>
+            </figure>
+
             <figure class="evidence-figure delivery-loop-figure" aria-describedby="delivery-loop-description">
               <figcaption>
                 <span class="figure-label">Evidence widens toward release</span>
