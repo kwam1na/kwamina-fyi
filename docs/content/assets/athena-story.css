@@ -652,6 +652,39 @@ a:hover .inline-link-icon {
   will-change: transform;
 }
 
+.shot-lightbox-close {
+  position: absolute;
+  z-index: 1;
+  top: max(20px, env(safe-area-inset-top));
+  right: max(20px, env(safe-area-inset-right));
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  padding: 0 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 300 1.6rem/1 var(--sans);
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    transform 160ms var(--ease-out);
+  touch-action: manipulation;
+}
+
+.shot-lightbox-close:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .shot-lightbox-close:hover {
+    color: var(--focus);
+    transform: scale(1.04);
+  }
+}
+
 .shot-lightbox[data-state='opening'],
 .shot-lightbox[data-state='closing'] {
   opacity: 0;
@@ -665,7 +698,8 @@ a:hover .inline-link-icon {
 
 @media (prefers-reduced-motion: reduce) {
   .shot-lightbox,
-  .shot-lightbox img {
+  .shot-lightbox img,
+  .shot-lightbox-close {
     transition-duration: 1ms;
   }
 

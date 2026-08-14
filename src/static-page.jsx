@@ -630,9 +630,9 @@ export function StaticPage({ documentHtml, pagePath, title, conversationArchiveE
         event.preventDefault()
         close()
       } else if (event.key === 'Tab') {
-        // The dialog holds no other focusable elements; keep focus on it.
+        // Keep keyboard focus inside the dialog's close control.
         event.preventDefault()
-        overlay?.focus()
+        overlay?.querySelector('.shot-lightbox-close')?.focus()
       }
     }
 
@@ -671,6 +671,14 @@ export function StaticPage({ documentHtml, pagePath, title, conversationArchiveE
       image.alt = source.getAttribute('alt')
       overlay.appendChild(image)
 
+      const closeButton = document.createElement('button')
+      closeButton.className = 'shot-lightbox-close'
+      closeButton.type = 'button'
+      closeButton.setAttribute('aria-label', 'Close expanded image')
+      closeButton.textContent = '×'
+      closeButton.addEventListener('click', () => close())
+      overlay.appendChild(closeButton)
+
       overlay.addEventListener('click', (event) => {
         if (event.target === overlay) close()
       })
@@ -681,7 +689,7 @@ export function StaticPage({ documentHtml, pagePath, title, conversationArchiveE
       document.addEventListener('keydown', onKeyDown)
       detachGestures = attachZoomGestures(overlay, image)
       opener = trigger
-      overlay.focus()
+      closeButton.focus()
       window.requestAnimationFrame(() => {
         if (overlay) overlay.dataset.state = 'open'
       })
