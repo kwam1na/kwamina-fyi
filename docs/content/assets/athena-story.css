@@ -14,6 +14,8 @@
   --nav-surface: rgba(252, 252, 251, 0.86);
   --surface-subtle: rgba(255, 255, 255, 0.34);
   --chart-bar: #aeb8c5;
+  --technical-radius: 12px;
+  --technical-radius-small: 8px;
   color-scheme: light;
 }
 
@@ -452,7 +454,9 @@ a:hover .inline-link-icon {
 .evidence-figure {
   margin: 36px 0 0;
   border: 1px solid var(--line-strong);
+  border-radius: var(--technical-radius);
   background: var(--surface-subtle);
+  overflow: hidden;
 }
 
 .evidence-figure figcaption {
@@ -466,6 +470,13 @@ a:hover .inline-link-icon {
 .evidence-figure .figure-label {
   display: block;
   margin-bottom: 4px;
+}
+
+/* Framed evidence reads as one continuous, softly bounded surface. The outer
+   frame owns the radius and clips each section, avoiding a nested-card seam. */
+.evidence-figure:not(.establishing-shot):not(.store-pulse) > .workspace-capture {
+  border: 0;
+  border-radius: 0;
 }
 
 /* Establishing captures: the product up front — one wide Daily Operations
@@ -554,10 +565,9 @@ a:hover .inline-link-icon {
   color: var(--muted);
 }
 
-/* Mobile-only tap-to-expand on the hero shot. The captures shrink to a
-   sliver in a phone-width column, so tapping opens a full-screen lightbox
-   (see StaticPage) where the reader pinch-zooms to inspect detail. Desktop
-   is left untouched — the shots are already legible there. */
+/* Workspace captures expand into a full-screen lightbox (see StaticPage).
+   Mobile retains its explicit expand affordance; desktop uses the image
+   itself as the quiet, zoomable control. */
 .product-establishing .establishing-shot,
 .capture-frame {
   position: relative;
@@ -598,10 +608,19 @@ a:hover .inline-link-icon {
   .hero-expand:focus-visible {
     outline: none;
   }
+}
 
-  .product-establishing .establishing-shot .workspace-capture {
-    cursor: zoom-in;
-  }
+.workspace-capture {
+  cursor: zoom-in;
+}
+
+.workspace-capture:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+}
+
+.evidence-figure:not(.establishing-shot):not(.store-pulse) > .workspace-capture:focus-visible {
+  outline-offset: -4px;
 }
 
 .shot-lightbox {
@@ -615,7 +634,9 @@ a:hover .inline-link-icon {
   background: color-mix(in srgb, var(--paper) 92%, transparent);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
+  opacity: 1;
   touch-action: none;
+  transition: opacity 250ms var(--ease-portfolio);
 }
 
 .shot-lightbox img {
@@ -624,7 +645,34 @@ a:hover .inline-link-icon {
   height: auto;
   max-height: 100%;
   object-fit: contain;
+  transform: scale(1);
+  transition:
+    opacity 250ms var(--ease-portfolio),
+    transform 250ms var(--ease-portfolio);
   will-change: transform;
+}
+
+.shot-lightbox[data-state='opening'],
+.shot-lightbox[data-state='closing'] {
+  opacity: 0;
+}
+
+.shot-lightbox[data-state='opening'] img,
+.shot-lightbox[data-state='closing'] img {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shot-lightbox,
+  .shot-lightbox img {
+    transition-duration: 1ms;
+  }
+
+  .shot-lightbox[data-state='opening'] img,
+  .shot-lightbox[data-state='closing'] img {
+    transform: none;
+  }
 }
 
 /* A quiet row of thumbnails under the hero. Uncaptioned — the caption lives
@@ -731,6 +779,7 @@ a:hover .inline-link-icon {
 .boundary-note {
   padding: 18px 20px;
   border-left: 2px solid var(--line-strong);
+  border-radius: 0 var(--technical-radius-small) var(--technical-radius-small) 0;
   background: var(--surface-subtle);
 }
 
@@ -769,6 +818,8 @@ a:hover .inline-link-icon {
   gap: 6px;
   padding: 14px 10px;
   border-top: 2px solid var(--line-strong);
+  border-radius: var(--technical-radius-small);
+  overflow: hidden;
 }
 
 .flow-node {
@@ -776,7 +827,6 @@ a:hover .inline-link-icon {
   isolation: isolate;
   min-height: 126px;
   justify-content: space-between;
-  overflow: hidden;
 }
 
 .flow-node::before {
@@ -950,6 +1000,7 @@ a:hover .inline-link-icon {
 .pulse-products {
   padding: 16px;
   border: 1px solid var(--line);
+  border-radius: var(--technical-radius-small);
   background: var(--paper);
 }
 
@@ -1096,7 +1147,9 @@ a:hover .inline-link-icon {
   gap: 1px;
   margin-top: 30px;
   border: 1px solid var(--line);
+  border-radius: var(--technical-radius);
   background: var(--line);
+  overflow: hidden;
 }
 
 .state-ledger article {
@@ -1175,7 +1228,9 @@ a:hover .inline-link-icon {
   gap: 1px;
   margin-top: 32px;
   border: 1px solid var(--line-strong);
+  border-radius: var(--technical-radius);
   background: var(--line);
+  overflow: hidden;
 }
 
 .authority-comparison article {
@@ -1230,7 +1285,9 @@ a:hover .inline-link-icon {
   display: grid;
   gap: 1px;
   padding: 1px;
+  border-radius: var(--technical-radius);
   background: var(--line);
+  overflow: hidden;
 }
 
 .repository-layer {
@@ -1302,6 +1359,36 @@ a:hover .inline-link-icon {
   display: block;
 }
 
+.deep-link span {
+  position: relative;
+  width: fit-content;
+  transition: color 160ms ease;
+}
+
+.deep-links--quint .deep-link span::after,
+.deep-links--reflection .deep-link:last-child span::after,
+.deep-links--reflection .deep-link:first-child span::before {
+  position: absolute;
+  color: var(--focus);
+  opacity: 0;
+  transition:
+    opacity 160ms ease,
+    transform 160ms var(--ease-out);
+}
+
+.deep-links--quint .deep-link span::after,
+.deep-links--reflection .deep-link:last-child span::after {
+  left: calc(100% + 6px);
+  content: '→';
+  transform: translateX(-4px);
+}
+
+.deep-links--reflection .deep-link:first-child span::before {
+  right: calc(100% + 6px);
+  content: '←';
+  transform: translateX(4px);
+}
+
 .deep-link small {
   margin-top: 6px;
   color: var(--muted);
@@ -1327,9 +1414,49 @@ a:hover .inline-link-icon {
   display: block;
   padding: 20px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--technical-radius);
+  background: transparent;
   color: var(--copy);
   font-weight: 500;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .deep-link:hover {
+    border-color: var(--line-strong);
+    background: var(--surface-subtle);
+  }
+
+  .deep-link:hover span {
+    color: var(--ink);
+  }
+
+  .deep-link:hover span::before,
+  .deep-link:hover span::after {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.deep-link:focus-visible {
+  transition-duration: 0ms;
+}
+
+.deep-link:focus-visible span::before,
+.deep-link:focus-visible span::after {
+  opacity: 1;
+  transform: translateX(0);
+  transition-duration: 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deep-link span::before,
+  .deep-link span::after {
+    transform: none;
+    transition-property: opacity;
+  }
 }
 
 .site-footer {
@@ -1587,7 +1714,7 @@ a:hover .inline-link-icon {
   width: 100%;
   height: auto;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--technical-radius);
 }
 
 .workspace-capture--dark {

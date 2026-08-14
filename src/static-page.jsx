@@ -199,6 +199,13 @@ function wrapFooterReveal(body) {
   )
 }
 
+export function lightboxCaptureFor(trigger, dark) {
+  if (trigger.matches('.workspace-capture')) return trigger
+  const frame = trigger.closest('.establishing-shot, .capture-frame')
+  if (!frame) return null
+  return frame.querySelector(dark ? '.workspace-capture--dark' : '.workspace-capture--light')
+}
+
 export function StaticPage({ documentHtml, pagePath, title, conversationArchiveEntry = false }) {
   const containerRef = useRef(null)
   const navigate = useNavigate()
@@ -595,22 +602,28 @@ export function StaticPage({ documentHtml, pagePath, title, conversationArchiveE
     }
   }, [documentHtml])
 
-  // Mobile-only lightbox for workspace captures, borrowed from Athena's
-  // landing page: tapping a shot (or its expand affordance) opens it
-  // full-screen where pinch and double-tap zoom the image. Body scroll locks
-  // while open; Escape or a backdrop tap closes and returns focus to the
-  // opener. Covers the establishing hero and any figure with a
-  // .capture-frame wrapper.
+  // Lightbox for embedded workspace captures. Clicking or keyboard-opening a
+  // capture expands the currently visible theme variant over a blurred page;
+  // pinch and double-tap zoom remain available on touch devices. Body scroll
+  // locks while open, and Escape or a backdrop click closes and returns focus
+  // to the opener.
   useEffect(() => {
     const container = containerRef.current
-    const expandables = [...(container?.querySelectorAll('.establishing-shot, .capture-frame') ?? [])]
-    if (!expandables.length) return undefined
+    const captures = [...(container?.querySelectorAll('.workspace-capture') ?? [])]
+      .filter((capture) => capture.alt.trim() && capture.getAttribute('aria-hidden') !== 'true')
+    if (!captures.length) return undefined
 
-    const mobile = window.matchMedia('(max-width: 768px)')
     let overlay = null
     let detachGestures = null
     let previousOverflow = ''
     let opener = null
+
+    captures.forEach((capture) => {
+      capture.tabIndex = 0
+      capture.setAttribute('role', 'button')
+      capture.setAttribute('aria-haspopup', 'dialog')
+      capture.setAttribute('aria-label', `Expand image: ${capture.alt}`)
+    })
 
     const onKeyDown = (event) => {
       if (event.key === 'Escape') {
@@ -623,25 +636,31 @@ export function StaticPage({ documentHtml, pagePath, title, conversationArchiveE
       }
     }
 
-    const close = () => {
+    const close = ({ immediate = false } = {}) => {
       if (!overlay) return
+      const closingOverlay = overlay
+      overlay = null
       detachGestures?.()
       detachGestures = null
-      overlay.remove()
-      overlay = null
       document.removeEventListener('keydown', onKeyDown)
       document.body.style.overflow = previousOverflow
-      opener?.focus()
+      if (!immediate) opener?.focus()
       opener = null
+
+      const removeOverlay = () => closingOverlay.remove()
+      if (immediate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        removeOverlay()
+      } else {
+        closingOverlay.dataset.state = 'closing'
+        window.setTimeout(removeOverlay, 250)
+      }
     }
 
-    const open = (frame) => {
+    const open = (source, trigger) => {
       if (overlay) return
-      const dark = document.documentElement.dataset.theme === 'dark'
-      const source = frame.querySelector(dark ? '.workspace-capture--dark' : '.workspace-capture--light')
-
       overlay = document.createElement('div')
       overlay.className = 'shot-lightbox'
+      overlay.dataset.state = 'opening'
       overlay.setAttribute('role', 'dialog')
       overlay.setAttribute('aria-modal', 'true')
       overlay.setAttribute('aria-label', source.getAttribute('alt'))
@@ -661,29 +680,42 @@ export function StaticPage({ documentHtml, pagePath, title, conversationArchiveE
       document.body.style.overflow = 'hidden'
       document.addEventListener('keydown', onKeyDown)
       detachGestures = attachZoomGestures(overlay, image)
+      opener = trigger
       overlay.focus()
+      window.requestAnimationFrame(() => {
+        if (overlay) overlay.dataset.state = 'open'
+      })
     }
 
-    const onContainerClick = (event) => {
-      if (!mobile.matches) return
-      const trigger = event.target.closest('.hero-expand') || event.target.closest('.workspace-capture')
-      const frame = trigger && expandables.find((candidate) => candidate.contains(trigger))
-      if (!frame) return
-      opener = frame.querySelector('.hero-expand')
-      open(frame)
+    const openFromEvent = (event) => {
+      const trigger = event.target.closest('.hero-expand, .workspace-capture')
+      if (!trigger || !container.contains(trigger)) return
+      const dark = document.documentElement.dataset.theme === 'dark'
+      const source = lightboxCaptureFor(trigger, dark)
+      if (!source) return
+      open(source, trigger)
     }
 
-    // Resized out of the mobile range: a stale lightbox must not stay mounted.
-    const onRangeChange = () => {
-      if (!mobile.matches) close()
+    const onContainerKeyDown = (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return
+      const trigger = event.target.closest('.workspace-capture')
+      if (!trigger) return
+      event.preventDefault()
+      open(trigger, trigger)
     }
 
-    container.addEventListener('click', onContainerClick)
-    mobile.addEventListener('change', onRangeChange)
+    container.addEventListener('click', openFromEvent)
+    container.addEventListener('keydown', onContainerKeyDown)
     return () => {
-      container.removeEventListener('click', onContainerClick)
-      mobile.removeEventListener('change', onRangeChange)
-      close()
+      container.removeEventListener('click', openFromEvent)
+      container.removeEventListener('keydown', onContainerKeyDown)
+      captures.forEach((capture) => {
+        capture.removeAttribute('tabindex')
+        capture.removeAttribute('role')
+        capture.removeAttribute('aria-haspopup')
+        capture.removeAttribute('aria-label')
+      })
+      close({ immediate: true })
     }
   }, [documentHtml])
 
