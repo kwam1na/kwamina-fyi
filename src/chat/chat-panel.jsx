@@ -112,6 +112,7 @@ export function createChatScrollFollower(getLog) {
 
 const GENERIC_ERROR = 'Something went wrong. Try asking again.'
 const TRANSCRIPT_TIMEOUT_MS = 8_000
+const CHAT_RESPONSE_TIMEOUT_MS = 30_000
 
 function expectedChatFailure(message) {
   const error = new Error(message)
@@ -362,15 +363,93 @@ export function StreamingText({ text, isStreaming, onReveal, onSiteNavigate }) {
 // what surfaces from `useChat` is a flattened plain Error with no `cause`. So
 // the message is read here, where the response still exists, and left in a ref
 // for the render that the failure is about to trigger.
-async function chatFetch(input, init, messageRef, memoryRef) {
+export async function chatFetch(input, init, messageRef, memoryRef, {
+  fetcher = fetch,
+  setTimer = globalThis.setTimeout,
+  clearTimer = globalThis.clearTimeout,
+} = {}) {
   messageRef.current = null
+
+  const abort = new AbortController()
+  const callerSignal = init?.signal
+  let timeout = null
+  let timeoutGeneration = 0
+  let stopped = false
+  let timedOut = false
+  const connectionFailure = () => {
+    messageRef.current = 'Could not reach the assistant. Check your connection and try again.'
+    return expectedChatFailure(messageRef.current)
+  }
+  const cleanup = () => {
+    if (stopped) return
+    stopped = true
+    if (timeout !== null) clearTimer(timeout)
+    timeout = null
+    timeoutGeneration += 1
+    callerSignal?.removeEventListener('abort', relayAbort)
+  }
+  const armTimeout = () => {
+    if (stopped) return
+    if (timeout !== null) clearTimer(timeout)
+    const generation = ++timeoutGeneration
+    timeout = setTimer(() => {
+      if (stopped || generation !== timeoutGeneration) return
+      timedOut = true
+      cleanup()
+      abort.abort()
+    }, CHAT_RESPONSE_TIMEOUT_MS)
+  }
+  const relayAbort = () => {
+    cleanup()
+    abort.abort(callerSignal.reason)
+  }
+  if (callerSignal?.aborted) relayAbort()
+  else callerSignal?.addEventListener('abort', relayAbort, { once: true })
+  armTimeout()
 
   let response
   try {
-    response = await fetch(input, init)
-  } catch {
-    messageRef.current = 'Could not reach the assistant. Check your connection and try again.'
-    throw expectedChatFailure(messageRef.current)
+    response = await fetcher(input, { ...init, signal: abort.signal })
+  } catch (error) {
+    cleanup()
+    if (callerSignal?.aborted && !timedOut) throw error
+    throw connectionFailure()
+  }
+
+  if (response.body) {
+    const reader = response.body.getReader()
+    const body = new ReadableStream({
+      async pull(controller) {
+        try {
+          const chunk = await reader.read()
+          if (chunk.done) {
+            cleanup()
+            controller.close()
+            return
+          }
+          armTimeout()
+          controller.enqueue(chunk.value)
+        } catch (error) {
+          cleanup()
+          controller.error(timedOut ? connectionFailure() : error)
+        }
+      },
+      async cancel(reason) {
+        cleanup()
+        try {
+          await reader.cancel(reason)
+        } finally {
+          abort.abort(reason)
+        }
+      },
+    })
+    response = new Response(body, {
+      headers: response.headers,
+      status: response.status,
+      statusText: response.statusText,
+    })
+  } else {
+    cleanup()
   }
 
   if (response.ok) {

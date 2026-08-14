@@ -7,6 +7,7 @@ import {
   EarlierMessagesPanel,
   ChatLatestButton,
   StreamingText,
+  chatFetch,
   chatIsAwayFromLatest,
   chatInputPlaceholder,
   createChatScrollFollower,
@@ -15,6 +16,192 @@ import {
   shouldShowThinking,
   triggerCompletionHaptic,
 } from './chat-panel.jsx'
+
+describe('chatFetch', () => {
+  it('aborts a request that never receives a backend response', async () => {
+    const messageRef = { current: null }
+    const memoryRef = { current: null }
+    let triggerTimeout
+    let clearedTimeout = false
+    const fetcher = (_input, init) => new Promise((_resolve, reject) => {
+      init.signal.addEventListener('abort', () => {
+        reject(new DOMException('Timed out', 'AbortError'))
+      }, { once: true })
+    })
+
+    const request = chatFetch('/api/chat', {}, messageRef, memoryRef, {
+      fetcher,
+      setTimer: (callback) => {
+        triggerTimeout = callback
+        return 17
+      },
+      clearTimer: (timer) => {
+        expect(timer).toBe(17)
+        clearedTimeout = true
+      },
+    })
+
+    triggerTimeout()
+
+    await expect(request).rejects.toThrow('Could not reach the assistant')
+    expect(messageRef.current).toBe('Could not reach the assistant. Check your connection and try again.')
+    expect(clearedTimeout).toBe(true)
+  })
+
+  it('keeps the deadline active until the backend stream responds', async () => {
+    const messageRef = { current: null }
+    const memoryRef = { current: null }
+    let triggerTimeout
+    let clearedTimeout = false
+    const fetcher = (_input, init) => Promise.resolve(new Response(new ReadableStream({
+      start(controller) {
+        init.signal.addEventListener('abort', () => {
+          controller.error(new DOMException('Timed out', 'AbortError'))
+        }, { once: true })
+      },
+    })))
+
+    const response = await chatFetch('/api/chat', {}, messageRef, memoryRef, {
+      fetcher,
+      setTimer: (callback) => {
+        triggerTimeout = callback
+        return 23
+      },
+      clearTimer: (timer) => {
+        expect(timer).toBe(23)
+        clearedTimeout = true
+      },
+    })
+    const firstChunk = response.body.getReader().read()
+
+    expect(clearedTimeout).toBe(false)
+    triggerTimeout()
+
+    await expect(firstChunk).rejects.toThrow('Could not reach the assistant')
+    expect(messageRef.current).toBe('Could not reach the assistant. Check your connection and try again.')
+    expect(clearedTimeout).toBe(true)
+  })
+
+  it('renews the deadline while a backend stream is active', async () => {
+    const messageRef = { current: null }
+    const memoryRef = { current: null }
+    const timeouts = []
+    const clearedTimers = []
+    let streamController
+    const fetcher = (_input, init) => Promise.resolve(new Response(new ReadableStream({
+      start(controller) {
+        streamController = controller
+        init.signal.addEventListener('abort', () => {
+          controller.error(new DOMException('Timed out', 'AbortError'))
+        }, { once: true })
+      },
+    })))
+
+    const response = await chatFetch('/api/chat', {}, messageRef, memoryRef, {
+      fetcher,
+      setTimer: (callback) => {
+        timeouts.push(callback)
+        return timeouts.length
+      },
+      clearTimer: (timer) => clearedTimers.push(timer),
+    })
+    const reader = response.body.getReader()
+    const firstChunk = reader.read()
+    streamController.enqueue(new Uint8Array([1]))
+
+    await expect(firstChunk).resolves.toMatchObject({ done: false })
+    expect(timeouts).toHaveLength(2)
+    expect(clearedTimers).toEqual([1])
+
+    const stalledChunk = reader.read()
+    timeouts[1]()
+
+    await expect(stalledChunk).rejects.toThrow('Could not reach the assistant')
+    expect(clearedTimers).toEqual([1, 2])
+  })
+
+  it('preserves caller cancellation without presenting a connection failure', async () => {
+    const messageRef = { current: null }
+    const memoryRef = { current: null }
+    const callerAbort = new AbortController()
+    const fetcher = (_input, init) => new Promise((_resolve, reject) => {
+      init.signal.addEventListener('abort', () => {
+        reject(new DOMException('Cancelled', 'AbortError'))
+      }, { once: true })
+    })
+
+    const request = chatFetch(
+      '/api/chat',
+      { signal: callerAbort.signal },
+      messageRef,
+      memoryRef,
+      { fetcher },
+    )
+    callerAbort.abort()
+
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' })
+    expect(messageRef.current).toBe(null)
+  })
+
+  it('cleans up the deadline when a healthy stream completes', async () => {
+    const clearedTimers = []
+    const response = await chatFetch('/api/chat', {}, { current: null }, { current: null }, {
+      fetcher: () => Promise.resolve(new Response('done')),
+      setTimer: () => 31,
+      clearTimer: (timer) => clearedTimers.push(timer),
+    })
+
+    await expect(response.text()).resolves.toBe('done')
+    expect(clearedTimers).toEqual([31, 31])
+  })
+
+  it('ignores a cleared timeout callback after stream activity renews the deadline', async () => {
+    const timeouts = []
+    let streamController
+    const response = await chatFetch('/api/chat', {}, { current: null }, { current: null }, {
+      fetcher: (_input, init) => Promise.resolve(new Response(new ReadableStream({
+        start(controller) {
+          streamController = controller
+          init.signal.addEventListener('abort', () => {
+            controller.error(new DOMException('Timed out', 'AbortError'))
+          }, { once: true })
+        },
+      }))),
+      setTimer: (callback) => {
+        timeouts.push(callback)
+        return timeouts.length
+      },
+      clearTimer: () => {},
+    })
+    const reader = response.body.getReader()
+    const firstChunk = reader.read()
+    streamController.enqueue(new Uint8Array([1]))
+    await firstChunk
+
+    timeouts[0]()
+    const secondChunk = reader.read()
+    streamController.enqueue(new Uint8Array([2]))
+
+    await expect(secondChunk).resolves.toMatchObject({ done: false })
+  })
+
+  it('cancels the source stream before aborting its fetch', async () => {
+    const events = []
+    const response = await chatFetch('/api/chat', {}, { current: null }, { current: null }, {
+      fetcher: (_input, init) => Promise.resolve(new Response(new ReadableStream({
+        start() {
+          init.signal.addEventListener('abort', () => events.push('abort'), { once: true })
+        },
+        cancel() {
+          events.push('cancel')
+        },
+      }))),
+    })
+
+    await expect(response.body.cancel('reader finished')).resolves.toBeUndefined()
+    expect(events).toEqual(['cancel', 'abort'])
+  })
+})
 
 function renderedText(node) {
   if (typeof node === 'string') return node
