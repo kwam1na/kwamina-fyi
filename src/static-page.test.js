@@ -5,9 +5,19 @@ describe('workspace capture lightbox', () => {
   it('opens the capture that was clicked directly', () => {
     const capture = {
       matches: (selector) => selector === '.workspace-capture',
+      closest: () => null,
     }
 
     expect(lightboxCaptureFor(capture, false)).toBe(capture)
+  })
+
+  it('does not expand captures nested inside thumbnail selectors', () => {
+    const capture = {
+      matches: (selector) => selector === '.workspace-capture',
+      closest: (selector) => selector === '.shot-thumb' ? { className: 'shot-thumb' } : null,
+    }
+
+    expect(lightboxCaptureFor(capture, false)).toBeNull()
   })
 
   it('uses the active theme capture for an expand affordance', () => {
@@ -18,7 +28,7 @@ describe('workspace capture lightbox', () => {
     }
     const trigger = {
       matches: () => false,
-      closest: () => frame,
+      closest: (selector) => selector === '.establishing-shot, .capture-frame' ? frame : null,
     }
 
     expect(lightboxCaptureFor(trigger, false)).toBe(light)

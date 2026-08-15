@@ -200,6 +200,7 @@ function wrapFooterReveal(body) {
 }
 
 export function lightboxCaptureFor(trigger, dark) {
+  if (trigger.closest('.shot-thumb')) return null
   if (trigger.matches('.workspace-capture')) return trigger
   const frame = trigger.closest('.establishing-shot, .capture-frame')
   if (!frame) return null
