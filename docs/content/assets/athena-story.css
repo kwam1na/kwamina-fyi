@@ -1450,6 +1450,21 @@ a:hover .inline-link-icon {
   transform: translateX(-4px);
 }
 
+.deep-links--quint .deep-link {
+  position: relative;
+}
+
+.deep-links--quint .deep-link span {
+  position: static;
+  padding-right: 32px;
+}
+
+.deep-links--quint .deep-link span::after {
+  top: 20px;
+  right: 20px;
+  left: auto;
+}
+
 .deep-links--reflection .deep-link:first-child span::before {
   right: calc(100% + 6px);
   content: '←';
