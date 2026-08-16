@@ -15,7 +15,7 @@ export const ROUTE_PATHS = {
   localFirstPos: '/work/athena/local-first-pos',
   agentReadyRepository: '/work/athena/agent-ready-repository',
   readOptimizedReporting: '/work/athena/read-optimized-reporting',
-  proseNotPolicy: '/work/athena/prose-not-policy',
+  ifItMattersMakeItAGate: '/work/athena/if-it-matters-make-it-a-gate',
   validButNotThisTicket: '/work/athena/valid-but-not-this-ticket',
 }
 
@@ -40,6 +40,14 @@ export function shouldRenderSiteChrome(pathname, archiveEnabled) {
   if (!archiveEnabled) return true
   return pathname !== PRIVATE_ROUTE_PATHS.conversations
     && !pathname.startsWith(`${PRIVATE_ROUTE_PATHS.conversations}/`)
+}
+
+export function shouldRenderChatTrigger(matches) {
+  return !matches.some((match) =>
+    match.status === 'error'
+    || match.status === 'notFound'
+    || match.globalNotFound,
+  )
 }
 
 // Superseded paths kept resolvable so older links and bookmarks still land.

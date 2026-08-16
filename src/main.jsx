@@ -25,6 +25,7 @@ import {
   PRIVATE_ROUTE_PATHS,
   ROUTE_PATHS,
   isConversationArchiveRouteEnabled,
+  shouldRenderChatTrigger,
   shouldRenderSiteChrome,
 } from './routes.js'
 import homepage from '../docs/content/homepage.html?raw'
@@ -33,7 +34,7 @@ import athena from '../docs/content/work/athena/index.html?raw'
 import localFirstPos from '../docs/content/work/athena/local-first-pos/index.html?raw'
 import agentReadyRepository from '../docs/content/work/athena/agent-ready-repository/index.html?raw'
 import readOptimizedReporting from '../docs/content/work/athena/read-optimized-reporting/index.html?raw'
-import proseNotPolicy from '../docs/content/work/athena/prose-not-policy/index.html?raw'
+import ifItMattersMakeItAGate from '../docs/content/work/athena/if-it-matters-make-it-a-gate/index.html?raw'
 import validButNotThisTicket from '../docs/content/work/athena/valid-but-not-this-ticket/index.html?raw'
 import './styles.css'
 
@@ -41,6 +42,9 @@ import './styles.css'
 function RootLayout() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const showSiteChrome = shouldRenderSiteChrome(pathname, conversationArchiveRouteEnabled)
+  const showChatTrigger = useRouterState({
+    select: (state) => shouldRenderChatTrigger(state.matches),
+  })
 
   return (
     <>
@@ -50,7 +54,7 @@ function RootLayout() {
           <ThemeToggle />
           <ScrollToTop />
           <ReadingPosition />
-          <ChatWidget />
+          {showChatTrigger && <ChatWidget />}
         </>
       )}
     </>
@@ -110,10 +114,10 @@ const readOptimizedReportingRoute = createRoute({
   component: () => <SitePage documentHtml={readOptimizedReporting} pagePath="/work/athena/read-optimized-reporting/" title="Read-optimized reporting — Athena" />,
 })
 
-const proseNotPolicyRoute = createRoute({
+const ifItMattersMakeItAGateRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: ROUTE_PATHS.proseNotPolicy,
-  component: () => <SitePage documentHtml={proseNotPolicy} pagePath="/work/athena/prose-not-policy/" title="Prose, not policy — Athena" />,
+  path: ROUTE_PATHS.ifItMattersMakeItAGate,
+  component: () => <SitePage documentHtml={ifItMattersMakeItAGate} pagePath="/work/athena/if-it-matters-make-it-a-gate/" title="If It Matters, Make It a Gate — Athena" />,
 })
 
 const validButNotThisTicketRoute = createRoute({
@@ -149,7 +153,7 @@ const routeTree = rootRoute.addChildren([
   localFirstPosRoute,
   agentReadyRepositoryRoute,
   readOptimizedReportingRoute,
-  proseNotPolicyRoute,
+  ifItMattersMakeItAGateRoute,
   validButNotThisTicketRoute,
   ...(conversationsRoute ? [conversationsRoute] : []),
   ...legacyRedirectRoutes,

@@ -29,10 +29,10 @@ PAGES = {
     / "athena"
     / "agent-ready-repository"
     / "index.html",
-    "prose_not_policy": CONTENT_ROOT
+    "if_it_matters_make_it_a_gate": CONTENT_ROOT
     / "work"
     / "athena"
-    / "prose-not-policy"
+    / "if-it-matters-make-it-a-gate"
     / "index.html",
     "valid_but_not_this_ticket": CONTENT_ROOT
     / "work"
@@ -53,7 +53,7 @@ ARTICLE_PAGES = (
     "local_first_pos",
     "agent_ready_repository",
     "read_optimized_reporting",
-    "prose_not_policy",
+    "if_it_matters_make_it_a_gate",
     "valid_but_not_this_ticket",
 )
 
@@ -349,7 +349,7 @@ class StaticPageTests(unittest.TestCase):
         self.assertIn("work/athena/", homepage.hrefs)
         expected_home = PAGES["homepage"].resolve()
         expected_athena = PAGES["athena"].resolve()
-        for page_name in ("local_first_pos", "agent_ready_repository", "prose_not_policy", "valid_but_not_this_ticket"):
+        for page_name in ("local_first_pos", "agent_ready_repository", "if_it_matters_make_it_a_gate", "valid_but_not_this_ticket"):
             resolved = {
                 resolve_site_reference(PAGES[page_name], href)
                 for href in parse_page(PAGES[page_name]).hrefs
@@ -671,11 +671,15 @@ class StaticPageTests(unittest.TestCase):
         )
         self.assert_claims_mapped(parser, 12)
 
-    def test_prose_not_policy_reflection_contract(self) -> None:
-        path = PAGES["prose_not_policy"]
+    def test_gate_lesson_reflection_contract(self) -> None:
+        path = PAGES["if_it_matters_make_it_a_gate"]
         html = path.read_text(encoding="utf-8")
         lowered = flattened(html)
         parser = parse_page(path)
+        self.assertIn('<body class="gate-reflection">', html)
+        self.assertEqual(html.count('<code>review.green</code>'), 1)
+        self.assertEqual(html.count('<code>documentation.current</code>'), 1)
+        self.assertEqual(html.count('<code>check &amp;&amp; heavy-command</code>'), 1)
         expected_sections = {
             "orientation",
             "marker-problem",

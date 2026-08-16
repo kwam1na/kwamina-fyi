@@ -305,6 +305,7 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
+        margin-top: 30px;
         color: color-mix(in srgb, var(--ink) 68%, transparent);
         font-size: 0.95rem;
         font-weight: 500;
@@ -317,15 +318,10 @@
         transform: scale(0.97);
       }
 
-      .project-action {
-        margin-top: 32px;
-      }
-
       .project-section {
         padding: 176px 0;
       }
 
-      .project-masthead,
       .career-masthead {
         display: grid;
         grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
@@ -334,10 +330,24 @@
       }
 
       .project-masthead {
-        margin-bottom: 88px;
+        max-width: 900px;
+        margin-bottom: 80px;
       }
 
-      .project-masthead h2,
+      .project-masthead .career-kicker {
+        margin-bottom: 24px;
+      }
+
+      .project-masthead h2 {
+        max-width: 860px;
+        margin: 0;
+        color: var(--ink);
+        font-size: clamp(3.5rem, 6vw, 5.6rem);
+        font-weight: 650;
+        line-height: 0.94;
+        letter-spacing: -0.035em;
+      }
+
       .career-masthead h2 {
         max-width: 760px;
         margin: 0;
@@ -347,22 +357,48 @@
       }
 
       .project-feature {
+        padding-top: 30px;
+        border-top: 1px solid var(--line-strong);
+      }
+
+      .project-intro {
         display: grid;
         grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
         gap: 64px;
+        align-items: start;
       }
 
-      .project-feature h3 {
+      .project-identity h3 {
         margin: 0;
         color: var(--ink);
         font-family: var(--serif);
         font-size: 3.25rem;
         font-weight: 650;
         line-height: 0.96;
+        letter-spacing: -0.025em;
+      }
+
+      .project-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 18px 0 0;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+      }
+
+      .project-status::before {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        content: "";
       }
 
       .project-copy {
-        max-width: 760px;
+        max-width: 720px;
       }
 
       .project-lede {
@@ -373,19 +409,44 @@
       }
 
       .project-proofs {
-        margin-top: 40px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0;
+        margin: 72px 0 0;
+        padding: 0;
+        border-top: 1px solid var(--line);
+        counter-reset: project-proof;
+        list-style: none;
       }
 
       .project-proof {
-        display: grid;
-        grid-template-columns: minmax(180px, 0.38fr) minmax(0, 1fr);
-        gap: 32px;
-        padding: 26px 0;
-        border-top: 1px solid var(--line);
+        min-width: 0;
+        padding: 28px 32px 0;
+        border-left: 1px solid var(--line);
+        counter-increment: project-proof;
       }
 
-      .project-proof:last-child {
-        padding-bottom: 0;
+      .project-proof:where(:first-child) {
+        padding-left: 0;
+        border-left: 0;
+      }
+
+      .project-proof:where(:last-child) {
+        padding-right: 0;
+      }
+
+      .project-proof-index {
+        display: block;
+        margin-bottom: 32px;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.08em;
+      }
+
+      .project-proof-index::before {
+        content: counter(project-proof, decimal-leading-zero);
       }
 
       .project-proof h4 {
@@ -393,11 +454,11 @@
         color: var(--ink);
         font-size: 0.95rem;
         font-weight: 650;
-        line-height: 1.45;
+        line-height: 1.4;
       }
 
       .project-proof p {
-        margin: 0;
+        margin: 12px 0 0;
         color: var(--copy);
         font-size: 0.95rem;
         line-height: 1.62;
@@ -769,15 +830,32 @@
         }
 
         .career-masthead,
-        .project-masthead,
-        .project-feature {
+        .project-intro {
           grid-template-columns: 1fr;
           gap: 28px;
         }
 
-        .career-masthead h2,
-        .project-masthead h2 {
+        .career-masthead h2 {
           font-size: 3.4rem;
+        }
+
+        .project-proofs {
+          grid-template-columns: 1fr;
+          margin-top: 56px;
+        }
+
+        .project-proof {
+          display: grid;
+          grid-template-columns: 52px minmax(180px, 0.38fr) minmax(0, 1fr);
+          gap: 28px;
+          padding: 26px 0;
+          border-bottom: 1px solid var(--line);
+          border-left: 0;
+        }
+
+        .project-proof-index,
+        .project-proof p {
+          margin: 0;
         }
 
         .writing-item h3 {
@@ -851,20 +929,24 @@
         }
 
         .project-masthead {
-          margin-bottom: 56px;
+          margin-bottom: 64px;
         }
 
-        .career-masthead h2,
-        .project-masthead h2 {
+        .career-masthead h2 {
           font-size: 2.7rem;
           line-height: 1.02;
         }
 
-        .project-feature {
-          gap: 32px;
+        .project-masthead h2 {
+          font-size: 3.2rem;
+          line-height: 0.98;
         }
 
-        .project-feature h3 {
+        .project-intro {
+          gap: 40px;
+        }
+
+        .project-identity h3 {
           font-size: 2.6rem;
         }
 
@@ -872,10 +954,22 @@
           font-size: 1.05rem;
         }
 
+        .project-proofs {
+          margin-top: 48px;
+        }
+
         .project-proof {
           grid-template-columns: 1fr;
           gap: 8px;
           padding: 24px 0;
+        }
+
+        .project-proof-index {
+          margin-bottom: 12px;
+        }
+
+        .project-proof p {
+          margin-top: 4px;
         }
 
         /* The ordering numerals are the first thing to go when the line gets
@@ -1049,15 +1143,42 @@
           </header>
 
           <article class="project-feature">
-            <h3>Athena</h3>
-            <div class="project-copy">
-              <p class="project-lede" data-claim="claim-wigclub-context">
-                The owner should not have to reconstruct the business before
-                running it. Athena keeps sales, stock, cash, services, and staff
-                work on one operating record &mdash; and runs the operating day
-                at
-                <a href="https://wigclub.store" target="_blank" rel="noreferrer"
-                  >Wigclub
+            <div class="project-intro">
+              <div class="project-identity">
+                <h3>Athena</h3>
+                <p class="project-status">Live in production</p>
+              </div>
+              <div class="project-copy">
+                <p class="project-lede" data-claim="claim-wigclub-context">
+                  The owner should not have to reconstruct the business before
+                  running it. Athena keeps sales, stock, cash, services, and
+                  staff work on one operating record &mdash; and runs the
+                  operating day at
+                  <a
+                    href="https://wigclub.store"
+                    target="_blank"
+                    rel="noreferrer"
+                    >Wigclub
+                    <svg
+                      class="inline-link-icon"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M7 7h10v10" />
+                      <path d="M7 17 17 7" /></svg></a
+                  >, a retail and service business in Ghana, in production
+                  today.
+                </p>
+                <a class="project-action" href="work/athena/"
+                  >Read the story
                   <svg
                     class="inline-link-icon"
                     xmlns="http://www.w3.org/2000/svg"
@@ -1072,59 +1193,44 @@
                     aria-hidden="true"
                   >
                     <path d="M7 7h10v10" />
-                    <path d="M7 17 17 7" /></svg></a
-                >, a retail and service business in Ghana, in production today.
-              </p>
-
-              <div
-                class="project-proofs"
-                aria-label="Athena engineering highlights"
-              >
-                <article class="project-proof">
-                  <h4>One connected operating record</h4>
-                  <p>
-                    In-person and online sales share context with inventory,
-                    cash, services, and staff work &mdash; the day&rsquo;s
-                    evidence lives in one place, not across disconnected tools.
-                  </p>
-                </article>
-                <article class="project-proof">
-                  <h4>Built for real operating conditions</h4>
-                  <p>
-                    The local-first register records the work before it reports
-                    success, keeps checkout independent of a cloud round trip,
-                    and reconciles with the cloud without rewriting history.
-                  </p>
-                </article>
-                <article class="project-proof">
-                  <h4>Engineered for humans and AI agents</h4>
-                  <p>
-                    I build Athena with AI agents inside a repository that
-                    audits its own delivery: generated maps orient contributors,
-                    evidence follows every change, and each failure that escapes
-                    becomes a new sensor. The quality bar stays human.
-                  </p>
-                </article>
+                    <path d="M7 17 17 7" /></svg
+                ></a>
               </div>
-              <a class="project-action" href="work/athena/"
-                >Read the story
-                <svg
-                  class="inline-link-icon"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M7 7h10v10" />
-                  <path d="M7 17 17 7" /></svg
-              ></a>
             </div>
+
+            <ol
+              class="project-proofs"
+              aria-label="Athena engineering highlights"
+            >
+              <li class="project-proof">
+                <span class="project-proof-index" aria-hidden="true"></span>
+                <h4>One connected operating record</h4>
+                <p>
+                  In-person and online sales share context with inventory,
+                  cash, services, and staff work &mdash; the day&rsquo;s evidence
+                  lives in one place, not across disconnected tools.
+                </p>
+              </li>
+              <li class="project-proof">
+                <span class="project-proof-index" aria-hidden="true"></span>
+                <h4>Built for real operating conditions</h4>
+                <p>
+                  The local-first register records the work before it reports
+                  success, keeps checkout independent of a cloud round trip,
+                  and reconciles with the cloud without rewriting history.
+                </p>
+              </li>
+              <li class="project-proof">
+                <span class="project-proof-index" aria-hidden="true"></span>
+                <h4>Engineered for humans and AI agents</h4>
+                <p>
+                  I build Athena with AI agents inside a repository that audits
+                  its own delivery: generated maps orient contributors,
+                  evidence follows every change, and each failure that escapes
+                  becomes a new sensor. The quality bar stays human.
+                </p>
+              </li>
+            </ol>
           </article>
         </div>
       </section>
@@ -1176,9 +1282,9 @@
                 operating record into reports that cost a single read.
               </p>
             </a>
-            <a class="writing-item" href="work/athena/prose-not-policy">
+            <a class="writing-item" href="work/athena/if-it-matters-make-it-a-gate">
               <span class="writing-index" aria-hidden="true">05</span>
-              <h3>Prose, not policy</h3>
+              <h3>If It Matters, Make It a Gate</h3>
               <span class="writing-meta">7 min read</span>
               <p>
                 How an advisory review-first instruction became an enforced,

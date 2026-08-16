@@ -17,6 +17,16 @@ describe('assistant contract', () => {
     expect(INSTRUCTIONS).toContain('Do not characterize or speculate about the quality, speed, availability, or reliability of internet service at Wigclub')
     expect(INSTRUCTIONS).toContain('checkout does not depend on a cloud round trip')
     expect(INSTRUCTIONS).toContain('synchronization happens in the background')
+    expect(INSTRUCTIONS).toContain('count or summarize a named collection')
+    expect(INSTRUCTIONS).toContain('every entry in that collection')
+    expect(INSTRUCTIONS).toContain('Never invent a distinction between highlighted and deeper entries')
+  })
+
+  it('keeps every homepage field note together in the generated corpus', () => {
+    const fieldNotes = corpus.match(/Field Notes([\s\S]*?)\n\nAbout\n/)?.[1] ?? ''
+
+    expect(fieldNotes.match(/\n\n0[1-6]\n\n### /g)).toHaveLength(6)
+    expect(fieldNotes).toContain('06\n\n### Valid, but not this ticket')
   })
 
   it('sets response budgets and limits contact deflection', () => {

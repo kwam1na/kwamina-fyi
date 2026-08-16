@@ -7,7 +7,7 @@ const CHAT_PAGE_LABELS = new Map([
   [ROUTE_PATHS.localFirstPos, "Local-first point of sale"],
   [ROUTE_PATHS.agentReadyRepository, "Agent-ready repository"],
   [ROUTE_PATHS.readOptimizedReporting, "Read-optimized reporting"],
-  [ROUTE_PATHS.proseNotPolicy, "Prose, not policy"],
+  [ROUTE_PATHS.ifItMattersMakeItAGate, "If It Matters, Make It a Gate"],
   [ROUTE_PATHS.validButNotThisTicket, "Valid, but not this ticket"],
 ]);
 

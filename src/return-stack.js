@@ -12,7 +12,7 @@ export const returnLabels = new Map([
   ['/work/athena/local-first-pos', 'Local-first point of sale'],
   ['/work/athena/agent-ready-repository', 'Agent-ready repository'],
   ['/work/athena/read-optimized-reporting', 'Read-optimized reporting'],
-  ['/work/athena/prose-not-policy', 'Prose, not policy'],
+  ['/work/athena/if-it-matters-make-it-a-gate', 'If It Matters, Make It a Gate'],
   ['/work/athena/valid-but-not-this-ticket', 'Valid, but not this ticket'],
 ])
 
