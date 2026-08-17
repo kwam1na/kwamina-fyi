@@ -28,6 +28,8 @@
         --content-width: 1180px;
         --gutter: 48px;
         --section-space: 112px;
+        --about-grid-columns: minmax(240px, 0.44fr) minmax(0, 1fr);
+        --about-grid-gap: 56px;
         --ease-in: var(--ease-portfolio-in);
         --ease-out: var(--ease-portfolio);
         --nav-surface: rgba(252, 252, 251, 0.86);
@@ -141,8 +143,8 @@
 
       .career-masthead {
         display: grid;
-        grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
-        gap: 64px;
+        grid-template-columns: var(--about-grid-columns);
+        gap: var(--about-grid-gap);
         align-items: end;
         margin-bottom: 72px;
       }
@@ -192,8 +194,8 @@
 
       .career-feature {
         display: grid;
-        grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
-        gap: 64px;
+        grid-template-columns: var(--about-grid-columns);
+        gap: var(--about-grid-gap);
         padding: 40px 0 64px;
       }
 
@@ -283,8 +285,8 @@
 
       .career-archive {
         display: grid;
-        grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
-        gap: 64px;
+        grid-template-columns: var(--about-grid-columns);
+        gap: var(--about-grid-gap);
         padding-top: 56px;
       }
 
@@ -376,8 +378,8 @@
 
       .education-story {
         display: grid;
-        grid-template-columns: minmax(240px, 0.44fr) minmax(0, 1fr);
-        gap: 56px;
+        grid-template-columns: var(--about-grid-columns);
+        gap: var(--about-grid-gap);
         padding: 48px 0;
         border-bottom: 1px solid var(--line);
       }

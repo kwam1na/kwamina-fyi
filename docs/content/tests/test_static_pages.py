@@ -10,6 +10,7 @@ from urllib.parse import unquote, urlsplit
 
 CONTENT_ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_ROOT = CONTENT_ROOT.parents[1] / "public"
+ABOUT_PAGE = CONTENT_ROOT / "about.html"
 EVIDENCE_LEDGER = CONTENT_ROOT / "work" / "athena" / "evidence.md"
 PAGES = {
     "homepage": CONTENT_ROOT / "homepage.html",
@@ -318,6 +319,21 @@ class StaticPageTests(unittest.TestCase):
         for name, path in PAGES.items():
             with self.subTest(page=name):
                 self.assertTrue(path.is_file(), f"Missing page: {path.relative_to(CONTENT_ROOT)}")
+
+    def test_about_sections_share_primary_column_geometry(self) -> None:
+        html = ABOUT_PAGE.read_text(encoding="utf-8")
+
+        for selector in (
+            ".career-masthead",
+            ".career-feature",
+            ".career-archive",
+            ".education-story",
+        ):
+            rule = re.search(rf"{re.escape(selector)}\s*\{{(?P<body>.*?)\}}", html, re.DOTALL)
+            self.assertIsNotNone(rule, f"missing {selector} rule")
+            body = rule.group("body")
+            self.assertIn("grid-template-columns: var(--about-grid-columns);", body)
+            self.assertIn("gap: var(--about-grid-gap);", body)
 
     def test_page_landmarks_headings_ids_and_skip_links(self) -> None:
         for name, path in PAGES.items():
