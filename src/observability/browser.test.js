@@ -155,6 +155,32 @@ describe('browser failure capture', () => {
     expect(JSON.stringify(issue)).not.toContain(SENTINEL)
   })
 
+  it('retains safe hashed asset paths when debug metadata is unavailable', () => {
+    const issue = scrubBrowserIssue({
+      release: 'kwamina-fyi@0123456789abcdef',
+      environment: 'production',
+      tags: {
+        route: '/',
+        renderContext: 'root_render',
+        stage: 'render',
+        outcomeCode: 'BROWSER_RENDER_FAILED',
+      },
+      exception: { values: [{ value: SENTINEL, stacktrace: { frames: [{
+        filename: `https://kwamina.fyi/assets/react-runtime-C96x4Sfl.js?secret=${SENTINEL}`,
+        lineno: 14,
+        colno: 8,
+      }] } }] },
+    })
+
+    expect(issue.exception.values[0].stacktrace.frames[0]).toEqual({
+      filename: '/assets/react-runtime-C96x4Sfl.js',
+      abs_path: '/assets/react-runtime-C96x4Sfl.js',
+      lineno: 14,
+      colno: 8,
+    })
+    expect(JSON.stringify(issue)).not.toContain(SENTINEL)
+  })
+
   it('captures uncaught errors and non-Error rejections once without their values', () => {
     const captures = []
     const listeners = new Map()

@@ -49,7 +49,7 @@ function safeFrame(frame = {}, assetByBasename = new Map()) {
   if (!filename || !/^[A-Za-z0-9._-]{1,120}$/.test(filename)) return null
   if (!Number.isInteger(lineno) || lineno < 0 || lineno > 10_000_000) return null
   if (!Number.isInteger(colno) || colno < 0 || colno > 10_000) return null
-  const assetPath = assetByBasename.get(filename)
+  const assetPath = assetByBasename.get(filename) ?? safeAssetPath(pathname)
   return assetPath
     ? { filename: assetPath, abs_path: assetPath, lineno, colno }
     : { filename, lineno, colno }
