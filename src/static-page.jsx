@@ -25,6 +25,11 @@ function addRouteBreadcrumbs(body, pagePath) {
   )
 }
 
+export function addCurrentYear(body, date = new Date()) {
+  const year = String(date.getFullYear())
+  return body.replaceAll('<span data-current-year></span>', `<span data-current-year>${year}</span>`)
+}
+
 // The homepage's scroll position is remembered when leaving via an in-site
 // link, so returning brings the reader back to where they were (e.g. the
 // Athena section). Homepage-only; other pages always open at the top.
@@ -182,7 +187,10 @@ function extractPage(documentHtml, pagePath, conversationArchiveEntry) {
     styles,
     body: wrapFooterReveal(
       addConversationArchiveEntry(
-        addRouteBreadcrumbs(body.replace(/<script\b[\s\S]*?<\/script>/gi, ''), pagePath),
+        addRouteBreadcrumbs(
+          addCurrentYear(body.replace(/<script\b[\s\S]*?<\/script>/gi, '')),
+          pagePath,
+        ),
         conversationArchiveEntry,
       ),
     ),

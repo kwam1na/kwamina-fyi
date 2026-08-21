@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'bun:test'
-import { lightboxCaptureFor } from './static-page.jsx'
+import { addCurrentYear, lightboxCaptureFor } from './static-page.jsx'
+
+describe('current year', () => {
+  it('fills authored year markers from the runtime date', () => {
+    const html = '<p>&copy; <span data-current-year></span></p>'
+
+    expect(addCurrentYear(html, new Date('2031-06-15T12:00:00Z')))
+      .toBe('<p>&copy; <span data-current-year>2031</span></p>')
+  })
+})
 
 describe('workspace capture lightbox', () => {
   it('opens the capture that was clicked directly', () => {
