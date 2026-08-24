@@ -149,11 +149,11 @@ function role(title, dates, url) {
                   url
                     ? link(url, { text: title, bold: true, size: 19 })
                     : new TextRun({
-                        ...base,
-                        text: title,
-                        bold: true,
-                        size: 19,
-                      }),
+                      ...base,
+                      text: title,
+                      bold: true,
+                      size: 19,
+                    }),
                 ],
               }),
             ],
@@ -348,7 +348,7 @@ const doc = new Document({
         heading("Experience"),
 
         role(
-          "Sole Product Engineer — Athena",
+          "Sole Product Engineer — Athena (Independent Project)",
           "Mar 2026 – Present",
           "https://athena-os.app/landing",
         ),
