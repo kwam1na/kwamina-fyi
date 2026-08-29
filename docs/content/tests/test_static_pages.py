@@ -771,7 +771,7 @@ class StaticPageTests(unittest.TestCase):
         # correct by the same measure rather than by hand.
         html = PAGES["homepage"].read_text(encoding="utf-8")
         rows = re.findall(
-            r'<a class="writing-item" href="([^"]+)"[\s\S]*?'
+            r'<a\s+class="writing-item"\s+href="([^"]+)"[\s\S]*?'
             r'<span class="writing-meta">\s*([^<]+?)\s*</span>',
             html,
         )
